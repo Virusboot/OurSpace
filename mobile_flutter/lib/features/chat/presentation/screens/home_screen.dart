@@ -3,6 +3,8 @@ import '../../../../core/networking/api_client.dart';
 
 class HomeScreen extends StatefulWidget {
   final Map<String, dynamic>? user;
+  final bool isDarkMode;
+  final VoidCallback onToggleTheme;
   final Function(Map<String, dynamic> recipient) onOpenChat;
   final Function(String type, Map<String, dynamic>? recipient) onStartCall;
   final VoidCallback onOpenSettings;
@@ -10,6 +12,8 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({
     Key? key,
     required this.user,
+    required this.isDarkMode,
+    required this.onToggleTheme,
     required this.onOpenChat,
     required this.onStartCall,
     required this.onOpenSettings,
@@ -48,10 +52,14 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   void _showNewActionSheet() {
+    final isDark = widget.isDarkMode;
+    final cardBg = isDark ? const Color(0xFF141824) : Colors.white;
+    final txtColor = isDark ? Colors.white : const Color(0xFF0F172A);
+
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF141824),
-      barrierColor: Colors.black.withOpacity(0.7),
+      backgroundColor: cardBg,
+      barrierColor: Colors.black.withOpacity(0.6),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(24.0),
@@ -63,12 +71,12 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Container(
                 width: 36,
                 height: 4,
-                decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(color: isDark ? Colors.white24 : Colors.black12, borderRadius: BorderRadius.circular(2)),
               ),
             ),
             const SizedBox(height: 16),
-            const Text('Start Secure Action', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 6),
+            Text('Start Secure Action', style: TextStyle(color: txtColor, fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
             const Text('Select an encrypted action to perform', style: TextStyle(color: Colors.grey, fontSize: 12)),
             const SizedBox(height: 20),
 
@@ -128,14 +136,15 @@ class _HomeScreenState extends State<HomeScreen> {
     required String subtitle,
     required VoidCallback onTap,
   }) {
+    final isDark = widget.isDarkMode;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.04),
-          border: Border.all(color: Colors.white.withOpacity(0.06)),
+          color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.03),
+          border: Border.all(color: isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05)),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -154,7 +163,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                  Text(title, style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 14)),
                   const SizedBox(height: 2),
                   Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 11)),
                 ],
@@ -172,18 +181,19 @@ class _HomeScreenState extends State<HomeScreen> {
     Map<String, dynamic>? searchResult;
     String? searchError;
     bool loading = false;
+    final isDark = widget.isDarkMode;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setStateDialog) => AlertDialog(
-          backgroundColor: const Color(0xFF141824),
+          backgroundColor: isDark ? const Color(0xFF141824) : Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.person_search_rounded, color: Color(0xFF10B981), size: 24),
-              SizedBox(width: 10),
-              Text('Search Identity', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              const Icon(Icons.person_search_rounded, color: Color(0xFF10B981), size: 24),
+              const SizedBox(width: 10),
+              Text('Search Identity', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold)),
             ],
           ),
           content: Column(
@@ -191,12 +201,12 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               TextField(
                 controller: searchCtrl,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+                style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14),
                 decoration: InputDecoration(
                   hintText: 'Enter @username or USER-XXXXXX',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
-                  fillColor: Colors.black.withOpacity(0.4),
+                  fillColor: isDark ? Colors.black.withOpacity(0.4) : const Color(0xFFF1F5F9),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
                   prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
                 ),
@@ -247,7 +257,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 14),
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
+                    color: isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
                   ),
@@ -256,7 +266,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       backgroundColor: const Color(0xFF10B981).withOpacity(0.2),
                       child: Text(searchResult!['username'].toString().substring(1, 3).toUpperCase(), style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
                     ),
-                    title: Text(searchResult!['username'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    title: Text(searchResult!['username'], style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
                     subtitle: Text(searchResult!['privateId'], style: const TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace')),
                     trailing: const Icon(Icons.chat_bubble_outline, color: Color(0xFF10B981)),
                     onTap: () {
@@ -278,18 +288,19 @@ class _HomeScreenState extends State<HomeScreen> {
     final pinCtrl = TextEditingController();
     String? generatedUrl;
     bool loading = false;
+    final isDark = widget.isDarkMode;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setStateDialog) => AlertDialog(
-          backgroundColor: const Color(0xFF141824),
+          backgroundColor: isDark ? const Color(0xFF141824) : Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.add_link_rounded, color: Color(0xFF10B981), size: 24),
-              SizedBox(width: 10),
-              Text('Create Guest Call Link', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              const Icon(Icons.add_link_rounded, color: Color(0xFF10B981), size: 24),
+              const SizedBox(width: 10),
+              Text('Create Guest Call Link', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold)),
             ],
           ),
           content: Column(
@@ -304,16 +315,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
-                            color: callType == 'video' ? const Color(0xFF10B981).withOpacity(0.2) : Colors.white.withOpacity(0.04),
-                            border: Border.all(color: callType == 'video' ? const Color(0xFF10B981) : Colors.white12),
+                            color: callType == 'video' ? const Color(0xFF10B981).withOpacity(0.2) : (isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.04)),
+                            border: Border.all(color: callType == 'video' ? const Color(0xFF10B981) : Colors.transparent),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.videocam, size: 18, color: Colors.white),
-                              SizedBox(width: 6),
-                              Text('Video', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                              Icon(Icons.videocam, size: 18, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                              const SizedBox(width: 6),
+                              Text('Video', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 13)),
                             ],
                           ),
                         ),
@@ -326,16 +337,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
-                            color: callType == 'audio' ? const Color(0xFF10B981).withOpacity(0.2) : Colors.white.withOpacity(0.04),
-                            border: Border.all(color: callType == 'audio' ? const Color(0xFF10B981) : Colors.white12),
+                            color: callType == 'audio' ? const Color(0xFF10B981).withOpacity(0.2) : (isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.04)),
+                            border: Border.all(color: callType == 'audio' ? const Color(0xFF10B981) : Colors.transparent),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.mic, size: 18, color: Colors.white),
-                              SizedBox(width: 6),
-                              Text('Audio', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                              Icon(Icons.mic, size: 18, color: isDark ? Colors.white : const Color(0xFF0F172A)),
+                              const SizedBox(width: 6),
+                              Text('Audio', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 13)),
                             ],
                           ),
                         ),
@@ -347,12 +358,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 TextField(
                   controller: pinCtrl,
                   keyboardType: TextInputType.number,
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13),
                   decoration: InputDecoration(
                     hintText: 'Optional PIN Code (e.g. 1234)',
                     hintStyle: const TextStyle(color: Colors.grey),
                     filled: true,
-                    fillColor: Colors.black.withOpacity(0.4),
+                    fillColor: isDark ? Colors.black.withOpacity(0.4) : const Color(0xFFF1F5F9),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                     prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey, size: 18),
                   ),
@@ -402,7 +413,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const Icon(Icons.check_circle_outline, color: Color(0xFF10B981), size: 36),
                       const SizedBox(height: 8),
-                      const Text('Call Link Ready!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                      Text('Call Link Ready!', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 15)),
                       const SizedBox(height: 10),
                       SelectableText(
                         generatedUrl!,
@@ -427,11 +438,16 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final username = widget.user?['username'] ?? '@harsh01';
     final privateId = widget.user?['privateId'] ?? 'USER-7XK92P';
+    final isDark = widget.isDarkMode;
+
+    final bgCol = isDark ? const Color(0xFF0A0D14) : const Color(0xFFF8FAFC);
+    final txtCol = isDark ? Colors.white : const Color(0xFF0F172A);
+    final cardBg = isDark ? const Color(0xFF141824) : Colors.white;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0D14),
+      backgroundColor: bgCol,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0A0D14),
+        backgroundColor: bgCol,
         elevation: 0,
         titleSpacing: 16,
         title: Row(
@@ -455,7 +471,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFF10B981),
                       shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFF0A0D14), width: 2),
+                      border: Border.all(color: bgCol, width: 2),
                     ),
                   ),
                 ),
@@ -467,7 +483,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Row(
                   children: [
-                    Text(username, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white)),
+                    Text(username, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: txtCol)),
                     const SizedBox(width: 4),
                     const Icon(Icons.verified_user_rounded, size: 14, color: Color(0xFF10B981)),
                   ],
@@ -478,31 +494,40 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
+          // Sun / Moon Theme Toggle Button ☀️ / 🌙
           IconButton(
-            icon: Icon(_isSearching ? Icons.close : Icons.search_rounded, color: Colors.white70),
+            icon: Icon(
+              isDark ? Icons.wb_sunny_outlined : Icons.nightlight_round,
+              color: isDark ? Colors.amber : const Color(0xFF0F172A),
+            ),
+            tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+            onPressed: widget.onToggleTheme,
+          ),
+          IconButton(
+            icon: Icon(_isSearching ? Icons.close : Icons.search_rounded, color: isDark ? Colors.white70 : const Color(0xFF475569)),
             onPressed: () => setState(() => _isSearching = !_isSearching),
           ),
           IconButton(
-            icon: const Icon(Icons.settings_outlined, color: Colors.white70),
+            icon: Icon(Icons.settings_outlined, color: isDark ? Colors.white70 : const Color(0xFF475569)),
             onPressed: widget.onOpenSettings,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
         ],
       ),
       body: Column(
         children: [
-          // Search Input Bar (Toggled)
+          // Search Bar
           if (_isSearching)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: TextField(
                 controller: _searchCtrl,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+                style: TextStyle(color: txtCol, fontSize: 14),
                 decoration: InputDecoration(
                   hintText: 'Search chats or Private ID...',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
-                  fillColor: const Color(0xFF141824),
+                  fillColor: cardBg,
                   prefixIcon: const Icon(Icons.search, color: Color(0xFF10B981), size: 20),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                   contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -510,15 +535,24 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-          // Modern Pill Navigation Bar (Chats / Calls / Security)
+          // Navigation Pill Tabs
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: const Color(0xFF141824),
+                color: cardBg,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white.withOpacity(0.05)),
+                border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.06)),
+                boxShadow: isDark
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
               ),
               child: Row(
                 children: [
@@ -530,7 +564,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // Content Area
+          // Tab Content
           Expanded(
             child: _buildTabContent(),
           ),
@@ -548,6 +582,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildNavTab(int index, String label, IconData icon, {int badgeCount = 0}) {
     final isSelected = _activeTab == index;
+
     return GestureDetector(
       onTap: () => setState(() => _activeTab = index),
       child: AnimatedContainer(
@@ -585,6 +620,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTabContent() {
+    final isDark = widget.isDarkMode;
+    final cardBg = isDark ? const Color(0xFF141824) : Colors.white;
+    final txtCol = isDark ? Colors.white : const Color(0xFF0F172A);
+
     if (_activeTab == 0) {
       // CHATS TAB
       return ListView.separated(
@@ -598,9 +637,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
           return Container(
             decoration: BoxDecoration(
-              color: const Color(0xFF141824),
+              color: cardBg,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white.withOpacity(0.04)),
+              border: Border.all(color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.06)),
+              boxShadow: isDark
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
             ),
             child: ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -625,7 +673,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         decoration: BoxDecoration(
                           color: const Color(0xFF10B981),
                           shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFF141824), width: 2),
+                          border: Border.all(color: cardBg, width: 2),
                         ),
                       ),
                     ),
@@ -634,7 +682,7 @@ class _HomeScreenState extends State<HomeScreen> {
               title: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(item['username'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                  Text(item['username'], style: TextStyle(color: txtCol, fontWeight: FontWeight.bold, fontSize: 15)),
                   Text(item['time'], style: TextStyle(color: unread > 0 ? const Color(0xFF10B981) : Colors.grey, fontSize: 11, fontWeight: FontWeight.w600)),
                 ],
               ),
@@ -670,7 +718,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Create Guest Call Banner
             InkWell(
               onTap: _showCreateCallLinkModal,
               borderRadius: BorderRadius.circular(20),
@@ -685,24 +732,24 @@ class _HomeScreenState extends State<HomeScreen> {
                   border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    CircleAvatar(
+                    const CircleAvatar(
                       backgroundColor: Color(0xFF10B981),
                       child: Icon(Icons.link_rounded, color: Colors.black),
                     ),
-                    SizedBox(width: 14),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Create Guest Call Link', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                          SizedBox(height: 2),
-                          Text('Share a WebRTC audio/video call link with anyone without app install', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                          Text('Create Guest Call Link', style: TextStyle(color: txtCol, fontWeight: FontWeight.bold, fontSize: 15)),
+                          const SizedBox(height: 2),
+                          const Text('Share a WebRTC audio/video call link with anyone without app install', style: TextStyle(color: Colors.grey, fontSize: 11)),
                         ],
                       ),
                     ),
-                    Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF10B981)),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF10B981)),
                   ],
                 ),
               ),
@@ -715,18 +762,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF141824),
+                  color: cardBg,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withOpacity(0.04)),
+                  border: Border.all(color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.06)),
                 ),
-                child: const Column(
+                child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.shield_outlined, size: 42, color: Colors.white24),
-                    SizedBox(height: 12),
-                    Text('Zero-Knowledge Call Logs', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                    SizedBox(height: 6),
-                    Text('Your call metadata is never stored on servers. Calls expire automatically.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    Icon(Icons.shield_outlined, size: 42, color: isDark ? Colors.white24 : Colors.black26),
+                    const SizedBox(height: 12),
+                    Text('Zero-Knowledge Call Logs', style: TextStyle(color: txtCol, fontWeight: FontWeight.bold, fontSize: 15)),
+                    const SizedBox(height: 6),
+                    const Text('Your call metadata is never stored on servers. Calls expire automatically.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 12)),
                   ],
                 ),
               ),
@@ -745,33 +792,33 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF141824),
+                  color: cardBg,
                   borderRadius: BorderRadius.circular(22),
                   border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
                 ),
                 child: Column(
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 28),
-                        SizedBox(width: 12),
+                        const Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 28),
+                        const SizedBox(width: 12),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('End-to-End Encryption', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                            Text('Status: ACTIVE & VERIFIED', style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 11)),
+                            Text('End-to-End Encryption', style: TextStyle(color: txtCol, fontWeight: FontWeight.bold, fontSize: 16)),
+                            const Text('Status: ACTIVE & VERIFIED', style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 11)),
                           ],
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
-                    const Divider(color: Colors.white10),
+                    Divider(color: isDark ? Colors.white10 : Colors.black12),
                     const SizedBox(height: 12),
-                    _buildSecurityDetailRow(Icons.key_rounded, 'Curve25519 & AES-256-GCM', 'Cryptographic protocol active'),
+                    _buildSecurityDetailRow(Icons.key_rounded, 'Curve25519 & AES-256-GCM', 'Cryptographic protocol active', txtCol),
                     const SizedBox(height: 10),
-                    _buildSecurityDetailRow(Icons.visibility_off_rounded, 'Zero Server Logs', 'No metadata or IP retention'),
+                    _buildSecurityDetailRow(Icons.visibility_off_rounded, 'Zero Server Logs', 'No metadata or IP retention', txtCol),
                     const SizedBox(height: 10),
-                    _buildSecurityDetailRow(Icons.timer_rounded, 'Auto Disappearing Chat', 'Messages wipe after countdown'),
+                    _buildSecurityDetailRow(Icons.timer_rounded, 'Auto Disappearing Chat', 'Messages wipe after countdown', txtCol),
                   ],
                 ),
               ),
@@ -782,7 +829,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Widget _buildSecurityDetailRow(IconData icon, String title, String subtitle) {
+  Widget _buildSecurityDetailRow(IconData icon, String title, String subtitle, Color txtCol) {
     return Row(
       children: [
         Icon(icon, size: 18, color: const Color(0xFF10B981)),
@@ -790,7 +837,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+            Text(title, style: TextStyle(color: txtCol, fontWeight: FontWeight.bold, fontSize: 13)),
             Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 11)),
           ],
         ),

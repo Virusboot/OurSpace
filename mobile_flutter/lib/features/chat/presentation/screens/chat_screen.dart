@@ -7,6 +7,7 @@ import '../../../../shared/widgets/security_overlay.dart';
 class ChatScreen extends StatefulWidget {
   final Map<String, dynamic> user;
   final Map<String, dynamic> recipient;
+  final bool isDarkMode;
   final VoidCallback onBack;
   final Function(String type, Map<String, dynamic> recipient) onStartCall;
   final Function(String imageUri, bool isViewOnce) onOpenImageViewer;
@@ -15,6 +16,7 @@ class ChatScreen extends StatefulWidget {
     super.key,
     required this.user,
     required this.recipient,
+    required this.isDarkMode,
     required this.onBack,
     required this.onStartCall,
     required this.onOpenImageViewer,
@@ -92,23 +94,27 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _showTimerPickerModal() {
+    final isDark = widget.isDarkMode;
+    final cardBg = isDark ? const Color(0xFF141824) : Colors.white;
+    final txtCol = isDark ? Colors.white : const Color(0xFF0F172A);
+
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF141824),
-      barrierColor: Colors.black.withOpacity(0.7),
+      backgroundColor: cardBg,
+      barrierColor: Colors.black.withOpacity(0.6),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 12),
-          Container(width: 36, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+          Container(width: 36, height: 4, decoration: BoxDecoration(color: isDark ? Colors.white24 : Colors.black12, borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 16),
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.timer_rounded, color: Color(0xFF10B981), size: 20),
-              SizedBox(width: 8),
-              Text('Disappearing Messages Timer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+              const Icon(Icons.timer_rounded, color: Color(0xFF10B981), size: 20),
+              const SizedBox(width: 8),
+              Text('Disappearing Messages Timer', style: TextStyle(color: txtCol, fontWeight: FontWeight.bold, fontSize: 16)),
             ],
           ),
           const SizedBox(height: 8),
@@ -129,7 +135,7 @@ class _ChatScreenState extends State<ChatScreen> {
             final isSel = _ttlSeconds == sec;
             return ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-              title: Text(opt['label'] as String, style: TextStyle(color: isSel ? const Color(0xFF10B981) : Colors.white70, fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
+              title: Text(opt['label'] as String, style: TextStyle(color: isSel ? const Color(0xFF10B981) : txtCol, fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
               trailing: isSel ? const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981)) : null,
               onTap: () {
                 setState(() => _ttlSeconds = sec);
@@ -146,16 +152,21 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final username = widget.recipient['username'] ?? '@peer';
+    final isDark = widget.isDarkMode;
+
+    final bgCol = isDark ? const Color(0xFF0A0D14) : const Color(0xFFF8FAFC);
+    final txtCol = isDark ? Colors.white : const Color(0xFF0F172A);
+    final cardBg = isDark ? const Color(0xFF141824) : Colors.white;
 
     return SecurityOverlay(
       isSensitive: true,
       child: Scaffold(
-        backgroundColor: const Color(0xFF0A0D14),
+        backgroundColor: bgCol,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF0A0D14),
+          backgroundColor: bgCol,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+            icon: Icon(Icons.arrow_back_rounded, color: txtCol),
             onPressed: widget.onBack,
           ),
           titleSpacing: 0,
@@ -180,7 +191,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xFF10B981),
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFF0A0D14), width: 1.5),
+                        border: Border.all(color: bgCol, width: 1.5),
                       ),
                     ),
                   ),
@@ -190,7 +201,7 @@ class _ChatScreenState extends State<ChatScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(username, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                  Text(username, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: txtCol)),
                   const Row(
                     children: [
                       Icon(Icons.lock_rounded, size: 10, color: Color(0xFF10B981)),
@@ -242,8 +253,8 @@ class _ChatScreenState extends State<ChatScreen> {
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withOpacity(0.08),
-                border: Border.all(color: const Color(0xFF10B981).withOpacity(0.2)),
+                color: isDark ? const Color(0xFF10B981).withOpacity(0.08) : const Color(0xFFECFDF5),
+                border: Border.all(color: const Color(0xFF10B981).withOpacity(0.25)),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: const Row(
@@ -254,7 +265,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Text(
                       'Messages are end-to-end encrypted. No one outside of this chat can read them.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 11, color: Color(0xFF10B981), fontWeight: FontWeight.w500),
+                      style: TextStyle(fontSize: 11, color: Color(0xFF059669), fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -285,7 +296,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                 end: Alignment.bottomRight,
                               )
                             : null,
-                        color: !isMe ? const Color(0xFF141824) : null,
+                        color: !isMe ? cardBg : null,
+                        border: !isMe && !isDark ? Border.all(color: const Color(0xFFE2E8F0)) : null,
                         borderRadius: BorderRadius.only(
                           topLeft: const Radius.circular(18),
                           topRight: const Radius.circular(18),
@@ -294,7 +306,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.15),
+                            color: Colors.black.withOpacity(isDark ? 0.15 : 0.05),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
@@ -306,7 +318,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           Text(
                             item['decryptedText'] ?? '',
                             style: TextStyle(
-                              color: isMe ? Colors.black : Colors.white,
+                              color: isMe ? Colors.white : txtCol,
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
                             ),
@@ -318,14 +330,14 @@ class _ChatScreenState extends State<ChatScreen> {
                               Text(
                                 nowTime,
                                 style: TextStyle(
-                                  color: isMe ? Colors.black54 : Colors.grey,
+                                  color: isMe ? Colors.white70 : Colors.grey,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                               if (isMe) ...[
                                 const SizedBox(width: 4),
-                                const Icon(Icons.done_all_rounded, size: 14, color: Colors.black),
+                                const Icon(Icons.done_all_rounded, size: 14, color: Colors.white),
                               ],
                             ],
                           ),
@@ -341,8 +353,8 @@ class _ChatScreenState extends State<ChatScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: const Color(0xFF141824),
-                border: Border(top: BorderSide(color: Colors.white.withOpacity(0.05))),
+                color: cardBg,
+                border: Border(top: BorderSide(color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.06))),
               ),
               child: SafeArea(
                 child: Row(
@@ -356,12 +368,12 @@ class _ChatScreenState extends State<ChatScreen> {
                     Expanded(
                       child: TextField(
                         controller: _inputCtrl,
-                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        style: TextStyle(color: txtCol, fontSize: 14),
                         decoration: InputDecoration(
                           hintText: 'Type encrypted message...',
                           hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
                           filled: true,
-                          fillColor: const Color(0xFF0A0D14),
+                          fillColor: isDark ? const Color(0xFF0A0D14) : const Color(0xFFF1F5F9),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                         ),

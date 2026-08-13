@@ -30,11 +30,30 @@ class _SecureChatAppState extends State<SecureChatApp> {
   String _activeCallType = 'video';
   String _activeImageUri = '';
   bool _activeIsViewOnce = false;
+  bool _isDarkMode = true;
 
   @override
   void initState() {
     super.initState();
     _checkStoredUser();
+    _loadThemeMode();
+  }
+
+  Future<void> _loadThemeMode() async {
+    final theme = await SecureStorageService.read('theme_mode');
+    if (theme != null) {
+      setState(() {
+        _isDarkMode = theme == 'dark';
+      });
+    }
+  }
+
+  Future<void> _toggleTheme() async {
+    final nextMode = !_isDarkMode;
+    setState(() {
+      _isDarkMode = nextMode;
+    });
+    await SecureStorageService.write('theme_mode', nextMode ? 'dark' : 'light');
   }
 
   Future<void> _checkStoredUser() async {
@@ -79,15 +98,44 @@ class _SecureChatAppState extends State<SecureChatApp> {
     return MaterialApp(
       title: 'OurSpace',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
+      themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
+
+      // CLEAN LIGHT THEME (WhatsApp / Telegram Light Style)
+      theme: ThemeData.light().copyWith(
+        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+        primaryColor: const Color(0xFF059669),
+        cardColor: const Color(0xFFFFFFFF),
+        colorScheme: const ColorScheme.light(
+          primary: Color(0xFF059669),
+          secondary: Color(0xFF10B981),
+          surface: Color(0xFFFFFFFF),
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFFF8FAFC),
+          elevation: 0,
+          iconTheme: IconThemeData(color: Color(0xFF0F172A)),
+          titleTextStyle: TextStyle(color: Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+      ),
+
+      // CLEAN DARK THEME (WhatsApp / Telegram Dark Style)
+      darkTheme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF0A0D14),
         primaryColor: const Color(0xFF10B981),
+        cardColor: const Color(0xFF141824),
         colorScheme: const ColorScheme.dark(
           primary: Color(0xFF10B981),
           secondary: Color(0xFF059669),
           surface: Color(0xFF141824),
         ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF0A0D14),
+          elevation: 0,
+          iconTheme: IconThemeData(color: Colors.white),
+          titleTextStyle: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+        ),
       ),
+
       home: _buildScreen(),
     );
   }
@@ -109,6 +157,8 @@ class _SecureChatAppState extends State<SecureChatApp> {
       case 'home':
         return HomeScreen(
           user: _user,
+          isDarkMode: _isDarkMode,
+          onToggleTheme: _toggleTheme,
           onOpenChat: (recipient) {
             setState(() {
               _activeRecipient = recipient;
@@ -128,6 +178,7 @@ class _SecureChatAppState extends State<SecureChatApp> {
         return ChatScreen(
           user: _user ?? {'id': 'u1', 'username': '@harsh01'},
           recipient: _activeRecipient ?? {'id': 'u2', 'username': '@alex_dev', 'publicKey': 'PUB-12345'},
+          isDarkMode: _isDarkMode,
           onBack: () => setState(() => _currentScreen = 'home'),
           onStartCall: (type, recipient) {
             setState(() {
@@ -160,6 +211,8 @@ class _SecureChatAppState extends State<SecureChatApp> {
         return SettingsScreen(
           user: _user,
           recoveryKey: _recoveryKey,
+          isDarkMode: _isDarkMode,
+          onToggleTheme: _toggleTheme,
           onBack: () => setState(() => _currentScreen = 'home'),
           onLogout: _handleLogout,
         );
