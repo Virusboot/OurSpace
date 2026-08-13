@@ -1,11 +1,12 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../storage/secure_storage_service.dart';
 
 class ApiClient {
   static String get baseUrl {
-    if (Platform.isAndroid) {
+    if (!kIsWeb && Platform.isAndroid) {
       return 'http://10.0.2.2:4000/api';
     }
     return 'http://localhost:4000/api';

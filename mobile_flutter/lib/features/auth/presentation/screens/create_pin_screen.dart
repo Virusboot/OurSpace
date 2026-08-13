@@ -76,7 +76,14 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
           padding: const EdgeInsets.all(24.0),
           child: Column(
             children: [
-              const SizedBox(height: 20),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: widget.onPinComplete,
+                  child: const Text('Skip for now →', style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 13)),
+                ),
+              ),
+              const SizedBox(height: 10),
               Container(
                 width: 72,
                 height: 72,

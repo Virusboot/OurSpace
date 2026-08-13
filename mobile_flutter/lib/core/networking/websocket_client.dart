@@ -1,7 +1,7 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../storage/secure_storage_service.dart';
 
@@ -19,9 +19,9 @@ class WebSocketClient {
     final token = await SecureStorageService.read('auth_token');
     if (token == null) return;
 
-    final wsUrl = Platform.isAndroid ? 'ws://10.0.2.2:4000/ws' : 'ws://localhost:4000/ws';
+    final wsUrl = (!kIsWeb && Platform.isAndroid) ? 'ws://10.0.2.2:4000/ws' : 'ws://localhost:4000/ws';
     try {
-      _channel = IOWebSocketChannel.connect(Uri.parse(wsUrl));
+      _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
       
       // Handshake authentication
       send({'type': 'auth', 'token': token});
