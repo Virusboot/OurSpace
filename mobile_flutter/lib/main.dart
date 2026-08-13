@@ -80,7 +80,13 @@ class _SecureChatAppState extends State<SecureChatApp> {
       title: 'OurSpace',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF090A0F),
+        scaffoldBackgroundColor: const Color(0xFF0A0D14),
+        primaryColor: const Color(0xFF10B981),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFF10B981),
+          secondary: Color(0xFF059669),
+          surface: Color(0xFF141824),
+        ),
       ),
       home: _buildScreen(),
     );
