@@ -14,7 +14,7 @@ subprojects {
 }
 
 subprojects {
-    afterEvaluate { project ->
+    def configureAndroid = { project ->
         if (project.hasProperty('android')) {
             project.android {
                 compileOptions {
@@ -23,6 +23,11 @@ subprojects {
                 }
             }
         }
+    }
+    if (project.state.executed) {
+        configureAndroid(project)
+    } else {
+        project.afterEvaluate configureAndroid
     }
 }
 
