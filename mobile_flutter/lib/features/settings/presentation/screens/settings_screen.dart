@@ -173,37 +173,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // User Profile Card
+            // WhatsApp Style Profile Card
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: cardBg,
                 border: Border.all(color: isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.06)),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: isDark
                     ? null
                     : [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.03),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
                         ),
                       ],
               ),
               child: Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: const Color(0xFF10B981).withOpacity(0.15),
-                    child: Text(username.length > 2 ? username.substring(1, 3).toUpperCase() : 'ME', style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
+                    radius: 28,
+                    backgroundColor: const Color(0xFF10B981).withOpacity(0.2),
+                    child: Text(
+                      username.length > 2 ? username.substring(1, 3).toUpperCase() : 'ME',
+                      style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
                   ),
-                  const SizedBox(width: 14),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(username, style: TextStyle(color: txtCol, fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text(privateId, style: const TextStyle(color: Colors.grey, fontSize: 12, fontFamily: 'monospace')),
-                    ],
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(username, style: TextStyle(color: txtCol, fontWeight: FontWeight.bold, fontSize: 18)),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            privateId,
+                            style: const TextStyle(color: Color(0xFF10B981), fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                  const Icon(Icons.qr_code_rounded, color: Color(0xFF10B981), size: 24),
                 ],
               ),
             ),

@@ -436,8 +436,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final username = widget.user?['username'] ?? '@harsh01';
-    final privateId = widget.user?['privateId'] ?? 'USER-7XK92P';
     final isDark = widget.isDarkMode;
 
     final bgCol = isDark ? const Color(0xFF0A0D14) : const Color(0xFFF8FAFC);
@@ -450,48 +448,14 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: bgCol,
         elevation: 0,
         titleSpacing: 16,
-        title: Row(
-          children: [
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: const Color(0xFF10B981).withOpacity(0.2),
-                  child: Text(
-                    username.length > 2 ? username.substring(1, 3).toUpperCase() : 'ME',
-                    style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.w800, fontSize: 13),
-                  ),
-                ),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 11,
-                    height: 11,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: bgCol, width: 2),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(username, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: txtCol)),
-                    const SizedBox(width: 4),
-                    const Icon(Icons.verified_user_rounded, size: 14, color: Color(0xFF10B981)),
-                  ],
-                ),
-                Text(privateId, style: const TextStyle(fontSize: 11, color: Colors.grey, fontFamily: 'monospace')),
-              ],
-            ),
-          ],
+        title: Text(
+          'OurSpace',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: txtCol,
+            letterSpacing: -0.5,
+          ),
         ),
         actions: [
           IconButton(
