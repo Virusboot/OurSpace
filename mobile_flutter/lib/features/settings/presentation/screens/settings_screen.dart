@@ -31,6 +31,120 @@ class _SettingsScreenState extends State<SettingsScreen> {
     widget.onLogout();
   }
 
+  void _showChangePasswordModal() {
+    final currPassCtrl = TextEditingController();
+    final newPassCtrl = TextEditingController();
+    final confirmPassCtrl = TextEditingController();
+    String? modalError;
+    bool successMsg = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setStateModal) => AlertDialog(
+          backgroundColor: const Color(0xFF12141D),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Icons.lock_reset, color: Color(0xFF10B981), size: 22),
+              SizedBox(width: 8),
+              Text('Change Password', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (modalError != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: const Color(0xFFF43F5E).withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
+                  child: Text(modalError!, style: const TextStyle(color: Color(0xFFF43F5E), fontSize: 12), textAlign: TextAlign.center),
+                ),
+                const SizedBox(height: 10),
+              ],
+              if (successMsg) ...[
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: const Color(0xFF10B981).withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
+                  child: const Text('Password changed successfully!', style: TextStyle(color: Color(0xFF10B981), fontSize: 12, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                ),
+                const SizedBox(height: 10),
+              ] else ...[
+                TextField(
+                  controller: currPassCtrl,
+                  obscureText: true,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Current Password',
+                    hintStyle: const TextStyle(color: Colors.grey),
+                    filled: true,
+                    fillColor: Colors.black.withOpacity(0.4),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: newPassCtrl,
+                  obscureText: true,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'New Password',
+                    hintStyle: const TextStyle(color: Colors.grey),
+                    filled: true,
+                    fillColor: Colors.black.withOpacity(0.4),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: confirmPassCtrl,
+                  obscureText: true,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Confirm New Password',
+                    hintStyle: const TextStyle(color: Colors.grey),
+                    filled: true,
+                    fillColor: Colors.black.withOpacity(0.4),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            if (!successMsg)
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+                onPressed: () {
+                  if (currPassCtrl.text.isEmpty || newPassCtrl.text.isEmpty) {
+                    setStateModal(() => modalError = 'Please fill all fields');
+                    return;
+                  }
+                  if (newPassCtrl.text != confirmPassCtrl.text) {
+                    setStateModal(() => modalError = 'New Passwords do not match');
+                    return;
+                  }
+                  setStateModal(() {
+                    modalError = null;
+                    successMsg = true;
+                  });
+                  Future.delayed(const Duration(milliseconds: 1500), () {
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  });
+                },
+                child: const Text('Update', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final username = widget.user?['username'] ?? '@harsh01';
@@ -132,6 +246,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 16),
             const Text('SECURITY & KEYS', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.lock_reset, color: Color(0xFF10B981)),
+              title: const Text('Change Password', style: TextStyle(color: Colors.white, fontSize: 14)),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+              onTap: _showChangePasswordModal,
+            ),
             ListTile(
               leading: const Icon(Icons.key, color: Colors.amber),
               title: const Text('View Recovery Key', style: TextStyle(color: Colors.white, fontSize: 14)),

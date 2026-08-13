@@ -13,20 +13,37 @@ class CreateIdentityScreen extends StatefulWidget {
 }
 
 class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
+  final TextEditingController _nameController = TextEditingController(text: 'Harsh');
   final TextEditingController _emailController = TextEditingController(text: 'harsh@ourspace.app');
   final TextEditingController _passwordController = TextEditingController(text: '123456');
+  final TextEditingController _confirmPasswordController = TextEditingController(text: '123456');
+
   bool _isSignUp = false;
   bool _obscurePassword = true;
   bool _loading = false;
+  String? _errorMsg;
 
   Future<void> _handleLoginOrRegister() async {
+    final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
 
-    if (email.isEmpty || password.isEmpty) return;
+    if (email.isEmpty || password.isEmpty) {
+      setState(() => _errorMsg = 'Please enter Email and Password');
+      return;
+    }
+
+    if (_isSignUp) {
+      if (password != confirmPassword) {
+        setState(() => _errorMsg = 'Passwords do not match');
+        return;
+      }
+    }
 
     setState(() {
       _loading = true;
+      _errorMsg = null;
     });
 
     final username = '@${email.contains('@') ? email.split('@')[0] : email}';
@@ -37,21 +54,24 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
     try {
       final endpoint = _isSignUp ? '/auth/register' : '/auth/login';
       final res = await ApiClient.post(endpoint, {
+        'name': name.isNotEmpty ? name : 'User',
         'email': email,
         'password': password,
         'username': username,
       });
       userObj = res['user'] ?? {
         'id': 'usr_${DateTime.now().millisecondsSinceEpoch}',
+        'name': name.isNotEmpty ? name : 'User',
         'email': email,
         'username': username,
         'privateId': privateId,
       };
       token = res['token'] ?? 'token_${DateTime.now().millisecondsSinceEpoch}';
     } catch (_) {
-      // Instant error-free local fallback login
+      // Instant error-free local fallback login/register
       userObj = {
         'id': 'usr_${DateTime.now().millisecondsSinceEpoch}',
+        'name': name.isNotEmpty ? name : 'User',
         'email': email,
         'username': username,
         'privateId': privateId,
@@ -96,19 +116,64 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                 const SizedBox(height: 20),
 
                 Text(
-                  _isSignUp ? 'Create OurSpace Account' : 'Welcome to OurSpace',
+                  _isSignUp ? 'Create OurSpace Account' : 'Welcome Back',
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   _isSignUp
-                      ? 'Enter your Email & Password to register'
-                      : 'Enter Email & Password to log in easily',
+                      ? 'Fill in your details to create a new account'
+                      : 'Log in easily with your Email & Password',
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 13, color: Colors.grey),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 28),
+
+                if (_errorMsg != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF43F5E).withOpacity(0.1),
+                      border: Border.all(color: const Color(0xFFF43F5E).withOpacity(0.3)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(_errorMsg!, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFF43F5E), fontSize: 13, fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // Full Name Input Box (Only for Sign Up)
+                if (_isSignUp) ...[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.04),
+                      border: Border.all(color: Colors.white.withOpacity(0.08)),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Full Name', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _nameController,
+                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF10B981), size: 20),
+                            filled: true,
+                            fillColor: Colors.black.withOpacity(0.4),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                            hintText: 'e.g. Alex Smith',
+                            hintStyle: const TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
 
                 // Email Input Box
                 Container(
@@ -178,9 +243,44 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 16),
 
-                // Big Primary Login/Register Button
+                // Confirm Password (Only for Sign Up)
+                if (_isSignUp) ...[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.04),
+                      border: Border.all(color: Colors.white.withOpacity(0.08)),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Confirm Password', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _confirmPasswordController,
+                          obscureText: _obscurePassword,
+                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(Icons.lock_reset, color: Color(0xFF10B981), size: 20),
+                            filled: true,
+                            fillColor: Colors.black.withOpacity(0.4),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                            hintText: 'Re-enter Password',
+                            hintStyle: const TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                const SizedBox(height: 12),
+
+                // Big Primary Action Button
                 SizedBox(
                   height: 54,
                   child: ElevatedButton(
@@ -192,8 +292,8 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                     onPressed: _loading ? null : _handleLoginOrRegister,
                     child: Text(
                       _loading
-                          ? 'Logging in...'
-                          : (_isSignUp ? 'Register & Enter' : 'Log In to OurSpace'),
+                          ? 'Please wait...'
+                          : (_isSignUp ? 'Create Account' : 'Log In to OurSpace'),
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
                     ),
                   ),
@@ -209,10 +309,15 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                       style: const TextStyle(color: Colors.grey, fontSize: 13),
                     ),
                     TextButton(
-                      onPressed: () => setState(() => _isSignUp = !_isSignUp),
+                      onPressed: () {
+                        setState(() {
+                          _isSignUp = !_isSignUp;
+                          _errorMsg = null;
+                        });
+                      },
                       child: Text(
-                        _isSignUp ? 'Log In' : 'Sign Up',
-                        style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 13),
+                        _isSignUp ? 'Log In' : 'Create Account',
+                        style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                     ),
                   ],
