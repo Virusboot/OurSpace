@@ -72,9 +72,10 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF090A0F),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Align(
                 alignment: Alignment.centerRight,
@@ -83,18 +84,18 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                   child: const Text('Skip for now →', style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 13)),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Container(
-                width: 72,
-                height: 72,
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
                   color: const Color(0xFF10B981).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
                 ),
-                child: const Icon(Icons.lock_outline, size: 32, color: Color(0xFF10B981)),
+                child: const Icon(Icons.lock_outline, size: 28, color: Color(0xFF10B981)),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Text(
                 !_isConfirm ? 'Create App PIN' : 'Confirm Your PIN',
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
@@ -104,12 +105,13 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                 !_isConfirm ? 'Set a 4-digit security PIN to protect app access' : 'Re-enter your 4-digit PIN',
                 style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
               if (_errorMsg != null)
-                Text(_errorMsg!, style: const TextStyle(color: const Color(0xFFF43F5E), fontSize: 12)),
-
-              const SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Text(_errorMsg!, style: const TextStyle(color: Color(0xFFF43F5E), fontSize: 12)),
+                ),
 
               // PIN Dots
               Row(
@@ -118,8 +120,8 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                   final filled = index < digits.length;
                   return Container(
                     margin: const EdgeInsets.symmetric(horizontal: 8),
-                    width: 16,
-                    height: 16,
+                    width: 14,
+                    height: 14,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: filled ? const Color(0xFF10B981) : Colors.transparent,
@@ -128,11 +130,11 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                   );
                 }),
               ),
-              const Spacer(),
+              const SizedBox(height: 20),
 
               // Biometric switch
               Container(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.04),
                   border: Border.all(color: Colors.white.withOpacity(0.08)),
@@ -156,24 +158,28 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               // Keypad
-              GridView.count(
-                shrinkWrap: true,
-                crossAxisCount: 3,
-                childAspectRatio: 1.5,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                children: [
-                  ...['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => _buildKey(num)),
-                  const SizedBox(),
-                  _buildKey('0'),
-                  IconButton(
-                    icon: const Icon(Icons.backspace_outlined, color: Colors.grey),
-                    onPressed: _handleDelete,
-                  ),
-                ],
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 320),
+                child: GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 3,
+                  childAspectRatio: 1.6,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  children: [
+                    ...['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => _buildKey(num)),
+                    const SizedBox(),
+                    _buildKey('0'),
+                    IconButton(
+                      icon: const Icon(Icons.backspace_outlined, color: Colors.grey),
+                      onPressed: _handleDelete,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -185,14 +191,14 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
   Widget _buildKey(String label) {
     return InkWell(
       onTap: () => _handleKeyPress(label),
-      borderRadius: BorderRadius.circular(30),
+      borderRadius: BorderRadius.circular(25),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.06),
           shape: BoxShape.circle,
         ),
         child: Center(
-          child: Text(label, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+          child: Text(label, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
         ),
       ),
     );
