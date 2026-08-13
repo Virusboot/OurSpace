@@ -494,15 +494,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
-          // Sun / Moon Theme Toggle Button ☀️ / 🌙
-          IconButton(
-            icon: Icon(
-              isDark ? Icons.wb_sunny_outlined : Icons.nightlight_round,
-              color: isDark ? Colors.amber : const Color(0xFF0F172A),
-            ),
-            tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
-            onPressed: widget.onToggleTheme,
-          ),
           IconButton(
             icon: Icon(_isSearching ? Icons.close : Icons.search_rounded, color: isDark ? Colors.white70 : const Color(0xFF475569)),
             onPressed: () => setState(() => _isSearching = !_isSearching),
@@ -556,9 +547,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: Row(
                 children: [
-                  Expanded(child: _buildNavTab(0, 'Chats', Icons.chat_bubble_rounded, badgeCount: 1)),
-                  Expanded(child: _buildNavTab(1, 'Calls', Icons.phone_rounded)),
-                  Expanded(child: _buildNavTab(2, 'Security', Icons.shield_rounded)),
+                  Expanded(child: _buildNavTab(0, 'Chats', badgeCount: 1)),
+                  Expanded(child: _buildNavTab(1, 'Calls')),
+                  Expanded(child: _buildNavTab(2, 'Security')),
                 ],
               ),
             ),
@@ -580,7 +571,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildNavTab(int index, String label, IconData icon, {int badgeCount = 0}) {
+  Widget _buildNavTab(int index, String label, {int badgeCount = 0}) {
     final isSelected = _activeTab == index;
 
     return GestureDetector(
@@ -595,8 +586,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 16, color: isSelected ? Colors.black : Colors.grey),
-            const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(

@@ -93,23 +93,6 @@ class _CallScreenState extends State<CallScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // E2EE Emoji Key Fingerprint Verification Badge (Telegram / Signal style)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.04),
-                    border: Border.all(color: Colors.white.withOpacity(0.08)),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Security Fingerprint:  ', style: TextStyle(color: Colors.grey, fontSize: 11)),
-                      Text('🔒  🛡️  🔑  ✨', style: TextStyle(fontSize: 14)),
-                    ],
-                  ),
-                ),
-
                 // Caller Avatar & Status
                 Expanded(
                   child: Center(
