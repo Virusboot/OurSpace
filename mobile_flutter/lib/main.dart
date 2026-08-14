@@ -72,10 +72,11 @@ class _SecureChatAppState extends State<SecureChatApp> {
   }
 
   void _handleIdentityCreated(Map<String, dynamic> newUser, String recKey) {
+    WebSocketClient().connect();
     setState(() {
       _user = newUser;
       _recoveryKey = recKey;
-      _currentScreen = 'create_pin';
+      _currentScreen = 'home';
     });
   }
 

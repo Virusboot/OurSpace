@@ -26,8 +26,8 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _appLock = true;
-  bool _biometric = true;
+  bool _appLock = false;
+  bool _biometric = false;
   bool _ghostMode = false;
   bool _showRecoveryKey = false;
   XFile? _profileImage;
