@@ -96,7 +96,6 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final scaffoldBg = isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC);
-    final cardBg = isDark ? const Color(0xFF121317) : const Color(0xFFFFFFFF);
     final cardBorder = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
     final inputBg = isDark ? Colors.black.withOpacity(0.4) : const Color(0xFFF1F5F9);
     final textTitle = isDark ? Colors.white : const Color(0xFF0F172A);
@@ -144,134 +143,90 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
 
                 // Full Name Input Box (Only for Sign Up)
                 if (_isSignUp) ...[
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: cardBg,
-                      border: Border.all(color: cardBorder),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Full Name', style: TextStyle(fontSize: 12, color: textSub, fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _nameController,
-                          style: TextStyle(color: inputTxt, fontSize: 14),
-                          decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF0066FF), size: 20),
-                            filled: true,
-                            fillColor: inputBg,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                            hintText: 'e.g. Alex Smith',
-                            hintStyle: TextStyle(color: textSub),
-                          ),
-                        ),
-                      ],
+                  Text('Full Name', style: TextStyle(fontSize: 13, color: textTitle, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _nameController,
+                    style: TextStyle(color: inputTxt, fontSize: 14),
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF0066FF), size: 20),
+                      filled: true,
+                      fillColor: inputBg,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cardBorder)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cardBorder)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF0066FF), width: 1.5)),
+                      hintText: 'e.g. Alex Smith',
+                      hintStyle: TextStyle(color: textSub, fontSize: 13),
                     ),
                   ),
                   const SizedBox(height: 16),
                 ],
 
                 // Email Input Box
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: cardBg,
-                    border: Border.all(color: cardBorder),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Email Address', style: TextStyle(fontSize: 12, color: textSub, fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _emailController,
-                        style: TextStyle(color: inputTxt, fontSize: 14),
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF0066FF), size: 20),
-                          filled: true,
-                          fillColor: inputBg,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                          hintText: 'name@domain.com',
-                          hintStyle: TextStyle(color: textSub),
-                        ),
-                      ),
-                    ],
+                Text('Email Address', style: TextStyle(fontSize: 13, color: textTitle, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _emailController,
+                  style: TextStyle(color: inputTxt, fontSize: 14),
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF0066FF), size: 20),
+                    filled: true,
+                    fillColor: inputBg,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cardBorder)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cardBorder)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF0066FF), width: 1.5)),
+                    hintText: 'name@domain.com',
+                    hintStyle: TextStyle(color: textSub, fontSize: 13),
                   ),
                 ),
                 const SizedBox(height: 16),
 
                 // Password Input Box
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: cardBg,
-                    border: Border.all(color: cardBorder),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Password', style: TextStyle(fontSize: 12, color: textSub, fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _passwordController,
-                        obscureText: _obscurePassword,
-                        style: TextStyle(color: inputTxt, fontSize: 14),
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF0066FF), size: 20),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                              color: textSub,
-                              size: 20,
-                            ),
-                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                          ),
-                          filled: true,
-                          fillColor: inputBg,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                          hintText: 'Enter Password',
-                          hintStyle: TextStyle(color: textSub),
-                        ),
+                Text('Password', style: TextStyle(fontSize: 13, color: textTitle, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  style: TextStyle(color: inputTxt, fontSize: 14),
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF0066FF), size: 20),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                        color: textSub,
+                        size: 20,
                       ),
-                    ],
+                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    ),
+                    filled: true,
+                    fillColor: inputBg,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cardBorder)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cardBorder)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF0066FF), width: 1.5)),
+                    hintText: 'Enter Password',
+                    hintStyle: TextStyle(color: textSub, fontSize: 13),
                   ),
                 ),
                 const SizedBox(height: 16),
 
                 // Confirm Password (Only for Sign Up)
                 if (_isSignUp) ...[
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: cardBg,
-                      border: Border.all(color: cardBorder),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Confirm Password', style: TextStyle(fontSize: 12, color: textSub, fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _confirmPasswordController,
-                          obscureText: _obscurePassword,
-                          style: TextStyle(color: inputTxt, fontSize: 14),
-                          decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.lock_reset, color: Color(0xFF0066FF), size: 20),
-                            filled: true,
-                            fillColor: inputBg,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                            hintText: 'Re-enter Password',
-                            hintStyle: TextStyle(color: textSub),
-                          ),
-                        ),
-                      ],
+                  Text('Confirm Password', style: TextStyle(fontSize: 13, color: textTitle, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _confirmPasswordController,
+                    obscureText: _obscurePassword,
+                    style: TextStyle(color: inputTxt, fontSize: 14),
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.lock_reset_rounded, color: Color(0xFF0066FF), size: 20),
+                      filled: true,
+                      fillColor: inputBg,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cardBorder)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cardBorder)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF0066FF), width: 1.5)),
+                      hintText: 'Re-enter Password',
+                      hintStyle: TextStyle(color: textSub, fontSize: 13),
                     ),
                   ),
                   const SizedBox(height: 16),
