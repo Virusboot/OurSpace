@@ -250,6 +250,75 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  void _confirmClearChat() {
+    final isDark = widget.isDarkMode;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF14161C) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Clear Chat History?', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold)),
+        content: Text('Are you sure you want to clear all messages in this conversation? This action cannot be undone.', style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), fontSize: 14)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF43F5E),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() {
+                _messages.clear();
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Chat history cleared'), duration: Duration(seconds: 2)),
+              );
+            },
+            child: const Text('Clear', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmBlockUser() {
+    final isDark = widget.isDarkMode;
+    final rawName = widget.recipient['username'] ?? 'User';
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF14161C) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Block $rawName?', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold)),
+        content: Text('Blocked contacts will no longer be able to call you or send you messages.', style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), fontSize: 14)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF43F5E),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('$rawName has been blocked'), duration: const Duration(seconds: 2), backgroundColor: const Color(0xFFF43F5E)),
+              );
+              widget.onBack();
+            },
+            child: const Text('Block', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showRecipientProfileModal() {
     final rawName = widget.recipient['username'] ?? 'User';
     final displayName = rawName.startsWith('@') ? 'Salina Gomez' : rawName;
@@ -603,9 +672,69 @@ class _ChatScreenState extends State<ChatScreen> {
                       icon: const Icon(Icons.videocam_outlined, color: Color(0xFF0066FF), size: 24),
                       onPressed: () => widget.onStartCall('video', widget.recipient),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.timer_outlined, color: Color(0xFF0066FF), size: 22),
-                      onPressed: _showTimerPickerModal,
+                    PopupMenuButton<String>(
+                      icon: Icon(Icons.more_vert_rounded, color: iconCol, size: 24),
+                      color: isDark ? const Color(0xFF191B22) : Colors.white,
+                      elevation: 8,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      onSelected: (value) {
+                        switch (value) {
+                          case 'profile':
+                            _showRecipientProfileModal();
+                            break;
+                          case 'timer':
+                            _showTimerPickerModal();
+                            break;
+                          case 'clear':
+                            _confirmClearChat();
+                            break;
+                          case 'block':
+                            _confirmBlockUser();
+                            break;
+                        }
+                      },
+                      itemBuilder: (ctx) => [
+                        PopupMenuItem(
+                          value: 'profile',
+                          child: Row(
+                            children: [
+                              Icon(Icons.person_outline_rounded, color: isDark ? Colors.white70 : const Color(0xFF475569), size: 20),
+                              const SizedBox(width: 12),
+                              Text('View Contact Info', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14)),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'timer',
+                          child: Row(
+                            children: [
+                              Icon(Icons.timer_outlined, color: isDark ? Colors.white70 : const Color(0xFF475569), size: 20),
+                              const SizedBox(width: 12),
+                              Text('Disappearing Messages', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14)),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'clear',
+                          child: Row(
+                            children: [
+                              Icon(Icons.cleaning_services_outlined, color: isDark ? Colors.white70 : const Color(0xFF475569), size: 20),
+                              const SizedBox(width: 12),
+                              Text('Clear Chat History', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14)),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'block',
+                          child: const Row(
+                            children: [
+                              Icon(Icons.block_rounded, color: Color(0xFFF43F5E), size: 20),
+                              SizedBox(width: 12),
+                              Text('Block Contact', style: TextStyle(color: Color(0xFFF43F5E), fontSize: 14, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
