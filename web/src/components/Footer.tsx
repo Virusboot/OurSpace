@@ -30,14 +30,13 @@ export const Footer: React.FC = () => {
           <p style={{ margin: 0, fontWeight: 600, color: '#475569' }}>© 2026 OurSpace Privacy Chat. All rights reserved.</p>
         </div>
 
+        {/* Footer Nav Links: Privacy Policy & Terms & Conditions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
-          <a href="/about" style={{ color: '#475569', textDecoration: 'none', fontWeight: 600 }}>About Us</a>
-          <span>•</span>
           <a href="/privacy" style={{ color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Privacy Policy</a>
           <span>•</span>
           <a href="/terms" style={{ color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Terms & Conditions</a>
           <span>•</span>
-          <a href="/contact" style={{ color: '#c026d3', textDecoration: 'none', fontWeight: 700 }}>Contact Us</a>
+          <span style={{ color: '#c026d3', fontWeight: 700 }}>A Private Space For Two</span>
         </div>
       </div>
     </footer>

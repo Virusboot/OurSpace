@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, Menu, X, Shield } from 'lucide-react';
+import { Download, Menu, X } from 'lucide-react';
 import logoImg from '../assets/logo.png';
 
 export const Header: React.FC = () => {
@@ -27,7 +27,7 @@ export const Header: React.FC = () => {
           justifyContent: 'space-between',
         }}
       >
-        {/* Brand Official Logo Image */}
+        {/* Brand Official Transparent Logo Image */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <a href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
             <img
@@ -53,12 +53,10 @@ export const Header: React.FC = () => {
           </span>
         </div>
 
-        {/* Desktop Nav Links */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }} className="hidden lg:flex">
+        {/* Desktop Nav Links: Home, About Us, Contact Us */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '28px' }} className="hidden lg:flex">
           <a href="/" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Home</a>
           <a href="/about" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>About Us</a>
-          <a href="/privacy" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Privacy Policy</a>
-          <a href="/terms" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Terms & Conditions</a>
           <a href="/contact" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Contact Us</a>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '20px', backgroundColor: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#059669', fontSize: '12px', fontWeight: 700 }}>
@@ -120,8 +118,6 @@ export const Header: React.FC = () => {
         >
           <a href="/" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '15px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Home</a>
           <a href="/about" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '15px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>About Us</a>
-          <a href="/privacy" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '15px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Privacy Policy</a>
-          <a href="/terms" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '15px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Terms & Conditions</a>
           <a href="/contact" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '15px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Contact Us</a>
           <button
             onClick={() => alert('OurSpace Mobile App (v1.0.0) is available on Google Play Store.')}
