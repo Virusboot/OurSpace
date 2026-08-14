@@ -43,7 +43,6 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     _checkGhostMode();
-    _loadSampleMessages();
     _initChat();
     _listenToWebSockets();
   }
@@ -122,45 +121,7 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  void _loadSampleMessages() {
-    _messages.addAll([
-      {
-        'id': 'm1',
-        'senderId': widget.recipient['id'] ?? 'u2',
-        'decryptedText': 'Hi! I am waiting for you',
-        'time': '5:22',
-        'isTyping': false,
-      },
-      {
-        'id': 'm2',
-        'senderId': widget.user['id'] ?? 'u1',
-        'decryptedText': 'Have you done it?',
-        'time': '5:22',
-        'isTyping': false,
-      },
-      {
-        'id': 'm3',
-        'senderId': widget.recipient['id'] ?? 'u2',
-        'decryptedText': 'Nop! just looking at it 😁😂',
-        'time': '5:22',
-        'isTyping': false,
-      },
-      {
-        'id': 'm4',
-        'senderId': widget.user['id'] ?? 'u1',
-        'decryptedText': 'Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s,',
-        'time': '5:22',
-        'isTyping': false,
-      },
-      {
-        'id': 'm5',
-        'senderId': widget.recipient['id'] ?? 'u2',
-        'decryptedText': '',
-        'time': '5:22',
-        'isTyping': true,
-      },
-    ]);
-  }
+
 
   Future<void> _initChat() async {
     try {

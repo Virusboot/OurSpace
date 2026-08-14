@@ -43,52 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
 
-  final List<Map<String, dynamic>> _conversations = [
-    {
-      'id': 'c1',
-      'username': 'Salina Desuza',
-      'handle': '@salina_desuza',
-      'privateId': 'USER-98X12A',
-      'lastMessage': 'Hi! I am waiting for you',
-      'time': '5:22',
-      'unread': 5,
-      'isOnline': true,
-      'publicKey': 'PUB-12345',
-    },
-    {
-      'id': 'c2',
-      'username': 'James Watemore',
-      'handle': '@james_w',
-      'privateId': 'USER-44B90Z',
-      'lastMessage': 'Ok great!👍👍',
-      'time': '12:45',
-      'unread': 0,
-      'isOnline': false,
-      'publicKey': 'PUB-67890',
-    },
-    {
-      'id': 'c3',
-      'username': 'Julia Smith',
-      'handle': '@julia_s',
-      'privateId': 'USER-77C11Q',
-      'lastMessage': 'It is gona be fun 🤨😁✌️',
-      'time': 'Yesterday',
-      'unread': 2,
-      'isOnline': true,
-      'publicKey': 'PUB-11223',
-    },
-    {
-      'id': 'c4',
-      'username': 'Alex Jazz',
-      'handle': '@alex_j',
-      'privateId': 'USER-88D99M',
-      'lastMessage': 'Yup!',
-      'time': 'Mon',
-      'unread': 0,
-      'isOnline': false,
-      'publicKey': 'PUB-44556',
-    },
-  ];
+  final List<Map<String, dynamic>> _conversations = [];
 
   void _showNewActionSheet() {
     final isDark = widget.isDarkMode;
@@ -593,13 +548,49 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: _activeTab == 0
                           ? (filteredConvs.isEmpty
                               ? Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.search_off_rounded, size: 44, color: searchHint),
-                                      const SizedBox(height: 12),
-                                      Text('No chats found matching "$filterQuery"', style: TextStyle(color: itemSubtxt, fontSize: 13, fontWeight: FontWeight.w500)),
-                                    ],
+                                  child: SingleChildScrollView(
+                                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(20),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF0066FF).withOpacity(0.12),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.3), width: 1.5),
+                                          ),
+                                          child: const Icon(Icons.shield_outlined, size: 48, color: Color(0xFF0066FF)),
+                                        ),
+                                        const SizedBox(height: 20),
+                                        Text(
+                                          filterQuery.isNotEmpty ? 'No chats matching "$filterQuery"' : 'No Active Conversations',
+                                          style: TextStyle(color: itemTxt, fontSize: 18, fontWeight: FontWeight.bold),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          filterQuery.isNotEmpty
+                                              ? 'Try searching with a different name, handle, or Private ID.'
+                                              : 'Your chats are zero-knowledge and end-to-end encrypted. Tap below to start a new secure chat.',
+                                          style: TextStyle(color: itemSubtxt, fontSize: 13, height: 1.5),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        if (filterQuery.isEmpty) ...[
+                                          const SizedBox(height: 24),
+                                          ElevatedButton.icon(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: const Color(0xFF0066FF),
+                                              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                            ),
+                                            onPressed: _showNewActionSheet,
+                                            icon: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                                            label: const Text('Start New Secure Chat', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
                                   ),
                                 )
                               : ListView.builder(
