@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/crypto/e2ee_crypto_service.dart';
 import '../../../../core/networking/api_client.dart';
 import '../../../../core/networking/websocket_client.dart';
@@ -30,6 +31,7 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _inputCtrl = TextEditingController();
+  final ScrollController _scrollCtrl = ScrollController();
   final List<Map<String, dynamic>> _messages = [];
   String? _conversationId;
   int _ttlSeconds = 30; // default 30s
@@ -41,6 +43,14 @@ class _ChatScreenState extends State<ChatScreen> {
     _loadSampleMessages();
     _initChat();
     _listenToWebSockets();
+  }
+
+  @override
+  void dispose() {
+    _inputCtrl.dispose();
+    _scrollCtrl.dispose();
+    _wsSubscription?.cancel();
+    super.dispose();
   }
 
   void _listenToWebSockets() {
@@ -82,13 +92,6 @@ class _ChatScreenState extends State<ChatScreen> {
         }
       }
     });
-  }
-
-  @override
-  void dispose() {
-    _wsSubscription?.cancel();
-    _inputCtrl.dispose();
-    super.dispose();
   }
 
   void _loadSampleMessages() {
@@ -180,6 +183,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _messages.removeWhere((m) => m['isTyping'] == true);
       _messages.add(localMsg);
     });
+    _scrollToBottom();
 
     if (_conversationId != null) {
       WebSocketClient().send({
@@ -192,6 +196,83 @@ class _ChatScreenState extends State<ChatScreen> {
         'ttlSeconds': _ttlSeconds,
       });
     }
+  }
+
+  void _scrollToBottom() {
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_scrollCtrl.hasClients) {
+        _scrollCtrl.animateTo(
+          _scrollCtrl.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  Future<void> _pickAttachmentImage(ImageSource source, {bool isViewOnce = false}) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: source, maxWidth: 1000, maxHeight: 1000, imageQuality: 85);
+      if (picked != null) {
+        widget.onOpenImageViewer(picked.path, isViewOnce);
+      }
+    } catch (_) {}
+  }
+
+  void _showAttachmentOptions() {
+    final isDark = widget.isDarkMode;
+    final cardBg = isDark ? const Color(0xFF14161C) : Colors.white;
+    final txtColor = isDark ? Colors.white : const Color(0xFF0F172A);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cardBg,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(color: Colors.grey.withOpacity(0.4), borderRadius: BorderRadius.circular(2)),
+              ),
+              const SizedBox(height: 16),
+              Text('Share Media Attachment', style: TextStyle(color: txtColor, fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const CircleAvatar(backgroundColor: Color(0xFF0066FF), child: Icon(Icons.camera_alt_rounded, color: Colors.white, size: 20)),
+                title: Text('Take Camera Photo', style: TextStyle(color: txtColor, fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAttachmentImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const CircleAvatar(backgroundColor: Color(0xFF0066FF), child: Icon(Icons.photo_library_rounded, color: Colors.white, size: 20)),
+                title: Text('Choose Gallery Image', style: TextStyle(color: txtColor, fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAttachmentImage(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: const CircleAvatar(backgroundColor: Color(0xFFF43F5E), child: Icon(Icons.visibility_off_rounded, color: Colors.white, size: 20)),
+                title: const Text('Send View-Once Media', style: TextStyle(color: Color(0xFFF43F5E), fontWeight: FontWeight.w600)),
+                subtitle: const Text('Recipient can view photo only once before auto-destruction', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAttachmentImage(ImageSource.gallery, isViewOnce: true);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showTimerPickerModal() {
@@ -752,6 +833,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     boxShadow: isDark ? null : [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, -4))],
                   ),
                   child: ListView.builder(
+                    controller: _scrollCtrl,
                     padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
                     itemCount: _messages.length,
                     itemBuilder: (ctx, idx) {
@@ -871,9 +953,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   children: [
                     // Blue Circle '+' Button
                     GestureDetector(
-                      onTap: () {
-                        widget.onOpenImageViewer('https://via.placeholder.com/400', true);
-                      },
+                      onTap: _showAttachmentOptions,
                       child: Container(
                         width: 44,
                         height: 44,

@@ -28,6 +28,20 @@ class _HomeScreenState extends State<HomeScreen> {
   int _activeTab = 0; // 0: Chat, 1: Calls, 2: Status, 3: Settings
   final TextEditingController _searchCtrl = TextEditingController();
 
+  @override
+  void initState() {
+    super.initState();
+    _searchCtrl.addListener(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
 
   final List<Map<String, dynamic>> _conversations = [
     {
@@ -442,6 +456,14 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = widget.isDarkMode;
+    final filterQuery = _searchCtrl.text.trim().toLowerCase();
+    final filteredConvs = _conversations.where((c) {
+      final name = c['username'].toString().toLowerCase();
+      final handle = (c['handle'] ?? '').toString().toLowerCase();
+      final pid = (c['privateId'] ?? '').toString().toLowerCase();
+      return name.contains(filterQuery) || handle.contains(filterQuery) || pid.contains(filterQuery);
+    }).toList();
+
     final scaffoldBg = isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC);
     final headerTxt = isDark ? Colors.white : const Color(0xFF0F172A);
     final searchBg = isDark ? const Color(0xFF191B20) : const Color(0xFFEDF2F7);
@@ -569,82 +591,93 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Expanded(
                       child: _activeTab == 0
-                          ? ListView.builder(
-                              padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
-                              itemCount: _conversations.length,
-                              itemBuilder: (ctx, idx) {
-                                final item = _conversations[idx];
-                                final unread = item['unread'] as int;
-                                final isSelected = idx == 0;
+                          ? (filteredConvs.isEmpty
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.search_off_rounded, size: 44, color: searchHint),
+                                      const SizedBox(height: 12),
+                                      Text('No chats found matching "$filterQuery"', style: TextStyle(color: itemSubtxt, fontSize: 13, fontWeight: FontWeight.w500)),
+                                    ],
+                                  ),
+                                )
+                              : ListView.builder(
+                                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
+                                  itemCount: filteredConvs.length,
+                                  itemBuilder: (ctx, idx) {
+                                    final item = filteredConvs[idx];
+                                    final unread = item['unread'] as int;
+                                    final isSelected = idx == 0;
 
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  decoration: BoxDecoration(
-                                    color: isSelected ? itemSelectedBg : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: ListTile(
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                                    onTap: () => widget.onOpenChat(item),
-                                     leading: CircleAvatar(
-                                       radius: 25,
-                                       backgroundColor: avatarBg,
-                                       child: (item['profileImage'] != null && File(item['profileImage']).existsSync())
-                                           ? ClipRRect(
-                                               borderRadius: BorderRadius.circular(25),
-                                               child: Image.file(
-                                                 File(item['profileImage']),
-                                                 width: 50,
-                                                 height: 50,
-                                                 fit: BoxFit.cover,
-                                               ),
-                                             )
-                                           : Text(
-                                               item['username'].toString().substring(0, 1).toUpperCase(),
-                                               style: TextStyle(color: avatarTxt, fontWeight: FontWeight.bold, fontSize: 17),
-                                             ),
-                                     ),
-                                    title: Text(
-                                      item['username'],
-                                      style: TextStyle(
-                                        color: itemTxt,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15,
+                                    return Container(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      decoration: BoxDecoration(
+                                        color: isSelected ? itemSelectedBg : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(20),
                                       ),
-                                    ),
-                                    subtitle: Padding(
-                                      padding: const EdgeInsets.only(top: 4),
-                                      child: Text(
-                                        item['lastMessage'],
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          color: itemSubtxt,
-                                          fontSize: 13,
+                                      child: ListTile(
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                                        onTap: () => widget.onOpenChat(item),
+                                        leading: CircleAvatar(
+                                          radius: 25,
+                                          backgroundColor: avatarBg,
+                                          child: (item['profileImage'] != null && File(item['profileImage']).existsSync())
+                                              ? ClipRRect(
+                                                  borderRadius: BorderRadius.circular(25),
+                                                  child: Image.file(
+                                                    File(item['profileImage']),
+                                                    width: 50,
+                                                    height: 50,
+                                                    fit: BoxFit.cover,
+                                                  ),
+                                                )
+                                              : Text(
+                                                  item['username'].toString().substring(0, 1).toUpperCase(),
+                                                  style: TextStyle(color: avatarTxt, fontWeight: FontWeight.bold, fontSize: 17),
+                                                ),
                                         ),
+                                        title: Text(
+                                          item['username'],
+                                          style: TextStyle(
+                                            color: itemTxt,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15,
+                                          ),
+                                        ),
+                                        subtitle: Padding(
+                                          padding: const EdgeInsets.only(top: 4),
+                                          child: Text(
+                                            item['lastMessage'],
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: itemSubtxt,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                        trailing: unread > 0
+                                            ? Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFF0066FF),
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                                child: Text(
+                                                  '$unread',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              )
+                                            : null,
                                       ),
-                                    ),
-                                    trailing: unread > 0
-                                        ? Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFF0066FF),
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                            child: Text(
-                                              '$unread',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          )
-                                        : null,
-                                  ),
-                                );
-                              },
-                            )
+                                    );
+                                  },
+                                ))
                           : _buildSecondaryTabContent(),
                     ),
                   ],
