@@ -517,6 +517,23 @@ class _HomeScreenState extends State<HomeScreen> {
                       letterSpacing: -0.4,
                     ),
                   ),
+                  InkWell(
+                    onTap: _showNewActionSheet,
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0066FF).withOpacity(0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.add_rounded,
+                        color: Color(0xFF0066FF),
+                        size: 26,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -687,33 +704,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 isSelected: _activeTab == 1,
                 onTap: () => setState(() => _activeTab = 1),
               ),
-              // 3. Glowing Gradient Center FAB Button (+)
-              GestureDetector(
-                onTap: _showNewActionSheet,
-                child: Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF0066FF), Color(0xFF0052CC)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF0066FF).withOpacity(0.45),
-                        blurRadius: 16,
-                        spreadRadius: 2,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.add_rounded, color: Colors.white, size: 28),
-                  ),
-                ),
-              ),
+
               // 4. Voice Notes Tab (Coming Soon)
               _buildNavItem(
                 index: 2,
