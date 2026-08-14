@@ -1,5 +1,4 @@
 import React from 'react';
-import logoImg from '../assets/logo.png';
 
 export const Footer: React.FC = () => {
   return (
@@ -25,8 +24,7 @@ export const Footer: React.FC = () => {
           gap: '20px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <img src={logoImg} alt="OurSpace Logo" style={{ height: '36px', width: 'auto', display: 'block', objectFit: 'contain' }} />
+        <div>
           <p style={{ margin: 0, fontWeight: 600, color: '#475569' }}>© 2026 OurSpace Privacy Chat. All rights reserved.</p>
         </div>
 
