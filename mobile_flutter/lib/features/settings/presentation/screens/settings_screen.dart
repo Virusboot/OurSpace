@@ -680,49 +680,80 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           clipBehavior: Clip.none,
                           children: [
                             Container(
-                              width: 68,
-                              height: 68,
+                              width: 76,
+                              height: 76,
+                              padding: const EdgeInsets.all(3),
                               decoration: BoxDecoration(
-                                gradient: _profileImage == null
-                                    ? const LinearGradient(
-                                        colors: [Color(0xFF0066FF), Color(0xFF00C6FF)],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                      )
-                                    : null,
-                                borderRadius: BorderRadius.circular(24),
-                                border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.5), width: 2),
+                                shape: BoxShape.circle,
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF0066FF), Color(0xFF00C6FF), Color(0xFF0044B3)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF0066FF).withOpacity(0.35),
+                                    blurRadius: 18,
+                                    offset: const Offset(0, 5),
+                                  ),
+                                ],
                               ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(22),
-                                child: _profileImage != null
-                                    ? Image.file(
-                                        File(_profileImage!.path),
-                                        fit: BoxFit.cover,
-                                      )
-                                    : Center(
-                                        child: Text(
-                                          username.replaceAll('@', '').substring(0, 1).toUpperCase(),
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 28,
-                                            fontWeight: FontWeight.bold,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: cardBg,
+                                  border: Border.all(color: cardBg, width: 2),
+                                ),
+                                child: ClipOval(
+                                  child: _profileImage != null
+                                      ? Image.file(
+                                          File(_profileImage!.path),
+                                          width: 68,
+                                          height: 68,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : Container(
+                                          width: 68,
+                                          height: 68,
+                                          decoration: const BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            gradient: LinearGradient(
+                                              colors: [Color(0xFF0066FF), Color(0xFF0044B3)],
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                            ),
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              username.replaceAll('@', '').substring(0, 1).toUpperCase(),
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 30,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
                                           ),
                                         ),
-                                      ),
+                                ),
                               ),
                             ),
                             Positioned(
-                              right: -4,
-                              bottom: -4,
+                              right: 0,
+                              bottom: 0,
                               child: Container(
                                 padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF0066FF),
                                   shape: BoxShape.circle,
                                   border: Border.all(color: cardBg, width: 2.5),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 6,
+                                    ),
+                                  ],
                                 ),
-                                child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 12),
+                                child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 13),
                               ),
                             ),
                           ],
