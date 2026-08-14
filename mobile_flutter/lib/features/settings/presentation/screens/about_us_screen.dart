@@ -132,8 +132,21 @@ class AboutUsScreen extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(color: subColor, fontSize: 13, fontWeight: FontWeight.w500)),
-        Text(value, style: const TextStyle(color: Color(0xFF0066FF), fontSize: 12, fontWeight: FontWeight.bold)),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(color: subColor, fontSize: 12, fontWeight: FontWeight.w500),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: const TextStyle(color: Color(0xFF0066FF), fontSize: 11, fontWeight: FontWeight.bold),
+          ),
+        ),
       ],
     );
   }
