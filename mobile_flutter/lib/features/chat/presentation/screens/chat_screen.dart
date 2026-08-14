@@ -887,9 +887,13 @@ class _ChatScreenState extends State<ChatScreen> {
                             children: [
                               Icon(Icons.visibility_off_rounded, color: Color(0xFF0066FF), size: 16),
                               SizedBox(width: 8),
-                              Text(
-                                '👻 GHOST MODE ACTIVE: 30s Auto-Disappear & View-Once',
-                                style: TextStyle(color: Color(0xFF0066FF), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                              Flexible(
+                                child: Text(
+                                  '👻 GHOST MODE ACTIVE: 30s Auto-Disappear & View-Once',
+                                  style: TextStyle(color: Color(0xFF0066FF), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                                  textAlign: TextAlign.center,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             ],
                           ),

@@ -67,7 +67,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Icon(value ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: Colors.white, size: 20),
               const SizedBox(width: 10),
-              Text(value ? 'Ghost Mode Activated (30s Disappearing & View-Once)' : 'Ghost Mode Deactivated'),
+              Expanded(
+                child: Text(
+                  value ? 'Ghost Mode Activated (30s Disappearing & View-Once)' : 'Ghost Mode Deactivated',
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ),
             ],
           ),
           backgroundColor: value ? const Color(0xFF0066FF) : const Color(0xFF64748B),
