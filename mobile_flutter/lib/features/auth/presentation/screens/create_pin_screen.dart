@@ -14,7 +14,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
   String _pin = '';
   String _confirmPin = '';
   bool _isConfirm = false;
-  bool _biometricEnabled = true;
+  bool _biometricEnabled = false;
   String? _errorMsg;
 
   void _handleKeyPress(String digit) {
