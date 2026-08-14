@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../../core/security/native_security_service.dart';
 import '../../../../shared/widgets/security_overlay.dart';
 
 class CallScreen extends StatefulWidget {
@@ -28,6 +29,7 @@ class _CallScreenState extends State<CallScreen> {
   @override
   void initState() {
     super.initState();
+    NativeSecurityService.enableFlagSecure();
     _camEnabled = widget.callType == 'video';
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (mounted) setState(() => _secondsElapsed++);
@@ -36,6 +38,7 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   void dispose() {
+    NativeSecurityService.disableFlagSecure();
     _timer?.cancel();
     super.dispose();
   }

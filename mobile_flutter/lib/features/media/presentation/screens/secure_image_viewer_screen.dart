@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../../../../core/crypto/e2ee_crypto_service.dart';
+import '../../../../core/security/native_security_service.dart';
 import '../../../../shared/widgets/security_overlay.dart';
 
 class SecureImageViewerScreen extends StatefulWidget {
@@ -25,12 +26,14 @@ class _SecureImageViewerScreenState extends State<SecureImageViewerScreen> {
   @override
   void initState() {
     super.initState();
+    NativeSecurityService.enableFlagSecure();
     // Simulate loading image bytes into memory buffer
     _inMemoryBuffer = Uint8List.fromList(widget.imageUri.codeUnits);
   }
 
   @override
   void dispose() {
+    NativeSecurityService.disableFlagSecure();
     // Explicitly zeroize memory buffer before disposal
     if (_inMemoryBuffer != null) {
       E2EECryptoService.wipeBuffer(_inMemoryBuffer!);

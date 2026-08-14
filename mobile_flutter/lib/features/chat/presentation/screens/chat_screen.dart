@@ -8,6 +8,8 @@ import '../../../../core/networking/websocket_client.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 import '../../../../shared/widgets/security_overlay.dart';
 
+import '../../../../core/security/native_security_service.dart';
+
 class ChatScreen extends StatefulWidget {
   final Map<String, dynamic> user;
   final Map<String, dynamic> recipient;
@@ -59,6 +61,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    NativeSecurityService.disableFlagSecure();
     _inputCtrl.dispose();
     _scrollCtrl.dispose();
     _wsSubscription?.cancel();
