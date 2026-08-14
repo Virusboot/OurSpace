@@ -61,18 +61,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.asset('assets/images/Our Space Logo.png', width: 28, height: 28, fit: BoxFit.contain),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'OurSpace',
-                        style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                    ],
+                  const Text(
+                    'OurSpace',
+                    style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 18, letterSpacing: -0.3),
                   ),
                   TextButton(
                     onPressed: widget.onFinish,
