@@ -4,6 +4,7 @@ import {
   Copy, Check, Menu, X, Cpu, RefreshCw, Zap, Download, Activity,
   Globe, Server, Terminal, Radio, ShieldCheck, Heart, Users
 } from 'lucide-react';
+import logoImg from '../assets/logo.png';
 
 export const WebHome: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'join' | 'create'>('join');
@@ -118,9 +119,9 @@ export const WebHome: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <a href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
               <img
-                src="/logo.png"
+                src={logoImg}
                 alt="OurSpace - A Private Space For Two"
-                style={{ height: '42px', width: 'auto', display: 'block', objectFit: 'contain' }}
+                style={{ height: '50px', width: 'auto', display: 'block', objectFit: 'contain' }}
               />
             </a>
             <span
@@ -805,7 +806,7 @@ export const WebHome: React.FC = () => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <img src="/logo.png" alt="OurSpace Logo" style={{ height: '30px', width: 'auto', display: 'block' }} />
+            <img src={logoImg} alt="OurSpace Logo" style={{ height: '36px', width: 'auto', display: 'block', objectFit: 'contain' }} />
             <p style={{ margin: 0, fontWeight: 600, color: '#475569' }}>© 2026 OurSpace Privacy Chat. All rights reserved.</p>
           </div>
 
