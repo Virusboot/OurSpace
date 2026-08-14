@@ -250,6 +250,249 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  void _showRecipientProfileModal() {
+    final rawName = widget.recipient['username'] ?? 'User';
+    final displayName = rawName.startsWith('@') ? 'Salina Gomez' : rawName;
+    final username = rawName.startsWith('@') ? rawName : '@${rawName.toLowerCase().replaceAll(' ', '')}';
+    final privateId = widget.recipient['privateId'] ?? 'USER-${widget.recipient['id'] ?? '891240'}';
+    final profileImgPath = widget.recipient['profileImage'];
+
+    final isDark = widget.isDarkMode;
+    final cardBg = isDark ? const Color(0xFF14161C) : Colors.white;
+    final sectionBg = isDark ? const Color(0xFF1B1D24) : const Color(0xFFF8FAFC);
+    final txtColor = isDark ? Colors.white : const Color(0xFF0F172A);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: cardBg,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (ctx) => SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(ctx).padding.bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(color: Colors.grey.withOpacity(0.4), borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // WhatsApp Style Large Profile Avatar
+            Container(
+              width: 104,
+              height: 104,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: profileImgPath == null
+                    ? const LinearGradient(
+                        colors: [Color(0xFF0066FF), Color(0xFF0044B3)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                border: Border.all(color: const Color(0xFF0066FF), width: 2.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0066FF).withOpacity(0.15),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(52),
+                child: (profileImgPath != null && File(profileImgPath).existsSync())
+                    ? Image.file(
+                        File(profileImgPath),
+                        width: 104,
+                        height: 104,
+                        fit: BoxFit.cover,
+                      )
+                    : Center(
+                        child: Text(
+                          displayName.replaceAll('@', '').substring(0, 1).toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 42,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Display Name & Username
+            Text(
+              displayName,
+              style: TextStyle(color: txtColor, fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              username,
+              style: const TextStyle(color: Color(0xFF0066FF), fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 10),
+
+            // Private ID Badge & Online Status
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0066FF).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    privateId,
+                    style: const TextStyle(
+                      color: Color(0xFF0066FF),
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    children: [
+                      CircleAvatar(radius: 3.5, backgroundColor: Color(0xFF10B981)),
+                      SizedBox(width: 5),
+                      Text(
+                        'Online',
+                        style: TextStyle(color: Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // WhatsApp Style Action Bar (Audio, Video, Search)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildWaActionButton(
+                  icon: Icons.phone_outlined,
+                  label: 'Audio',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    widget.onStartCall('audio', widget.recipient);
+                  },
+                ),
+                _buildWaActionButton(
+                  icon: Icons.videocam_outlined,
+                  label: 'Video',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    widget.onStartCall('video', widget.recipient);
+                  },
+                ),
+                _buildWaActionButton(
+                  icon: Icons.search_rounded,
+                  label: 'Search',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // WhatsApp "About" Section
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: sectionBg,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('About', style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                  const SizedBox(height: 6),
+                  Text('Hey there! I am using OurSpace Privacy Chat.', style: TextStyle(color: txtColor, fontSize: 14, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  const Text('Available | End-to-End Encrypted', style: TextStyle(color: Color(0xFF10B981), fontSize: 12, fontWeight: FontWeight.w500)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // WhatsApp Style Security & Encryption Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: sectionBg,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0)),
+              ),
+              child: const Row(
+                children: [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Color(0xFF10B981),
+                    child: Icon(Icons.lock_rounded, color: Colors.white, size: 18),
+                  ),
+                  SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('End-to-End Encryption', style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 14)),
+                        SizedBox(height: 2),
+                        Text('Messages and calls are secured with AES-256 E2EE keys. Tap to verify.', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWaActionButton({required IconData icon, required String label, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 80,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0066FF).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.2)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: const Color(0xFF0066FF), size: 24),
+            const SizedBox(height: 6),
+            Text(label, style: const TextStyle(color: Color(0xFF0066FF), fontSize: 12, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final rawName = widget.recipient['username'] ?? 'Salina Gomez';
@@ -282,65 +525,74 @@ class _ChatScreenState extends State<ChatScreen> {
                       icon: Icon(Icons.arrow_back_ios_new_rounded, color: iconCol, size: 20),
                       onPressed: widget.onBack,
                     ),
-                    const SizedBox(width: 2),
-                    CircleAvatar(
-                      radius: 19,
-                      backgroundColor: const Color(0xFF0066FF).withOpacity(0.12),
-                      child: (widget.recipient['profileImage'] != null && File(widget.recipient['profileImage']).existsSync())
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(19),
-                              child: Image.file(
-                                File(widget.recipient['profileImage']),
-                                width: 38,
-                                height: 38,
-                                fit: BoxFit.cover,
-                              ),
-                            )
-                          : Text(
-                              displayName.replaceAll('@', '').substring(0, 1).toUpperCase(),
-                              style: const TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.bold, fontSize: 15),
-                            ),
-                    ),
-                    const SizedBox(width: 10),
                     Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            displayName,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: headerTxt,
-                              letterSpacing: -0.2,
+                      child: GestureDetector(
+                        onTap: _showRecipientProfileModal,
+                        behavior: HitTestBehavior.opaque,
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 19,
+                              backgroundColor: const Color(0xFF0066FF).withOpacity(0.12),
+                              child: (widget.recipient['profileImage'] != null && File(widget.recipient['profileImage']).existsSync())
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(19),
+                                      child: Image.file(
+                                        File(widget.recipient['profileImage']),
+                                        width: 38,
+                                        height: 38,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    )
+                                  : Text(
+                                      displayName.replaceAll('@', '').substring(0, 1).toUpperCase(),
+                                      style: const TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.bold, fontSize: 15),
+                                    ),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Container(
-                                width: 7,
-                                height: 7,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF10B981),
-                                  shape: BoxShape.circle,
-                                ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    displayName,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: headerTxt,
+                                      letterSpacing: -0.2,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 7,
+                                        height: 7,
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFF10B981),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'Online',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 5),
-                              Text(
-                                'Online',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     IconButton(
