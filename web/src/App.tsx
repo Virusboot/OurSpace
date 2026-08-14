@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { LandingJoin } from './components/LandingJoin';
 import { ActiveCall } from './components/ActiveCall';
 import { ExpiredLink, InvalidLink } from './components/ExpiredLink';
+import { WebHome } from './components/WebHome';
 import { WebRTCService } from './services/webRTCService';
 
 export const App: React.FC = () => {
@@ -34,7 +35,6 @@ export const App: React.FC = () => {
 
     if (!urlToken) {
       setLoading(false);
-      setErrorStatus('invalid');
       return;
     }
 
@@ -133,6 +133,7 @@ export const App: React.FC = () => {
     );
   }
 
+  if (!token) return <WebHome />;
   if (errorStatus === 'expired') return <ExpiredLink />;
   if (errorStatus === 'invalid') return <InvalidLink />;
 
