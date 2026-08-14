@@ -517,25 +517,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       letterSpacing: -0.4,
                     ),
                   ),
-                  GestureDetector(
-                    onTap: widget.onOpenSettings,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF0066FF),
-                        shape: BoxShape.circle,
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: Image.asset(
-                          'assets/images/Our Space Logo.png',
-                          width: 40,
-                          height: 40,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
