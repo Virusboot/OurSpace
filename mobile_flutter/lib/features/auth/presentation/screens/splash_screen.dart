@@ -18,63 +18,13 @@ class SplashScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // User Provided PNG App Logo Asset
-                    Container(
-                      width: 180,
-                      height: 180,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(44),
-                        border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.5), width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF0066FF).withOpacity(0.45),
-                            blurRadius: 48,
-                            spreadRadius: 6,
-                            offset: const Offset(0, 14),
-                          ),
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.8),
-                            blurRadius: 20,
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(42),
-                        child: Image.asset(
-                          'assets/images/Our Space Logo.png',
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 36),
-
-                    // App Title & Tagline
-                    const Text(
-                      'OurSpace',
-                      style: TextStyle(
-                        fontSize: 44,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF0066FF),
-                        letterSpacing: -1.0,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0066FF).withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.3)),
-                      ),
-                      child: const Text(
-                        'A PRIVATE SPACE FOR TWO',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF0066FF),
-                          letterSpacing: 2.2,
-                        ),
+                    // Full OurSpace Logo (horizontal layout with text included)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                      child: Image.asset(
+                        'assets/images/Our Space Logo.png',
+                        width: double.infinity,
+                        fit: BoxFit.contain,
                       ),
                     ),
                     const SizedBox(height: 36),
@@ -109,7 +59,7 @@ class SplashScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF0066FF).withOpacity(0.4),
+                      color: const Color(0xFFC026D3).withOpacity(0.4),
                       blurRadius: 24,
                       offset: const Offset(0, 6),
                     ),
@@ -117,7 +67,7 @@ class SplashScreen extends StatelessWidget {
                 ),
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0066FF),
+                    backgroundColor: const Color(0xFFC026D3),
                     elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                   ),
@@ -150,7 +100,7 @@ class SplashScreen extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: const Color(0xFF0066FF)),
+          Icon(icon, size: 13, color: const Color(0xFFC026D3)),
           const SizedBox(width: 5),
           Text(label, style: const TextStyle(fontSize: 10, color: Colors.white70, fontWeight: FontWeight.w600)),
         ],
