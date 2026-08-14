@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
-import { Download, Menu, X } from 'lucide-react';
+import React from 'react';
+import { Download } from 'lucide-react';
 import logoImg from '../assets/logo.png';
 
 export const Header: React.FC = () => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
   return (
     <header
       style={{
@@ -25,6 +23,8 @@ export const Header: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '16px',
         }}
       >
         {/* Brand Official Transparent Logo Image */}
@@ -38,8 +38,8 @@ export const Header: React.FC = () => {
           </a>
         </div>
 
-        {/* Right-Aligned Desktop Nav Links: Home, About Us, Contact Us */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '28px', marginLeft: 'auto' }} className="hidden lg:flex">
+        {/* Right-Aligned Desktop & Mobile Nav Links */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginLeft: 'auto', flexWrap: 'wrap' }}>
           <a href="/" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Home</a>
           <a href="/about" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>About Us</a>
           <a href="/contact" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Contact Us</a>
@@ -70,58 +70,7 @@ export const Header: React.FC = () => {
             <span>Get Mobile App</span>
           </button>
         </div>
-
-        {/* Mobile Hamburger Toggle */}
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          style={{
-            display: 'flex',
-            background: 'none',
-            border: '1px solid #e2e8f0',
-            padding: '8px',
-            borderRadius: '10px',
-            color: '#0f172a',
-            cursor: 'pointer',
-            marginLeft: 'auto',
-          }}
-          className="lg:hidden"
-        >
-          {mobileMenuOpen ? <X style={{ width: '22px', height: '22px' }} /> : <Menu style={{ width: '22px', height: '22px' }} />}
-        </button>
       </div>
-
-      {/* Mobile Navigation Drawer */}
-      {mobileMenuOpen && (
-        <div
-          style={{
-            padding: '20px 24px 28px',
-            borderTop: '1px solid #f1f5f9',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-            backgroundColor: '#ffffff',
-          }}
-        >
-          <a href="/" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '15px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Home</a>
-          <a href="/about" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '15px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>About Us</a>
-          <a href="/contact" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '15px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Contact Us</a>
-          <button
-            onClick={() => alert('OurSpace Mobile App (v1.0.0) is available on Google Play Store.')}
-            style={{
-              fontSize: '15px',
-              fontWeight: 'bold',
-              padding: '14px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #d946ef 0%, #8b5cf6 50%, #2563eb 100%)',
-              color: '#ffffff',
-              border: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            Get Mobile App
-          </button>
-        </div>
-      )}
     </header>
   );
 };
