@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'core/storage/secure_storage_service.dart';
 import 'core/networking/websocket_client.dart';
-import 'features/auth/presentation/screens/splash_screen.dart';
 import 'features/auth/presentation/screens/onboarding_screen.dart';
 import 'features/identity/presentation/screens/create_identity_screen.dart';
 import 'features/auth/presentation/screens/create_pin_screen.dart';
@@ -25,7 +24,7 @@ class SecureChatApp extends StatefulWidget {
 }
 
 class _SecureChatAppState extends State<SecureChatApp> {
-  String _currentScreen = 'splash';
+  String _currentScreen = 'loading';
   Map<String, dynamic>? _user;
   String _recoveryKey = 'sample-recovery-key-1234';
   Map<String, dynamic>? _activeRecipient;
@@ -187,10 +186,8 @@ class _SecureChatAppState extends State<SecureChatApp> {
 
   Widget _buildScreen() {
     switch (_currentScreen) {
-      case 'splash':
-        return SplashScreen(
-          onContinue: () => setState(() => _currentScreen = _user != null ? 'home' : 'onboarding'),
-        );
+      case 'loading':
+        return const Scaffold(backgroundColor: Colors.black, body: SizedBox());
       case 'onboarding':
         return OnboardingScreen(
           onFinish: () => setState(() => _currentScreen = 'create_identity'),
