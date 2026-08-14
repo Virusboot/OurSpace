@@ -110,7 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icons.chat_bubble_outline_rounded,
               color: const Color(0xFF0066FF),
               title: 'New Encrypted Chat',
-              subtitle: 'Connect with a user via Username or Private ID',
+              subtitle: 'Connect with a user via unique Username or Private ID',
               onTap: () {
                 Navigator.pop(ctx);
                 _showSearchUserModal();
@@ -118,32 +118,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 12),
             _buildSheetTile(
-              icon: Icons.mic_none_rounded,
-              color: const Color(0xFF0066FF),
-              title: 'New Audio Call',
-              subtitle: 'Start an E2E encrypted HD voice call',
-              onTap: () {
-                Navigator.pop(ctx);
-                widget.onStartCall('audio', null);
-              },
-            ),
-            const SizedBox(height: 12),
-            _buildSheetTile(
-              icon: Icons.videocam_outlined,
-              color: const Color(0xFF0066FF),
-              title: 'New Video Call',
-              subtitle: 'Start an E2E encrypted HD video call',
-              onTap: () {
-                Navigator.pop(ctx);
-                widget.onStartCall('video', null);
-              },
-            ),
-            const SizedBox(height: 12),
-            _buildSheetTile(
               icon: Icons.link_rounded,
               color: const Color(0xFF0066FF),
               title: 'Create Call Link',
-              subtitle: 'Generate a guest WebRTC link to share anywhere',
+              subtitle: 'Generate a guest WebRTC call link to share anywhere',
               onTap: () {
                 Navigator.pop(ctx);
                 _showCreateCallLinkModal();

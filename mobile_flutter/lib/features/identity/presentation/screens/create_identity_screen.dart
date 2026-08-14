@@ -46,7 +46,9 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
       _errorMsg = null;
     });
 
-    final username = '@${email.contains('@') ? email.split('@')[0] : email}';
+    final baseUsername = email.contains('@') ? email.split('@')[0] : email;
+    final randomSuffix = (DateTime.now().millisecondsSinceEpoch % 9000 + 1000).toString();
+    final username = '@${baseUsername.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '')}_$randomSuffix';
     final privateId = 'USER-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
     Map<String, dynamic> userObj;
     String token;
