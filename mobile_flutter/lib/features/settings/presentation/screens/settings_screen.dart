@@ -10,6 +10,7 @@ class SettingsScreen extends StatefulWidget {
   final VoidCallback onToggleTheme;
   final VoidCallback onBack;
   final VoidCallback onLogout;
+  final Function(String? path)? onProfileImageUpdated;
 
   const SettingsScreen({
     Key? key,
@@ -19,6 +20,7 @@ class SettingsScreen extends StatefulWidget {
     required this.onToggleTheme,
     required this.onBack,
     required this.onLogout,
+    this.onProfileImageUpdated,
   }) : super(key: key);
 
   @override
@@ -33,6 +35,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   XFile? _profileImage;
   final ImagePicker _picker = ImagePicker();
 
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedProfileImage();
+  }
+
+  Future<void> _loadSavedProfileImage() async {
+    final savedPath = await SecureStorageService.read('profile_image_path');
+    if (savedPath != null && File(savedPath).existsSync()) {
+      setState(() {
+        _profileImage = XFile(savedPath);
+      });
+    }
+  }
+
   Future<void> _pickImage(ImageSource source) async {
     try {
       final picked = await _picker.pickImage(source: source, maxWidth: 600, maxHeight: 600, imageQuality: 85);
@@ -40,6 +57,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         setState(() {
           _profileImage = picked;
         });
+        await SecureStorageService.write('profile_image_path', picked.path);
+        widget.onProfileImageUpdated?.call(picked.path);
       }
     } catch (_) {}
   }
@@ -84,9 +103,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ListTile(
                   leading: const CircleAvatar(backgroundColor: Color(0xFFF43F5E), child: Icon(Icons.delete_outline_rounded, color: Colors.white, size: 20)),
                   title: const Text('Remove Photo', style: TextStyle(color: Color(0xFFF43F5E), fontWeight: FontWeight.w600)),
-                  onTap: () {
+                  onTap: () async {
                     Navigator.pop(ctx);
                     setState(() => _profileImage = null);
+                    await SecureStorageService.delete('profile_image_path');
+                    widget.onProfileImageUpdated?.call(null);
                   },
                 ),
             ],

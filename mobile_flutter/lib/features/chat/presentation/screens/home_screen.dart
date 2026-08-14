@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../../core/networking/api_client.dart';
 
@@ -585,14 +586,24 @@ class _HomeScreenState extends State<HomeScreen> {
                                   child: ListTile(
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                                     onTap: () => widget.onOpenChat(item),
-                                    leading: CircleAvatar(
-                                      radius: 25,
-                                      backgroundColor: avatarBg,
-                                      child: Text(
-                                        item['username'].toString().substring(0, 1).toUpperCase(),
-                                        style: TextStyle(color: avatarTxt, fontWeight: FontWeight.bold, fontSize: 17),
-                                      ),
-                                    ),
+                                     leading: CircleAvatar(
+                                       radius: 25,
+                                       backgroundColor: avatarBg,
+                                       child: (item['profileImage'] != null && File(item['profileImage']).existsSync())
+                                           ? ClipRRect(
+                                               borderRadius: BorderRadius.circular(25),
+                                               child: Image.file(
+                                                 File(item['profileImage']),
+                                                 width: 50,
+                                                 height: 50,
+                                                 fit: BoxFit.cover,
+                                               ),
+                                             )
+                                           : Text(
+                                               item['username'].toString().substring(0, 1).toUpperCase(),
+                                               style: TextStyle(color: avatarTxt, fontWeight: FontWeight.bold, fontSize: 17),
+                                             ),
+                                     ),
                                     title: Text(
                                       item['username'],
                                       style: TextStyle(

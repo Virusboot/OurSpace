@@ -59,9 +59,13 @@ class _SecureChatAppState extends State<SecureChatApp> {
 
   Future<void> _checkStoredUser() async {
     final stored = await SecureStorageService.read('user_info');
+    final savedImg = await SecureStorageService.read('profile_image_path');
     if (stored != null) {
       try {
         final parsed = jsonDecode(stored) as Map<String, dynamic>;
+        if (savedImg != null) {
+          parsed['profileImage'] = savedImg;
+        }
         setState(() {
           _user = parsed;
           _currentScreen = 'home';
@@ -221,6 +225,13 @@ class _SecureChatAppState extends State<SecureChatApp> {
           onToggleTheme: _toggleTheme,
           onBack: () => setState(() => _currentScreen = 'home'),
           onLogout: _handleLogout,
+          onProfileImageUpdated: (path) {
+            setState(() {
+              if (_user != null) {
+                _user!['profileImage'] = path;
+              }
+            });
+          },
         );
       default:
         return OnboardingScreen(

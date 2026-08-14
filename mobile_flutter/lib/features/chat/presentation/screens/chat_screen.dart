@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../core/crypto/e2ee_crypto_service.dart';
@@ -285,10 +286,20 @@ class _ChatScreenState extends State<ChatScreen> {
                     CircleAvatar(
                       radius: 19,
                       backgroundColor: const Color(0xFF0066FF).withOpacity(0.12),
-                      child: Text(
-                        displayName.replaceAll('@', '').substring(0, 1).toUpperCase(),
-                        style: const TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.bold, fontSize: 15),
-                      ),
+                      child: (widget.recipient['profileImage'] != null && File(widget.recipient['profileImage']).existsSync())
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(19),
+                              child: Image.file(
+                                File(widget.recipient['profileImage']),
+                                width: 38,
+                                height: 38,
+                                fit: BoxFit.cover,
+                              ),
+                            )
+                          : Text(
+                              displayName.replaceAll('@', '').substring(0, 1).toUpperCase(),
+                              style: const TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.bold, fontSize: 15),
+                            ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
