@@ -587,13 +587,16 @@ class _ChatScreenState extends State<ChatScreen> {
             children: [
               // TOP HEADER BAR
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.fromLTRB(4, 6, 8, 6),
                 child: Row(
                   children: [
                     IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                       icon: Icon(Icons.arrow_back_ios_new_rounded, color: iconCol, size: 20),
                       onPressed: widget.onBack,
                     ),
+                    const SizedBox(width: 2),
                     Expanded(
                       child: GestureDetector(
                         onTap: _showRecipientProfileModal,
