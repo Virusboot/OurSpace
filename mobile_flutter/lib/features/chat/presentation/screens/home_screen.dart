@@ -567,7 +567,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 10),
 
             // CHAT LIST SECTION CONTAINER
             Expanded(
@@ -591,7 +591,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Expanded(
                       child: _activeTab == 0
                           ? ListView.builder(
-                              padding: const EdgeInsets.fromLTRB(14, 4, 14, 16),
+                              padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
                               itemCount: _conversations.length,
                               itemBuilder: (ctx, idx) {
                                 final item = _conversations[idx];
