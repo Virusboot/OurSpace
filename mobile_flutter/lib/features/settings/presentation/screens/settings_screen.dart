@@ -631,15 +631,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final sectionHeaderCol = isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
     final cardBg = isDark ? const Color(0xFF121317) : Colors.white;
     final cardBorderCol = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
-    final cardShadows = isDark
-        ? null
-        : [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ];
+    final cardShadows = null;
 
     return Scaffold(
       backgroundColor: bgCol,
@@ -661,15 +653,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Sleek Profile User Card
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: cardBg,
-                border: Border.all(color: cardBorderCol),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: cardShadows,
-              ),
+            // 1. Sleek Profile User Section (Seamless Flat Background, No Outer Box/Shadow)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
               child: Column(
                 children: [
                   Row(
@@ -683,26 +669,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               width: 76,
                               height: 76,
                               padding: const EdgeInsets.all(3),
-                              decoration: BoxDecoration(
+                              decoration: const BoxDecoration(
                                 shape: BoxShape.circle,
-                                gradient: const LinearGradient(
+                                gradient: LinearGradient(
                                   colors: [Color(0xFF0066FF), Color(0xFF00C6FF), Color(0xFF0044B3)],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF0066FF).withOpacity(0.35),
-                                    blurRadius: 18,
-                                    offset: const Offset(0, 5),
-                                  ),
-                                ],
                               ),
                               child: Container(
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: cardBg,
-                                  border: Border.all(color: cardBg, width: 2),
+                                  color: bgCol,
+                                  border: Border.all(color: bgCol, width: 2),
                                 ),
                                 child: ClipOval(
                                   child: _profileImage != null
@@ -745,13 +724,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF0066FF),
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: cardBg, width: 2.5),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
-                                      blurRadius: 6,
-                                    ),
-                                  ],
+                                  border: Border.all(color: bgCol, width: 2.5),
                                 ),
                                 child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 13),
                               ),
