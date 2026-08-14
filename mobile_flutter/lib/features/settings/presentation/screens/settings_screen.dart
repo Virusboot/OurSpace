@@ -57,26 +57,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _toggleAppLock(bool value) async {
     if (value) {
-      final pin = await SecureStorageService.read('user_pin_hash');
-      if (pin == null || pin.isEmpty) {
-        if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (ctx) => CreatePinScreen(
-              isUnlockMode: false,
-              onPinComplete: () async {
-                Navigator.pop(ctx);
-                await SecureStorageService.write('app_lock_enabled', 'true');
-                setState(() => _appLock = true);
-              },
-            ),
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (ctx) => CreatePinScreen(
+            isUnlockMode: false,
+            onPinComplete: () async {
+              Navigator.pop(ctx);
+              await SecureStorageService.write('app_lock_enabled', 'true');
+              setState(() => _appLock = true);
+            },
           ),
-        );
-        return;
-      }
-      await SecureStorageService.write('app_lock_enabled', 'true');
-      setState(() => _appLock = true);
+        ),
+      );
     } else {
       await SecureStorageService.write('app_lock_enabled', 'false');
       setState(() => _appLock = false);
@@ -862,6 +856,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     activeColor: const Color(0xFF0066FF),
                     onChanged: _toggleAppLock,
                   ),
+                  if (_appLock) ...[
+                    Divider(height: 1, color: isDark ? Colors.white10 : const Color(0xFFF1F5F9)),
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                      title: Text('Change App PIN', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
+                      trailing: Icon(Icons.chevron_right_rounded, color: subtxtCol, size: 20),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (ctx) => CreatePinScreen(
+                              isUnlockMode: false,
+                              onPinComplete: () {
+                                Navigator.pop(ctx);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Row(
+                                      children: [
+                                        Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                                        SizedBox(width: 10),
+                                        Text('App PIN updated successfully!'),
+                                      ],
+                                    ),
+                                    backgroundColor: const Color(0xFF10B981),
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                   Divider(height: 1, color: isDark ? Colors.white10 : const Color(0xFFF1F5F9)),
                   SwitchListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
