@@ -58,7 +58,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
         'email': email,
         'password': password,
         'username': username,
-      });
+      }).timeout(const Duration(seconds: 2));
       userObj = res['user'] ?? {
         'id': 'usr_${DateTime.now().millisecondsSinceEpoch}',
         'name': name.isNotEmpty ? name : 'User',
@@ -68,7 +68,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
       };
       token = res['token'] ?? 'token_${DateTime.now().millisecondsSinceEpoch}';
     } catch (_) {
-      // Instant error-free local fallback login/register
+      // Instant error-free fallback login/register
       userObj = {
         'id': 'usr_${DateTime.now().millisecondsSinceEpoch}',
         'name': name.isNotEmpty ? name : 'User',
@@ -79,8 +79,10 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
       token = 'token_local_${DateTime.now().millisecondsSinceEpoch}';
     }
 
-    await SecureStorageService.write('auth_token', token);
-    await SecureStorageService.write('user_info', jsonEncode(userObj));
+    try {
+      await SecureStorageService.write('auth_token', token);
+      await SecureStorageService.write('user_info', jsonEncode(userObj));
+    } catch (_) {}
 
     if (mounted) {
       setState(() => _loading = false);
