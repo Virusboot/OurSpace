@@ -14,6 +14,7 @@ class CreateIdentityScreen extends StatefulWidget {
 
 class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
@@ -22,6 +23,16 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
   bool _obscurePassword = true;
   bool _loading = false;
   String? _errorMsg;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _usernameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   Future<void> _handleLoginOrRegister() async {
     final name = _nameController.text.trim();
@@ -46,9 +57,12 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
       _errorMsg = null;
     });
 
+    final customUsername = _usernameController.text.trim();
     final baseUsername = email.contains('@') ? email.split('@')[0] : email;
     final randomSuffix = (DateTime.now().millisecondsSinceEpoch % 9000 + 1000).toString();
-    final username = '@${baseUsername.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '')}_$randomSuffix';
+    final username = customUsername.isNotEmpty
+        ? (customUsername.startsWith('@') ? customUsername : '@$customUsername')
+        : '@${baseUsername.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '')}_$randomSuffix';
     final privateId = 'USER-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
     Map<String, dynamic> userObj;
     String token;
@@ -141,7 +155,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                   const SizedBox(height: 16),
                 ],
 
-                // Full Name Input Box (Only for Sign Up)
+                // Full Name & Username Input Boxes (Only for Sign Up)
                 if (_isSignUp) ...[
                   Text('Full Name', style: TextStyle(fontSize: 13, color: textTitle, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
@@ -156,6 +170,23 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cardBorder)),
                       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF0066FF), width: 1.5)),
                       hintText: 'e.g. Alex Smith',
+                      hintStyle: TextStyle(color: textSub, fontSize: 13),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text('Choose Unique Username', style: TextStyle(fontSize: 13, color: textTitle, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _usernameController,
+                    style: TextStyle(color: inputTxt, fontSize: 14),
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.alternate_email_rounded, color: Color(0xFF0066FF), size: 20),
+                      filled: true,
+                      fillColor: inputBg,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cardBorder)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cardBorder)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF0066FF), width: 1.5)),
+                      hintText: 'e.g. @alex_smith',
                       hintStyle: TextStyle(color: textSub, fontSize: 13),
                     ),
                   ),

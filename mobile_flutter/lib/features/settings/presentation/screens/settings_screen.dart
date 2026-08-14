@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -113,6 +114,127 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditProfileModal() {
+    final isDark = widget.isDarkMode;
+    final nameCtrl = TextEditingController(text: widget.user?['name'] ?? widget.user?['username'] ?? '');
+    final usernameCtrl = TextEditingController(text: widget.user?['username'] ?? '');
+    final bioCtrl = TextEditingController(text: widget.user?['bio'] ?? 'Available on OurSpace E2EE');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? const Color(0xFF14161C) : Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(color: Colors.grey.withOpacity(0.4), borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Edit Profile Info', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold)),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 20),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text('Display Name', style: TextStyle(fontSize: 12, color: isDark ? Colors.grey : const Color(0xFF64748B), fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            TextField(
+              controller: nameCtrl,
+              style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.person_outline_rounded, color: Color(0xFF0066FF), size: 20),
+                filled: true,
+                fillColor: isDark ? Colors.black.withOpacity(0.4) : const Color(0xFFF1F5F9),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text('Username / Handle', style: TextStyle(fontSize: 12, color: isDark ? Colors.grey : const Color(0xFF64748B), fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            TextField(
+              controller: usernameCtrl,
+              style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.alternate_email_rounded, color: Color(0xFF0066FF), size: 20),
+                filled: true,
+                fillColor: isDark ? Colors.black.withOpacity(0.4) : const Color(0xFFF1F5F9),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text('Bio / About', style: TextStyle(fontSize: 12, color: isDark ? Colors.grey : const Color(0xFF64748B), fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            TextField(
+              controller: bioCtrl,
+              maxLines: 2,
+              style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.info_outline_rounded, color: Color(0xFF0066FF), size: 20),
+                filled: true,
+                fillColor: isDark ? Colors.black.withOpacity(0.4) : const Color(0xFFF1F5F9),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0066FF),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                onPressed: () async {
+                  final updatedName = nameCtrl.text.trim();
+                  final updatedUsername = usernameCtrl.text.trim();
+                  final updatedBio = bioCtrl.text.trim();
+                  if (widget.user != null) {
+                    widget.user!['name'] = updatedName;
+                    widget.user!['username'] = updatedUsername.startsWith('@') ? updatedUsername : '@$updatedUsername';
+                    widget.user!['bio'] = updatedBio;
+                    await SecureStorageService.write('user_info', jsonEncode(widget.user));
+                  }
+                  if (!mounted) return;
+                  Navigator.pop(ctx);
+                  setState(() {});
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Row(
+                        children: [
+                          Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                          SizedBox(width: 10),
+                          Text('Profile details updated successfully!'),
+                        ],
+                      ),
+                      backgroundColor: const Color(0xFF10B981),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  );
+                },
+                child: const Text('Save Profile Changes', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -545,16 +667,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ],
                     ),
                   ),
-                  GestureDetector(
-                    onTap: () => _showQrCodeModal(username, privateId),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFF1F5F9),
-                        shape: BoxShape.circle,
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: _showEditProfileModal,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFF1F5F9),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.edit_outlined, color: Color(0xFF0066FF), size: 20),
+                        ),
                       ),
-                      child: const Icon(Icons.qr_code_rounded, color: Color(0xFF0066FF), size: 22),
-                    ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () => _showQrCodeModal(username, privateId),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFF1F5F9),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.qr_code_rounded, color: Color(0xFF0066FF), size: 20),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
