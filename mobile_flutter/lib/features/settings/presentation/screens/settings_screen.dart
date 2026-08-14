@@ -6,6 +6,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:local_auth/local_auth.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 import '../../../auth/presentation/screens/create_pin_screen.dart';
+import 'privacy_policy_screen.dart';
+import 'terms_conditions_screen.dart';
+import 'about_us_screen.dart';
+import 'contact_us_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final Map<String, dynamic>? user;
@@ -1096,6 +1100,128 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           backgroundColor: const Color(0xFF10B981),
                           behavior: SnackBarBehavior.floating,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // 6. LEGAL, ABOUT & SUPPORT Section (Play Store Compliance)
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 8),
+              child: Text('LEGAL, ABOUT & SUPPORT', style: TextStyle(color: sectionHeaderCol, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: cardBorderCol),
+                boxShadow: cardShadows,
+              ),
+              child: Column(
+                children: [
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0066FF).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.shield_outlined, color: Color(0xFF0066FF), size: 20),
+                    ),
+                    title: Text('Privacy Policy', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
+                    subtitle: Text('Zero-Knowledge E2EE Data Protection', style: TextStyle(color: subtxtCol, fontSize: 12)),
+                    trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: subtxtCol),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (ctx) => PrivacyPolicyScreen(
+                            isDarkMode: isDark,
+                            onBack: () => Navigator.pop(ctx),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  Divider(height: 1, color: isDark ? Colors.white10 : const Color(0xFFF1F5F9)),
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0066FF).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.gavel_outlined, color: Color(0xFF0066FF), size: 20),
+                    ),
+                    title: Text('Terms & Conditions', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
+                    subtitle: Text('Service Agreement & Use Guidelines', style: TextStyle(color: subtxtCol, fontSize: 12)),
+                    trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: subtxtCol),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (ctx) => TermsConditionsScreen(
+                            isDarkMode: isDark,
+                            onBack: () => Navigator.pop(ctx),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  Divider(height: 1, color: isDark ? Colors.white10 : const Color(0xFFF1F5F9)),
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0066FF).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.info_outline_rounded, color: Color(0xFF0066FF), size: 20),
+                    ),
+                    title: Text('About OurSpace', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
+                    subtitle: Text('Version 1.0.0 (Build 100)', style: TextStyle(color: subtxtCol, fontSize: 12)),
+                    trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: subtxtCol),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (ctx) => AboutUsScreen(
+                            isDarkMode: isDark,
+                            onBack: () => Navigator.pop(ctx),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  Divider(height: 1, color: isDark ? Colors.white10 : const Color(0xFFF1F5F9)),
+                  ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0066FF).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.support_agent_rounded, color: Color(0xFF0066FF), size: 20),
+                    ),
+                    title: Text('Contact Us & Support', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
+                    subtitle: Text('support@ourspace.app', style: TextStyle(color: subtxtCol, fontSize: 12)),
+                    trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: subtxtCol),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (ctx) => ContactUsScreen(
+                            isDarkMode: isDark,
+                            onBack: () => Navigator.pop(ctx),
+                          ),
                         ),
                       );
                     },
