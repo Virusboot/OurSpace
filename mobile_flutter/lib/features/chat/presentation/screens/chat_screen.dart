@@ -278,29 +278,56 @@ class _ChatScreenState extends State<ChatScreen> {
                 child: Row(
                   children: [
                     IconButton(
-                      icon: Icon(Icons.arrow_back, color: iconCol, size: 24),
+                      icon: Icon(Icons.arrow_back_ios_new_rounded, color: iconCol, size: 20),
                       onPressed: widget.onBack,
                     ),
+                    const SizedBox(width: 2),
+                    CircleAvatar(
+                      radius: 19,
+                      backgroundColor: const Color(0xFF0066FF).withOpacity(0.12),
+                      child: Text(
+                        displayName.replaceAll('@', '').substring(0, 1).toUpperCase(),
+                        style: const TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             displayName,
                             style: TextStyle(
-                              fontSize: 20,
+                              fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: headerTxt,
+                              letterSpacing: -0.2,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
-                          const Text(
-                            'Online',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF6C727F),
-                              fontWeight: FontWeight.w500,
-                            ),
+                          Row(
+                            children: [
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF10B981),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                'Online',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
