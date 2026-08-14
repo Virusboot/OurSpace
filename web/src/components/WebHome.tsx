@@ -142,11 +142,11 @@ export const WebHome: React.FC = () => {
           </div>
 
           {/* Desktop Nav Links */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '28px' }} className="hidden lg:flex">
-            <a href="#hub" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Call Hub</a>
-            <a href="#features" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Privacy Features</a>
-            <a href="#simulator" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>E2EE Terminal</a>
-            <a href="#specs" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Security Specs</a>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }} className="hidden lg:flex">
+            <a href="/about" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>About Us</a>
+            <a href="/privacy" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Privacy Policy</a>
+            <a href="/terms" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Terms & Conditions</a>
+            <a href="/contact" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Contact Us</a>
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '20px', backgroundColor: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#059669', fontSize: '12px', fontWeight: 700 }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
@@ -205,10 +205,10 @@ export const WebHome: React.FC = () => {
               backgroundColor: '#ffffff',
             }}
           >
-            <a href="#hub" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '15px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Call Hub</a>
-            <a href="#features" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '15px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Privacy Features</a>
-            <a href="#simulator" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '15px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>E2EE Terminal</a>
-            <a href="#specs" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '15px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Security Specs</a>
+            <a href="/about" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '15px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>About Us</a>
+            <a href="/privacy" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '15px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Privacy Policy</a>
+            <a href="/terms" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '15px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Terms & Conditions</a>
+            <a href="/contact" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '15px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Contact Us</a>
             <button
               onClick={() => alert('OurSpace Mobile App (v1.0.0) is available on Google Play Store.')}
               style={{
@@ -663,131 +663,14 @@ export const WebHome: React.FC = () => {
           </div>
         </section>
 
-        {/* SECTION 3: REAL-TIME CRYPTOGRAPHIC TERMINAL */}
-        <section id="simulator" style={{ marginBottom: '80px' }}>
-          <div style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 900, color: '#c026d3', letterSpacing: '0.1em', textAlign: 'center', marginBottom: '8px' }}>
-            Interactive Security Engine
-          </div>
-          <h3 style={{ fontSize: '32px', fontWeight: 900, color: '#0f172a', textAlign: 'center', marginBottom: '32px', letterSpacing: '-0.02em' }}>
-            Live Cryptographic Payload Terminal
-          </h3>
-
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '24px',
-              padding: '32px',
-              boxShadow: '0 15px 35px rgba(0, 0, 0, 0.03)',
-            }}
-          >
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
-              {/* Left Column: Plaintext Stream */}
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Plaintext Client Input</label>
-                  <span style={{ fontSize: '11px', color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-                    Local RAM Only
-                  </span>
-                </div>
-                <textarea
-                  value={simText}
-                  onChange={(e) => setSimText(e.target.value)}
-                  rows={4}
-                  style={{
-                    width: '100%',
-                    backgroundColor: '#f8fafc',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '14px',
-                    padding: '14px',
-                    color: '#0f172a',
-                    fontSize: '14px',
-                    outline: 'none',
-                    resize: 'none',
-                    boxSizing: 'border-box',
-                    lineHeight: 1.5,
-                  }}
-                />
-              </div>
-
-              {/* Right Column: Encrypted Output */}
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>AES-256-GCM Ciphertext Packet</label>
-                  <span style={{ fontSize: '11px', color: '#c026d3', fontFamily: 'monospace', fontWeight: 700 }}>Wire Stream</span>
-                </div>
-                <div
-                  style={{
-                    width: '100%',
-                    backgroundColor: '#0f172a',
-                    border: '1px solid #1e293b',
-                    borderRadius: '14px',
-                    padding: '14px',
-                    minHeight: '108px',
-                    color: '#e879f9',
-                    fontSize: '12px',
-                    fontFamily: 'monospace',
-                    wordBreak: 'break-all',
-                    boxSizing: 'border-box',
-                    lineHeight: 1.5,
-                    boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.4)',
-                  }}
-                >
-                  {getCiphertext(simText)}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* SECTION 4: PROTOCOL SPECS GRID */}
-        <section id="specs" style={{ marginBottom: '56px' }}>
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '24px',
-              padding: '32px',
-              textAlign: 'left',
-              boxShadow: '0 15px 35px rgba(0, 0, 0, 0.03)',
-            }}
-          >
-            <h3 style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', marginBottom: '20px' }}>
-              Full Technical & Security Audit Specifications
-            </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
-              <div style={{ backgroundColor: '#f8fafc', padding: '18px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.04em' }}>Symmetric Cipher</span>
-                <p style={{ color: '#c026d3', fontWeight: 900, fontSize: '15px', margin: '4px 0 0' }}>AES-256-GCM (Authenticated)</p>
-              </div>
-
-              <div style={{ backgroundColor: '#f8fafc', padding: '18px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.04em' }}>Key Agreement</span>
-                <p style={{ color: '#c026d3', fontWeight: 900, fontSize: '15px', margin: '4px 0 0' }}>ECDH (Curve25519 Ephemeral)</p>
-              </div>
-
-              <div style={{ backgroundColor: '#f8fafc', padding: '18px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.04em' }}>Key Expansion</span>
-                <p style={{ color: '#c026d3', fontWeight: 900, fontSize: '15px', margin: '4px 0 0' }}>HKDF-SHA256 Protocol</p>
-              </div>
-
-              <div style={{ backgroundColor: '#f8fafc', padding: '18px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.04em' }}>Audio/Video Tunnel</span>
-                <p style={{ color: '#c026d3', fontWeight: 900, fontSize: '15px', margin: '4px 0 0' }}>WebRTC STUN/TURN Direct P2P</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
       </main>
 
-      {/* Footer (Clean Balanced Light Footer) */}
+      {/* Footer (Play Store Compliant Footer with Legal & Contact Links) */}
       <footer
         style={{
           borderTop: '1px solid #e2e8f0',
           backgroundColor: '#f8fafc',
-          padding: '28px 40px',
+          padding: '32px 40px',
           textAlign: 'center',
           fontSize: '13px',
           color: '#64748b',
@@ -802,7 +685,7 @@ export const WebHome: React.FC = () => {
             justifyContent: 'space-between',
             alignItems: 'center',
             flexWrap: 'wrap',
-            gap: '16px',
+            gap: '20px',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -810,12 +693,14 @@ export const WebHome: React.FC = () => {
             <p style={{ margin: 0, fontWeight: 600, color: '#475569' }}>© 2026 OurSpace Privacy Chat. All rights reserved.</p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <span style={{ color: '#c026d3', fontWeight: 700 }}>A Private Space For Two</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+            <a href="/about" style={{ color: '#475569', textDecoration: 'none', fontWeight: 600 }}>About Us</a>
             <span>•</span>
-            <span style={{ color: '#475569', fontWeight: 600 }}>End-to-End Encrypted</span>
+            <a href="/privacy" style={{ color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Privacy Policy</a>
             <span>•</span>
-            <a href="https://github.com/Virusboot/OurSpace" target="_blank" rel="noreferrer" style={{ color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Open Source GitHub</a>
+            <a href="/terms" style={{ color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Terms & Conditions</a>
+            <span>•</span>
+            <a href="/contact" style={{ color: '#c026d3', textDecoration: 'none', fontWeight: 700 }}>Contact Us</a>
           </div>
         </div>
       </footer>

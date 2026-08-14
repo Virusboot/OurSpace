@@ -3,9 +3,14 @@ import { LandingJoin } from './components/LandingJoin';
 import { ActiveCall } from './components/ActiveCall';
 import { ExpiredLink, InvalidLink } from './components/ExpiredLink';
 import { WebHome } from './components/WebHome';
+import { PrivacyPolicy } from './components/PrivacyPolicy';
+import { TermsConditions } from './components/TermsConditions';
+import { ContactUs } from './components/ContactUs';
+import { AboutUs } from './components/AboutUs';
 import { WebRTCService } from './services/webRTCService';
 
 export const App: React.FC = () => {
+  const [currentRoute, setCurrentRoute] = useState<string>('');
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [linkDetails, setLinkDetails] = useState<any>(null);
@@ -23,8 +28,10 @@ export const App: React.FC = () => {
   const [rtcService] = useState(() => new WebRTCService());
 
   useEffect(() => {
-    // Parse call token from location path: /c/:token or query ?token=
+    // Parse route path
     const path = window.location.pathname;
+    setCurrentRoute(path);
+
     let urlToken: string | null = null;
     if (path.startsWith('/c/')) {
       urlToken = path.split('/c/')[1];
@@ -132,6 +139,11 @@ export const App: React.FC = () => {
       </div>
     );
   }
+
+  if (currentRoute === '/privacy') return <PrivacyPolicy />;
+  if (currentRoute === '/terms') return <TermsConditions />;
+  if (currentRoute === '/contact') return <ContactUs />;
+  if (currentRoute === '/about') return <AboutUs />;
 
   if (!token) return <WebHome />;
   if (errorStatus === 'expired') return <ExpiredLink />;
