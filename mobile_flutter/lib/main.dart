@@ -24,7 +24,7 @@ class SecureChatApp extends StatefulWidget {
 }
 
 class _SecureChatAppState extends State<SecureChatApp> {
-  String _currentScreen = 'splash';
+  String _currentScreen = 'onboarding';
   Map<String, dynamic>? _user;
   String _recoveryKey = 'sample-recovery-key-1234';
   Map<String, dynamic>? _activeRecipient;
@@ -90,7 +90,7 @@ class _SecureChatAppState extends State<SecureChatApp> {
     WebSocketClient().disconnect();
     setState(() {
       _user = null;
-      _currentScreen = 'splash';
+      _currentScreen = 'onboarding';
     });
   }
 
@@ -222,7 +222,9 @@ class _SecureChatAppState extends State<SecureChatApp> {
           onLogout: _handleLogout,
         );
       default:
-        return SplashScreen(onContinue: () {});
+        return OnboardingScreen(
+          onFinish: () => setState(() => _currentScreen = 'create_identity'),
+        );
     }
   }
 }
