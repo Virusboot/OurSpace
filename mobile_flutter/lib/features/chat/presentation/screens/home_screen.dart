@@ -469,7 +469,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final searchTxt = isDark ? Colors.white : const Color(0xFF0F172A);
     final searchHint = isDark ? const Color(0xFF6C727F) : const Color(0xFF94A3B8);
     final cardBg = isDark ? const Color(0xFF121317) : const Color(0xFFFFFFFF);
-    final handleColor = isDark ? Colors.white.withOpacity(0.12) : Colors.black.withOpacity(0.12);
     final itemSelectedBg = isDark ? const Color(0xFF1B1D23) : const Color(0xFFF1F5F9);
     final itemTxt = isDark ? Colors.white : const Color(0xFF0F172A);
     final itemSubtxt = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
@@ -568,7 +567,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 6),
 
             // CHAT LIST SECTION CONTAINER
             Expanded(
@@ -589,15 +588,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Column(
                   children: [
-                    const SizedBox(height: 12),
-                    Container(
-                      width: 36,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: handleColor,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
+                    const SizedBox(height: 6),
                     const SizedBox(height: 8),
                     Expanded(
                       child: _activeTab == 0
