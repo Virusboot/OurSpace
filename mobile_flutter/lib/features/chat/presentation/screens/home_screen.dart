@@ -517,20 +517,26 @@ class _HomeScreenState extends State<HomeScreen> {
                       letterSpacing: -0.4,
                     ),
                   ),
-                  InkWell(
-                    onTap: _showNewActionSheet,
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0066FF).withOpacity(0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.add_rounded,
-                        color: Color(0xFF0066FF),
-                        size: 26,
+                  Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(21),
+                    child: InkWell(
+                      onTap: _showNewActionSheet,
+                      borderRadius: BorderRadius.circular(21),
+                      child: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0066FF).withOpacity(0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.add_rounded,
+                            color: Color(0xFF0066FF),
+                            size: 26,
+                          ),
+                        ),
                       ),
                     ),
                   ),
