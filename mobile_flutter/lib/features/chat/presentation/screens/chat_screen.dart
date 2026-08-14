@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../core/crypto/e2ee_crypto_service.dart';
 import '../../../../core/networking/api_client.dart';
@@ -31,12 +32,62 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<Map<String, dynamic>> _messages = [];
   String? _conversationId;
   int _ttlSeconds = 30; // default 30s
+  StreamSubscription<Map<String, dynamic>>? _wsSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadSampleMessages();
     _initChat();
+    _listenToWebSockets();
+  }
+
+  void _listenToWebSockets() {
+    WebSocketClient().connect();
+    _wsSubscription = WebSocketClient().stream.listen((event) {
+      if (!mounted) return;
+      final type = event['type'];
+
+      if (type == 'chat_receive') {
+        final msg = event['message'] ?? event;
+        final encrypted = msg['encryptedPayload'] ?? '';
+        final text = E2EECryptoService.decryptPayload(encrypted, widget.recipient['publicKey'] ?? '');
+
+        setState(() {
+          _messages.removeWhere((m) => m['isTyping'] == true);
+          _messages.add({
+            'id': msg['id'] ?? 'm_${DateTime.now().millisecondsSinceEpoch}',
+            'senderId': msg['senderId'] ?? widget.recipient['id'],
+            'encryptedPayload': encrypted,
+            'decryptedText': text.isNotEmpty ? text : (msg['text'] ?? 'Encrypted message'),
+            'time': 'Just now',
+            'isTyping': false,
+          });
+        });
+      } else if (type == 'chat_typing') {
+        if (event['senderId'] == widget.recipient['id']) {
+          setState(() {
+            _messages.removeWhere((m) => m['isTyping'] == true);
+            if (event['isTyping'] == true) {
+              _messages.add({
+                'id': 'typing_${DateTime.now().millisecondsSinceEpoch}',
+                'senderId': widget.recipient['id'],
+                'decryptedText': '',
+                'time': '',
+                'isTyping': true,
+              });
+            }
+          });
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _wsSubscription?.cancel();
+    _inputCtrl.dispose();
+    super.dispose();
   }
 
   void _loadSampleMessages() {

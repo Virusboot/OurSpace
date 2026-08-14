@@ -10,6 +10,8 @@ class WebSocketClient {
   factory WebSocketClient() => _instance;
   WebSocketClient._internal();
 
+  static String? customWsUrl;
+
   WebSocketChannel? _channel;
   final StreamController<Map<String, dynamic>> _messageController = StreamController.broadcast();
 
@@ -19,7 +21,14 @@ class WebSocketClient {
     final token = await SecureStorageService.read('auth_token');
     if (token == null) return;
 
-    final wsUrl = (!kIsWeb && Platform.isAndroid) ? 'ws://10.0.2.2:4000/ws' : 'ws://localhost:4000/ws';
+    String wsUrl;
+    if (customWsUrl != null && customWsUrl!.isNotEmpty) {
+      wsUrl = customWsUrl!;
+    } else if (kReleaseMode) {
+      wsUrl = 'wss://ourspace-backend.onrender.com/ws';
+    } else {
+      wsUrl = (!kIsWeb && Platform.isAndroid) ? 'ws://10.0.2.2:4000/ws' : 'ws://localhost:4000/ws';
+    }
     try {
       _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
       

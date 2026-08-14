@@ -5,7 +5,15 @@ import 'package:http/http.dart' as http;
 import '../storage/secure_storage_service.dart';
 
 class ApiClient {
+  static String? customBaseUrl;
+
   static String get baseUrl {
+    if (customBaseUrl != null && customBaseUrl!.isNotEmpty) {
+      return customBaseUrl!;
+    }
+    if (kReleaseMode) {
+      return 'https://ourspace-backend.onrender.com/api';
+    }
     if (!kIsWeb && Platform.isAndroid) {
       return 'http://10.0.2.2:4000/api';
     }
