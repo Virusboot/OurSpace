@@ -28,33 +28,18 @@ export const Header: React.FC = () => {
         }}
       >
         {/* Brand Official Transparent Logo Image */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
           <a href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
             <img
               src={logoImg}
               alt="OurSpace - A Private Space For Two"
-              style={{ height: '48px', width: 'auto', display: 'block', objectFit: 'contain' }}
+              style={{ height: '44px', width: 'auto', display: 'block', objectFit: 'contain' }}
             />
           </a>
-          <span
-            style={{
-              fontSize: '11px',
-              padding: '4px 12px',
-              borderRadius: '9999px',
-              backgroundColor: 'rgba(217, 70, 239, 0.08)',
-              border: '1px solid rgba(217, 70, 239, 0.2)',
-              color: '#c026d3',
-              fontWeight: 800,
-              letterSpacing: '0.04em',
-            }}
-            className="hidden md:inline-block"
-          >
-            ZERO KNOWLEDGE E2EE
-          </span>
         </div>
 
-        {/* Desktop Nav Links: Home, About Us, Contact Us */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '28px' }} className="hidden lg:flex">
+        {/* Right-Aligned Desktop Nav Links: Home, About Us, Contact Us */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '28px', marginLeft: 'auto' }} className="hidden lg:flex">
           <a href="/" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Home</a>
           <a href="/about" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>About Us</a>
           <a href="/contact" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Contact Us</a>
@@ -97,6 +82,7 @@ export const Header: React.FC = () => {
             borderRadius: '10px',
             color: '#0f172a',
             cursor: 'pointer',
+            marginLeft: 'auto',
           }}
           className="lg:hidden"
         >
