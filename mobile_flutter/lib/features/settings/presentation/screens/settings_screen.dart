@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -28,6 +30,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _biometric = true;
   bool _ghostMode = false;
   bool _showRecoveryKey = false;
+  XFile? _profileImage;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picked = await _picker.pickImage(source: source, maxWidth: 600, maxHeight: 600, imageQuality: 85);
+      if (picked != null) {
+        setState(() {
+          _profileImage = picked;
+        });
+      }
+    } catch (_) {}
+  }
+
+  void _showImagePickerOptions() {
+    final isDark = widget.isDarkMode;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF14161C) : Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(color: Colors.grey.withOpacity(0.4), borderRadius: BorderRadius.circular(2)),
+              ),
+              const SizedBox(height: 16),
+              Text('Change Profile Photo', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const CircleAvatar(backgroundColor: Color(0xFF0066FF), child: Icon(Icons.camera_alt_rounded, color: Colors.white, size: 20)),
+                title: Text('Take Photo', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const CircleAvatar(backgroundColor: Color(0xFF0066FF), child: Icon(Icons.photo_library_rounded, color: Colors.white, size: 20)),
+                title: Text('Choose from Gallery', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+              if (_profileImage != null)
+                ListTile(
+                  leading: const CircleAvatar(backgroundColor: Color(0xFFF43F5E), child: Icon(Icons.delete_outline_rounded, color: Colors.white, size: 20)),
+                  title: const Text('Remove Photo', style: TextStyle(color: Color(0xFFF43F5E), fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() => _profileImage = null);
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Future<void> _handleLogout() async {
     await SecureStorageService.delete('auth_token');
@@ -203,20 +270,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               child: Row(
                 children: [
-                  Container(
-                    width: 58,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0066FF).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.3)),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
-                      child: Image.asset(
-                        'assets/images/Our Space Logo.png',
-                        fit: BoxFit.contain,
-                      ),
+                  GestureDetector(
+                    onTap: _showImagePickerOptions,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            gradient: _profileImage == null
+                                ? const LinearGradient(
+                                    colors: [Color(0xFF0066FF), Color(0xFF0044B3)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  )
+                                : null,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.4), width: 1.5),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(18),
+                            child: _profileImage != null
+                                ? Image.file(
+                                    File(_profileImage!.path),
+                                    fit: BoxFit.cover,
+                                  )
+                                : Center(
+                                    child: Text(
+                                      username.replaceAll('@', '').substring(0, 1).toUpperCase(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        Positioned(
+                          right: -3,
+                          bottom: -3,
+                          child: Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0066FF),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: cardBg, width: 2),
+                            ),
+                            child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 12),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 16),
