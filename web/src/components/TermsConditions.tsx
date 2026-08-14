@@ -9,7 +9,7 @@ export const TermsConditions: React.FC = () => {
       <Header />
 
       {/* Main Content */}
-      <main style={{ maxWidth: '900px', margin: '0 auto', padding: '48px 24px', textAlign: 'left', flex: 1, width: '100%', boxSizing: 'border-box' }}>
+      <main style={{ maxWidth: '1280px', margin: '0 auto', padding: '48px 32px', textAlign: 'left', flex: 1, width: '100%', boxSizing: 'border-box' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '20px', backgroundColor: 'rgba(217, 70, 239, 0.08)', color: '#c026d3', fontSize: '12px', fontWeight: 800, marginBottom: '16px' }}>
           <Shield style={{ width: '14px', height: '14px' }} />
           <span>Google Play Store Terms of Service</span>

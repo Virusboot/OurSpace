@@ -79,8 +79,8 @@ export const WebHome: React.FC = () => {
 
       <Header />
 
-      {/* Main Container (Centered 1280px Container with Generous Side Margins) */}
-      <main style={{ maxWidth: '1280px', margin: '0 auto', padding: '56px 40px', flex: 1, zIndex: 1, width: '100%', boxSizing: 'border-box' }}>
+      {/* Main Container (Centered 1280px Container with Exact 32px Side Margins Matching Header & Footer) */}
+      <main style={{ maxWidth: '1280px', margin: '0 auto', padding: '56px 32px', flex: 1, zIndex: 1, width: '100%', boxSizing: 'border-box' }}>
         
         {/* HERO SECTION: Balanced 2-Column Layout */}
         <section id="hub" style={{ marginBottom: '80px' }}>
