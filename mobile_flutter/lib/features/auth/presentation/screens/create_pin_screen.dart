@@ -68,9 +68,16 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
   @override
   Widget build(BuildContext context) {
     final digits = _isConfirm ? _confirmPin : _pin;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scaffoldBg = isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC);
+    final textTitle = isDark ? Colors.white : const Color(0xFF0F172A);
+    final textSub = isDark ? Colors.grey : const Color(0xFF64748B);
+    final cardBg = isDark ? const Color(0xFF121317) : const Color(0xFFFFFFFF);
+    final cardBorder = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+    final dotUnfilledBorder = isDark ? Colors.white24 : const Color(0xFFCBD5E1);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF090A0F),
+      backgroundColor: scaffoldBg,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
@@ -81,29 +88,40 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: widget.onPinComplete,
-                  child: const Text('Skip for now →', style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 13)),
+                  child: const Text('Skip for now →', style: TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.bold, fontSize: 13)),
                 ),
               ),
               const SizedBox(height: 8),
               Container(
-                width: 64,
-                height: 64,
+                width: 72,
+                height: 72,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0066FF).withOpacity(0.35),
+                      blurRadius: 18,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                child: const Icon(Icons.lock_outline, size: 28, color: Color(0xFF10B981)),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Image.asset(
+                    'assets/images/Our Space Logo.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               Text(
                 !_isConfirm ? 'Create App PIN' : 'Confirm Your PIN',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textTitle),
               ),
               const SizedBox(height: 4),
               Text(
                 !_isConfirm ? 'Set a 4-digit security PIN to protect app access' : 'Re-enter your 4-digit PIN',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: TextStyle(fontSize: 12, color: textSub),
               ),
               const SizedBox(height: 12),
 
@@ -124,8 +142,8 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                     height: 14,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: filled ? const Color(0xFF10B981) : Colors.transparent,
-                      border: Border.all(color: filled ? const Color(0xFF10B981) : Colors.white24),
+                      color: filled ? const Color(0xFF0066FF) : Colors.transparent,
+                      border: Border.all(color: filled ? const Color(0xFF0066FF) : dotUnfilledBorder),
                     ),
                   );
                 }),
@@ -136,23 +154,23 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.04),
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  color: cardBg,
+                  border: Border.all(color: cardBorder),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.fingerprint, size: 20, color: Color(0xFF10B981)),
-                        SizedBox(width: 10),
-                        Text('Enable Face ID / Biometrics', style: TextStyle(color: Colors.white, fontSize: 13)),
+                        const Icon(Icons.fingerprint, size: 20, color: Color(0xFF0066FF)),
+                        const SizedBox(width: 10),
+                        Text('Enable Face ID / Biometrics', style: TextStyle(color: textTitle, fontSize: 13)),
                       ],
                     ),
                     Switch(
                       value: _biometricEnabled,
-                      activeColor: const Color(0xFF10B981),
+                      activeColor: const Color(0xFF0066FF),
                       onChanged: (val) => setState(() => _biometricEnabled = val),
                     ),
                   ],
@@ -171,11 +189,11 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
                   children: [
-                    ...['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => _buildKey(num)),
+                    ...['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => _buildKey(num, isDark)),
                     const SizedBox(),
-                    _buildKey('0'),
+                    _buildKey('0', isDark),
                     IconButton(
-                      icon: const Icon(Icons.backspace_outlined, color: Colors.grey),
+                      icon: Icon(Icons.backspace_outlined, color: textSub),
                       onPressed: _handleDelete,
                     ),
                   ],
@@ -188,17 +206,20 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
     );
   }
 
-  Widget _buildKey(String label) {
+  Widget _buildKey(String label, bool isDark) {
+    final keyBg = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+    final keyTxt = isDark ? Colors.white : const Color(0xFF0F172A);
+
     return InkWell(
       onTap: () => _handleKeyPress(label),
       borderRadius: BorderRadius.circular(25),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.06),
+          color: keyBg,
           shape: BoxShape.circle,
         ),
         child: Center(
-          child: Text(label, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+          child: Text(label, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: keyTxt)),
         ),
       ),
     );

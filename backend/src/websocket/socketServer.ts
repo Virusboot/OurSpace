@@ -23,9 +23,11 @@ export function initWebSocketServer(server: HttpServer) {
           try {
             const decoded: any = jwt.verify(token, config.jwtSecret);
             currentId = decoded.userId;
-            activeConnections.set(currentId, ws);
-            ws.send(JSON.stringify({ type: 'auth_ack', success: true, userId: currentId }));
-            console.log(`[WebSocket] User authenticated: ${currentId}`);
+            if (currentId) {
+              activeConnections.set(currentId, ws);
+              ws.send(JSON.stringify({ type: 'auth_ack', success: true, userId: currentId }));
+              console.log(`[WebSocket] User authenticated: ${currentId}`);
+            }
           } catch (err) {
             ws.send(JSON.stringify({ type: 'auth_ack', success: false, error: 'Invalid auth token' }));
           }
@@ -35,8 +37,10 @@ export function initWebSocketServer(server: HttpServer) {
         // Guest identification for public call links
         if (type === 'guest_register') {
           currentId = payload.guestId || `guest_${Math.random().toString(36).substring(2, 9)}`;
-          activeConnections.set(currentId, ws);
-          ws.send(JSON.stringify({ type: 'guest_ack', guestId: currentId }));
+          if (currentId) {
+            activeConnections.set(currentId, ws);
+            ws.send(JSON.stringify({ type: 'guest_ack', guestId: currentId }));
+          }
           return;
         }
 

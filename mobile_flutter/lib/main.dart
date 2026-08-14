@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'core/storage/secure_storage_service.dart';
 import 'core/networking/websocket_client.dart';
 import 'features/auth/presentation/screens/splash_screen.dart';
+import 'features/auth/presentation/screens/onboarding_screen.dart';
 import 'features/identity/presentation/screens/create_identity_screen.dart';
 import 'features/auth/presentation/screens/create_pin_screen.dart';
 import 'features/chat/presentation/screens/home_screen.dart';
@@ -100,14 +101,14 @@ class _SecureChatAppState extends State<SecureChatApp> {
       debugShowCheckedModeBanner: false,
       themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
 
-      // CLEAN LIGHT THEME (WhatsApp / Telegram Light Style)
+      // CLEAN LIGHT THEME (OurSpace Royal Blue System)
       theme: ThemeData.light().copyWith(
         scaffoldBackgroundColor: const Color(0xFFF8FAFC),
-        primaryColor: const Color(0xFF059669),
+        primaryColor: const Color(0xFF0066FF),
         cardColor: const Color(0xFFFFFFFF),
         colorScheme: const ColorScheme.light(
-          primary: Color(0xFF059669),
-          secondary: Color(0xFF10B981),
+          primary: Color(0xFF0066FF),
+          secondary: Color(0xFF0066FF),
           surface: Color(0xFFFFFFFF),
         ),
         appBarTheme: const AppBarTheme(
@@ -118,21 +119,21 @@ class _SecureChatAppState extends State<SecureChatApp> {
         ),
       ),
 
-      // CLEAN DARK THEME (WhatsApp / Telegram Dark Style)
+      // MATCHING DARK THEME SYSTEM (Pitch Black + Royal Blue System)
       darkTheme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF0A0D14),
-        primaryColor: const Color(0xFF10B981),
-        cardColor: const Color(0xFF141824),
+        scaffoldBackgroundColor: const Color(0xFF000000),
+        primaryColor: const Color(0xFF0066FF),
+        cardColor: const Color(0xFF121317),
         colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF10B981),
-          secondary: Color(0xFF059669),
-          surface: Color(0xFF141824),
+          primary: Color(0xFF0066FF),
+          secondary: Color(0xFF0066FF),
+          surface: Color(0xFF121317),
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF0A0D14),
+          backgroundColor: Color(0xFF000000),
           elevation: 0,
           iconTheme: IconThemeData(color: Colors.white),
-          titleTextStyle: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          titleTextStyle: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
         ),
       ),
 
@@ -144,7 +145,11 @@ class _SecureChatAppState extends State<SecureChatApp> {
     switch (_currentScreen) {
       case 'splash':
         return SplashScreen(
-          onContinue: () => setState(() => _currentScreen = _user != null ? 'home' : 'create_identity'),
+          onContinue: () => setState(() => _currentScreen = _user != null ? 'home' : 'onboarding'),
+        );
+      case 'onboarding':
+        return OnboardingScreen(
+          onFinish: () => setState(() => _currentScreen = 'create_identity'),
         );
       case 'create_identity':
         return CreateIdentityScreen(

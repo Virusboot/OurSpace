@@ -8,7 +8,7 @@ class SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0D14),
+      backgroundColor: const Color(0xFF000000),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 20.0),
@@ -18,79 +18,90 @@ class SplashScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Glowing Shield Brand Logo Badge
+                    // User Provided PNG App Logo Asset
                     Container(
-                      width: 104,
-                      height: 104,
+                      width: 140,
+                      height: 140,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF059669), Color(0xFF10B981)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(32),
+                        borderRadius: BorderRadius.circular(36),
+                        border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.4), width: 1.5),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF10B981).withOpacity(0.35),
-                            blurRadius: 30,
-                            spreadRadius: 2,
-                            offset: const Offset(0, 10),
+                            color: const Color(0xFF0066FF).withOpacity(0.4),
+                            blurRadius: 40,
+                            spreadRadius: 4,
+                            offset: const Offset(0, 12),
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.8),
+                            blurRadius: 16,
                           ),
                         ],
                       ),
-                      child: const Center(
-                        child: Icon(Icons.shield_rounded, size: 54, color: Colors.black),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(36),
+                        child: Image.asset(
+                          'assets/images/Our Space Logo.png',
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 32),
 
-                    // App Title
-                    RichText(
-                      textAlign: TextAlign.center,
-                      text: const TextSpan(
-                        children: [
-                          TextSpan(
-                            text: 'Our',
-                            style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.5),
-                          ),
-                          TextSpan(
-                            text: 'Space',
-                            style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: Color(0xFF10B981), letterSpacing: -0.5),
-                          ),
-                        ],
+                    // App Title & Tagline
+                    const Text(
+                      'OurSpace',
+                      style: TextStyle(
+                        fontSize: 40,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF0066FF),
+                        letterSpacing: -0.8,
                       ),
                     ),
                     const SizedBox(height: 8),
 
-                    const Text(
-                      'SECURE PRIVATE MESSAGING & CALLS',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF9CA3AF), letterSpacing: 1.5),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0066FF).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.3)),
+                      ),
+                      child: const Text(
+                        'A PRIVATE SPACE FOR TWO',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0066FF),
+                          letterSpacing: 2.2,
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 36),
 
-                    // Feature Pill Badges
+                    // Feature Badges Row
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _buildFeaturePill(Icons.lock_rounded, 'E2E Encrypted'),
+                        _buildFeaturePill(Icons.security_rounded, 'E2E Encrypted'),
                         const SizedBox(width: 8),
-                        _buildFeaturePill(Icons.visibility_off_rounded, 'Zero Knowledge'),
+                        _buildFeaturePill(Icons.shield_rounded, 'Zero Knowledge'),
                         const SizedBox(width: 8),
                         _buildFeaturePill(Icons.timer_rounded, 'Auto Disappear'),
                       ],
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 28),
 
                     const Text(
-                      'No phone numbers required. Instant zero-trace encrypted communication built for total privacy.',
+                      'Zero tracking. No phone numbers required.\nEncrypted peer-to-peer messaging built for maximum privacy.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 13, color: Color(0xFF6B7280), height: 1.5),
+                      style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8), height: 1.5),
                     ),
                   ],
                 ),
               ),
 
-              // Get Started CTA Button
+              // Get Started / Explore Button
               Container(
                 width: double.infinity,
                 height: 56,
@@ -98,15 +109,15 @@ class SplashScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF10B981).withOpacity(0.3),
-                      blurRadius: 16,
+                      color: const Color(0xFF0066FF).withOpacity(0.4),
+                      blurRadius: 24,
                       offset: const Offset(0, 6),
                     ),
                   ],
                 ),
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
+                    backgroundColor: const Color(0xFF0066FF),
                     elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                   ),
@@ -114,9 +125,9 @@ class SplashScreen extends StatelessWidget {
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('Get Started', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.black)),
+                      Text('Get Started', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                       SizedBox(width: 8),
-                      Icon(Icons.arrow_forward_rounded, size: 20, color: Colors.black),
+                      Icon(Icons.arrow_forward_rounded, size: 20, color: Colors.white),
                     ],
                   ),
                 ),
@@ -139,7 +150,7 @@ class SplashScreen extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: const Color(0xFF10B981)),
+          Icon(icon, size: 13, color: const Color(0xFF0066FF)),
           const SizedBox(width: 5),
           Text(label, style: const TextStyle(fontSize: 10, color: Colors.white70, fontWeight: FontWeight.w600)),
         ],

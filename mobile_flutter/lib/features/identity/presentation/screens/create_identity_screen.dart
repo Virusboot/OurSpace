@@ -90,8 +90,17 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scaffoldBg = isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC);
+    final cardBg = isDark ? const Color(0xFF121317) : const Color(0xFFFFFFFF);
+    final cardBorder = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+    final inputBg = isDark ? Colors.black.withOpacity(0.4) : const Color(0xFFF1F5F9);
+    final textTitle = isDark ? Colors.white : const Color(0xFF0F172A);
+    final textSub = isDark ? Colors.grey : const Color(0xFF64748B);
+    final inputTxt = isDark ? Colors.white : const Color(0xFF0F172A);
+
     return Scaffold(
-      backgroundColor: const Color(0xFF090A0F),
+      backgroundColor: scaffoldBg,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -103,14 +112,25 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                 // App Logo Badge
                 Center(
                   child: Container(
-                    width: 80,
-                    height: 80,
+                    width: 90,
+                    height: 90,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withOpacity(0.12),
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0066FF).withOpacity(0.35),
+                          blurRadius: 20,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
                     ),
-                    child: const Icon(Icons.shield_outlined, size: 42, color: Color(0xFF10B981)),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Image.asset(
+                        'assets/images/Our Space Logo.png',
+                        fit: BoxFit.contain,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -118,7 +138,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                 Text(
                   _isSignUp ? 'Create OurSpace Account' : 'Welcome Back',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: textTitle),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -126,7 +146,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                       ? 'Fill in your details to create a new account'
                       : 'Log in easily with your Email & Password',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 13, color: Colors.grey),
+                  style: TextStyle(fontSize: 13, color: textSub),
                 ),
                 const SizedBox(height: 28),
 
@@ -148,25 +168,25 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.04),
-                      border: Border.all(color: Colors.white.withOpacity(0.08)),
+                      color: cardBg,
+                      border: Border.all(color: cardBorder),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Full Name', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
+                        Text('Full Name', style: TextStyle(fontSize: 12, color: textSub, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 8),
                         TextField(
                           controller: _nameController,
-                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                          style: TextStyle(color: inputTxt, fontSize: 14),
                           decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF10B981), size: 20),
+                            prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF0066FF), size: 20),
                             filled: true,
-                            fillColor: Colors.black.withOpacity(0.4),
+                            fillColor: inputBg,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                             hintText: 'e.g. Alex Smith',
-                            hintStyle: const TextStyle(color: Colors.grey),
+                            hintStyle: TextStyle(color: textSub),
                           ),
                         ),
                       ],
@@ -179,26 +199,26 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.04),
-                    border: Border.all(color: Colors.white.withOpacity(0.08)),
+                    color: cardBg,
+                    border: Border.all(color: cardBorder),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Email Address', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
+                      Text('Email Address', style: TextStyle(fontSize: 12, color: textSub, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 8),
                       TextField(
                         controller: _emailController,
-                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        style: TextStyle(color: inputTxt, fontSize: 14),
                         keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF10B981), size: 20),
+                          prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF0066FF), size: 20),
                           filled: true,
-                          fillColor: Colors.black.withOpacity(0.4),
+                          fillColor: inputBg,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                           hintText: 'name@domain.com',
-                          hintStyle: const TextStyle(color: Colors.grey),
+                          hintStyle: TextStyle(color: textSub),
                         ),
                       ),
                     ],
@@ -210,34 +230,34 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.04),
-                    border: Border.all(color: Colors.white.withOpacity(0.08)),
+                    color: cardBg,
+                    border: Border.all(color: cardBorder),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Password', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
+                      Text('Password', style: TextStyle(fontSize: 12, color: textSub, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 8),
                       TextField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
-                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        style: TextStyle(color: inputTxt, fontSize: 14),
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF10B981), size: 20),
+                          prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF0066FF), size: 20),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                              color: Colors.grey,
+                              color: textSub,
                               size: 20,
                             ),
                             onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                           ),
                           filled: true,
-                          fillColor: Colors.black.withOpacity(0.4),
+                          fillColor: inputBg,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                           hintText: 'Enter Password',
-                          hintStyle: const TextStyle(color: Colors.grey),
+                          hintStyle: TextStyle(color: textSub),
                         ),
                       ),
                     ],
@@ -250,26 +270,26 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.04),
-                      border: Border.all(color: Colors.white.withOpacity(0.08)),
+                      color: cardBg,
+                      border: Border.all(color: cardBorder),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Confirm Password', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
+                        Text('Confirm Password', style: TextStyle(fontSize: 12, color: textSub, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 8),
                         TextField(
                           controller: _confirmPasswordController,
                           obscureText: _obscurePassword,
-                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                          style: TextStyle(color: inputTxt, fontSize: 14),
                           decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.lock_reset, color: Color(0xFF10B981), size: 20),
+                            prefixIcon: const Icon(Icons.lock_reset, color: Color(0xFF0066FF), size: 20),
                             filled: true,
-                            fillColor: Colors.black.withOpacity(0.4),
+                            fillColor: inputBg,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                             hintText: 'Re-enter Password',
-                            hintStyle: const TextStyle(color: Colors.grey),
+                            hintStyle: TextStyle(color: textSub),
                           ),
                         ),
                       ],
@@ -285,7 +305,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                   height: 54,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
+                      backgroundColor: const Color(0xFF0066FF),
                       elevation: 4,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
@@ -294,7 +314,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                       _loading
                           ? 'Please wait...'
                           : (_isSignUp ? 'Create Account' : 'Log In to OurSpace'),
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                   ),
                 ),
@@ -306,7 +326,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                   children: [
                     Text(
                       _isSignUp ? 'Already have an account?' : "Don't have an account?",
-                      style: const TextStyle(color: Colors.grey, fontSize: 13),
+                      style: TextStyle(color: textSub, fontSize: 13),
                     ),
                     TextButton(
                       onPressed: () {
@@ -317,7 +337,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                       },
                       child: Text(
                         _isSignUp ? 'Log In' : 'Create Account',
-                        style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 14),
+                        style: const TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                     ),
                   ],

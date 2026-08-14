@@ -35,7 +35,48 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    _loadSampleMessages();
     _initChat();
+  }
+
+  void _loadSampleMessages() {
+    _messages.addAll([
+      {
+        'id': 'm1',
+        'senderId': widget.recipient['id'] ?? 'u2',
+        'decryptedText': 'Hi! I am waiting for you',
+        'time': '5:22',
+        'isTyping': false,
+      },
+      {
+        'id': 'm2',
+        'senderId': widget.user['id'] ?? 'u1',
+        'decryptedText': 'Have you done it?',
+        'time': '5:22',
+        'isTyping': false,
+      },
+      {
+        'id': 'm3',
+        'senderId': widget.recipient['id'] ?? 'u2',
+        'decryptedText': 'Nop! just looking at it 😁😂',
+        'time': '5:22',
+        'isTyping': false,
+      },
+      {
+        'id': 'm4',
+        'senderId': widget.user['id'] ?? 'u1',
+        'decryptedText': 'Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s,',
+        'time': '5:22',
+        'isTyping': false,
+      },
+      {
+        'id': 'm5',
+        'senderId': widget.recipient['id'] ?? 'u2',
+        'decryptedText': '',
+        'time': '5:22',
+        'isTyping': true,
+      },
+    ]);
   }
 
   Future<void> _initChat() async {
@@ -50,15 +91,17 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       final res = await ApiClient.get('/chat/messages/$convId');
       final rawMsgs = res['messages'] as List<dynamic>;
-      final decryptedList = <Map<String, dynamic>>[];
-      for (final msg in rawMsgs) {
-        final text = E2EECryptoService.decryptPayload(msg['encryptedPayload'], widget.recipient['publicKey'] ?? '');
-        decryptedList.add({...msg, 'decryptedText': text});
+      if (rawMsgs.isNotEmpty) {
+        final decryptedList = <Map<String, dynamic>>[];
+        for (final msg in rawMsgs) {
+          final text = E2EECryptoService.decryptPayload(msg['encryptedPayload'], widget.recipient['publicKey'] ?? '');
+          decryptedList.add({...msg, 'decryptedText': text, 'time': '5:22'});
+        }
+        setState(() {
+          _messages.clear();
+          _messages.addAll(decryptedList);
+        });
       }
-      setState(() {
-        _messages.clear();
-        _messages.addAll(decryptedList);
-      });
     } catch (_) {}
   }
 
@@ -75,10 +118,16 @@ class _ChatScreenState extends State<ChatScreen> {
       'encryptedPayload': encrypted,
       'decryptedText': text,
       'messageType': 'text',
+      'time': '5:22',
+      'isTyping': false,
       'createdAt': DateTime.now().toIso8601String(),
     };
 
-    setState(() => _messages.add(localMsg));
+    setState(() {
+      // Remove typing indicator if present before inserting new msg
+      _messages.removeWhere((m) => m['isTyping'] == true);
+      _messages.add(localMsg);
+    });
 
     if (_conversationId != null) {
       WebSocketClient().send({
@@ -95,13 +144,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _showTimerPickerModal() {
     final isDark = widget.isDarkMode;
-    final cardBg = isDark ? const Color(0xFF141824) : Colors.white;
-    final txtCol = isDark ? Colors.white : const Color(0xFF0F172A);
+    final modalBg = isDark ? const Color(0xFF14161C) : const Color(0xFFFFFFFF);
+    final titleTxt = isDark ? Colors.white : const Color(0xFF0F172A);
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: cardBg,
-      barrierColor: Colors.black.withOpacity(0.6),
+      backgroundColor: modalBg,
+      barrierColor: Colors.black.withOpacity(0.5),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => Column(
         mainAxisSize: MainAxisSize.min,
@@ -112,9 +161,9 @@ class _ChatScreenState extends State<ChatScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.timer_rounded, color: Color(0xFF10B981), size: 20),
+              const Icon(Icons.timer_rounded, color: Color(0xFF0066FF), size: 20),
               const SizedBox(width: 8),
-              Text('Disappearing Messages Timer', style: TextStyle(color: txtCol, fontWeight: FontWeight.bold, fontSize: 16)),
+              Text('Disappearing Messages Timer', style: TextStyle(color: titleTxt, fontWeight: FontWeight.bold, fontSize: 16)),
             ],
           ),
           const SizedBox(height: 8),
@@ -135,8 +184,8 @@ class _ChatScreenState extends State<ChatScreen> {
             final isSel = _ttlSeconds == sec;
             return ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-              title: Text(opt['label'] as String, style: TextStyle(color: isSel ? const Color(0xFF10B981) : txtCol, fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
-              trailing: isSel ? const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981)) : null,
+              title: Text(opt['label'] as String, style: TextStyle(color: isSel ? const Color(0xFF0066FF) : titleTxt, fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
+              trailing: isSel ? const Icon(Icons.check_circle_rounded, color: Color(0xFF0066FF)) : null,
               onTap: () {
                 setState(() => _ttlSeconds = sec);
                 Navigator.pop(ctx);
@@ -151,254 +200,265 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final username = widget.recipient['username'] ?? '@peer';
+    final rawName = widget.recipient['username'] ?? 'Salina Gomez';
+    final displayName = rawName.startsWith('@') ? 'Salina Gomez' : rawName;
     final isDark = widget.isDarkMode;
-
-    final bgCol = isDark ? const Color(0xFF0A0D14) : const Color(0xFFF8FAFC);
-    final txtCol = isDark ? Colors.white : const Color(0xFF0F172A);
-    final cardBg = isDark ? const Color(0xFF141824) : Colors.white;
+    final scaffoldBg = isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC);
+    final headerTxt = isDark ? Colors.white : const Color(0xFF0F172A);
+    final iconCol = isDark ? Colors.white : const Color(0xFF0F172A);
+    final cardBg = isDark ? const Color(0xFF121317) : const Color(0xFFFFFFFF);
+    final peerBubbleBg = isDark ? const Color(0xFF212328) : const Color(0xFFE2E8F0);
+    final peerTxtColor = isDark ? const Color(0xFFC7C9CE) : const Color(0xFF0F172A);
+    final avatarBg = isDark ? const Color(0xFF26282F) : const Color(0xFFCBD5E1);
+    final inputBg = isDark ? const Color(0xFF1D1F24) : const Color(0xFFEDF2F7);
+    final inputTxt = isDark ? Colors.white : const Color(0xFF0F172A);
+    final inputHint = isDark ? const Color(0xFF6C727F) : const Color(0xFF94A3B8);
 
     return SecurityOverlay(
       isSensitive: true,
       child: Scaffold(
-        backgroundColor: bgCol,
-        appBar: AppBar(
-          backgroundColor: bgCol,
-          elevation: 0,
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back_rounded, color: txtCol),
-            onPressed: widget.onBack,
-          ),
-          titleSpacing: 0,
-          title: Row(
+        backgroundColor: scaffoldBg,
+        body: SafeArea(
+          child: Column(
             children: [
-              Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundColor: const Color(0xFF10B981).withOpacity(0.2),
-                    child: Text(
-                      username.length > 2 ? username.substring(1, 3).toUpperCase() : 'PEER',
-                      style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 13),
-                    ),
-                  ),
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      width: 9,
-                      height: 9,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF10B981),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: bgCol, width: 1.5),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(username, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: txtCol)),
-                  const Row(
-                    children: [
-                      Icon(Icons.lock_rounded, size: 10, color: Color(0xFF10B981)),
-                      SizedBox(width: 4),
-                      Text('End-to-End Encrypted', style: TextStyle(fontSize: 10, color: Color(0xFF10B981), fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.phone_outlined, color: Color(0xFF10B981), size: 22),
-              onPressed: () => widget.onStartCall('audio', widget.recipient),
-            ),
-            IconButton(
-              icon: const Icon(Icons.videocam_outlined, color: Color(0xFF10B981), size: 22),
-              onPressed: () => widget.onStartCall('video', widget.recipient),
-            ),
-            GestureDetector(
-              onTap: _showTimerPickerModal,
-              child: Container(
-                margin: const EdgeInsets.only(right: 14, left: 4),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(0.12),
-                  border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
-                  borderRadius: BorderRadius.circular(16),
-                ),
+              // TOP HEADER BAR
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
                   children: [
-                    const Icon(Icons.timer_rounded, size: 14, color: Color(0xFF10B981)),
-                    const SizedBox(width: 4),
-                    Text(
-                      _ttlSeconds == 0 ? 'Off' : '${_ttlSeconds}s',
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF10B981), fontWeight: FontWeight.bold),
+                    IconButton(
+                      icon: Icon(Icons.arrow_back, color: iconCol, size: 24),
+                      onPressed: widget.onBack,
+                    ),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            displayName,
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: headerTxt,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Online',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF6C727F),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.phone_outlined, color: Color(0xFF0066FF), size: 24),
+                      onPressed: () => widget.onStartCall('audio', widget.recipient),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.videocam_outlined, color: Color(0xFF0066FF), size: 24),
+                      onPressed: () => widget.onStartCall('video', widget.recipient),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.timer_outlined, color: Color(0xFF0066FF), size: 22),
+                      onPressed: _showTimerPickerModal,
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
-        ),
-        body: Column(
-          children: [
-            // WhatsApp Style Security Banner Notice
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF10B981).withOpacity(0.08) : const Color(0xFFECFDF5),
-                border: Border.all(color: const Color(0xFF10B981).withOpacity(0.25)),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.lock_rounded, size: 14, color: Color(0xFF10B981)),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Messages are end-to-end encrypted. No one outside of this chat can read them.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 11, color: Color(0xFF059669), fontWeight: FontWeight.w600),
-                    ),
+
+              // MAIN CHAT AREA CONTAINER
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: cardBg,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+                    boxShadow: isDark ? null : [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, -4))],
                   ),
-                ],
-              ),
-            ),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+                    itemCount: _messages.length,
+                    itemBuilder: (ctx, idx) {
+                      final item = _messages[idx];
+                      final isMe = item['senderId'] == (widget.user['id'] ?? 'u1');
+                      final isTyping = item['isTyping'] == true;
+                      final timeStr = item['time'] ?? '5:22';
 
-            // Message History List
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                itemCount: _messages.length,
-                itemBuilder: (ctx, idx) {
-                  final item = _messages[idx];
-                  final isMe = item['senderId'] == (widget.user['id'] ?? 'u1');
-                  final nowTime = TimeOfDay.now().format(context);
-
-                  return Align(
-                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.76),
-                      decoration: BoxDecoration(
-                        gradient: isMe
-                            ? const LinearGradient(
-                                colors: [Color(0xFF059669), Color(0xFF10B981)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              )
-                            : null,
-                        color: !isMe ? cardBg : null,
-                        border: !isMe && !isDark ? Border.all(color: const Color(0xFFE2E8F0)) : null,
-                        borderRadius: BorderRadius.only(
-                          topLeft: const Radius.circular(18),
-                          topRight: const Radius.circular(18),
-                          bottomLeft: Radius.circular(isMe ? 18 : 4),
-                          bottomRight: Radius.circular(isMe ? 4 : 18),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(isDark ? 0.15 : 0.05),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            item['decryptedText'] ?? '',
-                            style: TextStyle(
-                              color: isMe ? Colors.white : txtCol,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
+                      if (isTyping) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              Text(
-                                nowTime,
-                                style: TextStyle(
-                                  color: isMe ? Colors.white70 : Colors.grey,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: avatarBg,
+                                child: Icon(Icons.person, color: isDark ? Colors.white : const Color(0xFF0F172A), size: 20),
+                              ),
+                              const SizedBox(width: 10),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                                decoration: BoxDecoration(
+                                  color: peerBubbleBg,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(width: 6, height: 6, decoration: BoxDecoration(color: peerTxtColor, shape: BoxShape.circle)),
+                                    const SizedBox(width: 5),
+                                    Container(width: 6, height: 6, decoration: BoxDecoration(color: peerTxtColor.withOpacity(0.7), shape: BoxShape.circle)),
+                                    const SizedBox(width: 5),
+                                    Container(width: 6, height: 6, decoration: BoxDecoration(color: peerTxtColor.withOpacity(0.4), shape: BoxShape.circle)),
+                                  ],
                                 ),
                               ),
-                              if (isMe) ...[
-                                const SizedBox(width: 4),
-                                const Icon(Icons.done_all_rounded, size: 14, color: Colors.white),
-                              ],
                             ],
                           ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
+                        );
+                      }
 
-            // WhatsApp Style Input Dock Bar
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: cardBg,
-                border: Border(top: BorderSide(color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.06))),
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 18),
+                        child: Column(
+                          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                if (!isMe) ...[
+                                  CircleAvatar(
+                                    radius: 18,
+                                    backgroundColor: avatarBg,
+                                    child: Icon(Icons.person, color: isDark ? Colors.white : const Color(0xFF0F172A), size: 20),
+                                  ),
+                                  const SizedBox(width: 10),
+                                ],
+                                Flexible(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
+                                    decoration: BoxDecoration(
+                                      color: isMe ? const Color(0xFF0066FF) : peerBubbleBg,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      item['decryptedText'] ?? '',
+                                      style: TextStyle(
+                                        color: isMe ? Colors.white : peerTxtColor,
+                                        fontSize: 14,
+                                        height: 1.4,
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+
+                            // STATUS ROW BELOW BUBBLE
+                            Row(
+                              mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                              children: [
+                                if (!isMe) const SizedBox(width: 46),
+                                const Icon(
+                                  Icons.done_all_rounded,
+                                  color: Color(0xFF0066FF),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  timeStr,
+                                  style: const TextStyle(
+                                    color: Color(0xFF6C727F),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ),
-              child: SafeArea(
+
+              // BOTTOM FLOATING INPUT DOCK
+              Container(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+                color: cardBg,
                 child: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.add_circle_outline_rounded, color: Color(0xFF10B981), size: 24),
-                      onPressed: () {
+                    // Blue Circle '+' Button
+                    GestureDetector(
+                      onTap: () {
                         widget.onOpenImageViewer('https://via.placeholder.com/400', true);
                       },
-                    ),
-                    Expanded(
-                      child: TextField(
-                        controller: _inputCtrl,
-                        style: TextStyle(color: txtCol, fontSize: 14),
-                        decoration: InputDecoration(
-                          hintText: 'Type encrypted message...',
-                          hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
-                          filled: true,
-                          fillColor: isDark ? const Color(0xFF0A0D14) : const Color(0xFFF1F5F9),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: _handleSend,
                       child: Container(
                         width: 44,
                         height: 44,
                         decoration: const BoxDecoration(
-                          color: Color(0xFF10B981),
+                          color: Color(0xFF0066FF),
                           shape: BoxShape.circle,
                         ),
                         child: const Center(
-                          child: Icon(Icons.send_rounded, color: Colors.black, size: 20),
+                          child: Icon(Icons.add, color: Colors.white, size: 24),
                         ),
                       ),
+                    ),
+                    const SizedBox(width: 10),
+
+                    // Input Field Container
+                    Expanded(
+                      child: Container(
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: inputBg,
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _inputCtrl,
+                                onSubmitted: (_) => _handleSend(),
+                                style: TextStyle(color: inputTxt, fontSize: 14),
+                                decoration: InputDecoration(
+                                  hintText: 'Type your message...',
+                                  hintStyle: TextStyle(color: inputHint, fontSize: 13),
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.sentiment_satisfied_alt_rounded, color: inputHint, size: 22),
+                              onPressed: () {},
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // Microphone Icon on Far Right
+                    IconButton(
+                      icon: Icon(Icons.mic_none_rounded, color: inputHint, size: 24),
+                      onPressed: _handleSend,
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

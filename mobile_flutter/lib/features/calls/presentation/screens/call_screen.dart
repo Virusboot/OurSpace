@@ -53,7 +53,7 @@ class _CallScreenState extends State<CallScreen> {
     return SecurityOverlay(
       isSensitive: true,
       child: Scaffold(
-        backgroundColor: const Color(0xFF0A0D14),
+        backgroundColor: const Color(0xFF000000),
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
@@ -66,15 +66,15 @@ class _CallScreenState extends State<CallScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withOpacity(0.12),
-                        border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+                        color: const Color(0xFF0066FF).withOpacity(0.12),
+                        border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.3)),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.security_rounded, size: 14, color: Color(0xFF10B981)),
+                          Icon(Icons.security_rounded, size: 14, color: Color(0xFF0066FF)),
                           SizedBox(width: 6),
-                          Text('WebRTC P2P Encrypted', style: TextStyle(color: Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.bold)),
+                          Text('WebRTC P2P Encrypted', style: TextStyle(color: Color(0xFF0066FF), fontSize: 11, fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ),
@@ -106,13 +106,13 @@ class _CallScreenState extends State<CallScreen> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: const LinearGradient(
-                              colors: [Color(0xFF059669), Color(0xFF10B981)],
+                              colors: [Color(0xFF0066FF), Color(0xFF0052CC)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF10B981).withOpacity(0.35),
+                                color: const Color(0xFF0066FF).withOpacity(0.4),
                                 blurRadius: 40,
                                 spreadRadius: 4,
                               ),
@@ -121,10 +121,10 @@ class _CallScreenState extends State<CallScreen> {
                           child: Center(
                             child: CircleAvatar(
                               radius: 60,
-                              backgroundColor: const Color(0xFF141824),
+                              backgroundColor: const Color(0xFF121317),
                               child: Text(
-                                name.length > 2 ? name.substring(1, 3).toUpperCase() : 'PEER',
-                                style: const TextStyle(color: Color(0xFF10B981), fontSize: 34, fontWeight: FontWeight.w800),
+                                name.length > 2 ? name.substring(0, 2).toUpperCase() : 'PEER',
+                                style: const TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.w800),
                               ),
                             ),
                           ),
@@ -135,11 +135,11 @@ class _CallScreenState extends State<CallScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle)),
+                            Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF0066FF), shape: BoxShape.circle)),
                             const SizedBox(width: 6),
                             Text(
                               widget.callType == 'video' ? 'HD Video Call Connected' : 'HD Voice Call Connected',
-                              style: const TextStyle(color: Color(0xFF10B981), fontSize: 13, fontWeight: FontWeight.w600),
+                              style: const TextStyle(color: Color(0xFF0066FF), fontSize: 13, fontWeight: FontWeight.w600),
                             ),
                           ],
                         ),
@@ -148,11 +148,11 @@ class _CallScreenState extends State<CallScreen> {
                   ),
                 ),
 
-                // Floating Glass Call Controls Dock
+                // Floating Controls Dock
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF141824),
+                    color: const Color(0xFF121317),
                     borderRadius: BorderRadius.circular(32),
                     border: Border.all(color: Colors.white.withOpacity(0.08)),
                     boxShadow: [
@@ -177,8 +177,8 @@ class _CallScreenState extends State<CallScreen> {
                       // Speaker Button
                       _buildControlButton(
                         icon: _speakerEnabled ? Icons.volume_up_rounded : Icons.volume_down_rounded,
-                        color: _speakerEnabled ? const Color(0xFF10B981) : Colors.white,
-                        bgColor: _speakerEnabled ? const Color(0xFF10B981).withOpacity(0.2) : Colors.white.withOpacity(0.1),
+                        color: _speakerEnabled ? const Color(0xFF0066FF) : Colors.white,
+                        bgColor: _speakerEnabled ? const Color(0xFF0066FF).withOpacity(0.2) : Colors.white.withOpacity(0.1),
                         onTap: () => setState(() => _speakerEnabled = !_speakerEnabled),
                       ),
 

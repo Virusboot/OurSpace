@@ -24,42 +24,66 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _activeTab = 0; // 0: Chats, 1: Calls, 2: Security
+  int _activeTab = 0; // 0: Chat, 1: Calls, 2: Status, 3: Settings
   final TextEditingController _searchCtrl = TextEditingController();
-  bool _isSearching = false;
+
 
   final List<Map<String, dynamic>> _conversations = [
     {
       'id': 'c1',
-      'username': '@alex_dev',
+      'username': 'Salina Desuza',
+      'handle': '@salina_desuza',
       'privateId': 'USER-98X12A',
-      'lastMessage': '🔒 Hello! This conversation is end-to-end encrypted.',
-      'time': '14:20',
-      'unread': 1,
+      'lastMessage': 'Hi! I am waiting for you',
+      'time': '5:22',
+      'unread': 5,
       'isOnline': true,
       'publicKey': 'PUB-12345',
     },
     {
       'id': 'c2',
-      'username': '@sarah_sec',
+      'username': 'James Watemore',
+      'handle': '@james_w',
       'privateId': 'USER-44B90Z',
-      'lastMessage': '🔒 Disappearing message timer set to 30s',
-      'time': 'Yesterday',
+      'lastMessage': 'Ok great!👍👍',
+      'time': '12:45',
       'unread': 0,
       'isOnline': false,
       'publicKey': 'PUB-67890',
+    },
+    {
+      'id': 'c3',
+      'username': 'Julia Smith',
+      'handle': '@julia_s',
+      'privateId': 'USER-77C11Q',
+      'lastMessage': 'It is gona be fun 🤨😁✌️',
+      'time': 'Yesterday',
+      'unread': 2,
+      'isOnline': true,
+      'publicKey': 'PUB-11223',
+    },
+    {
+      'id': 'c4',
+      'username': 'Alex Jazz',
+      'handle': '@alex_j',
+      'privateId': 'USER-88D99M',
+      'lastMessage': 'Yup!',
+      'time': 'Mon',
+      'unread': 0,
+      'isOnline': false,
+      'publicKey': 'PUB-44556',
     },
   ];
 
   void _showNewActionSheet() {
     final isDark = widget.isDarkMode;
-    final cardBg = isDark ? const Color(0xFF141824) : Colors.white;
+    final cardBg = isDark ? const Color(0xFF14161C) : Colors.white;
     final txtColor = isDark ? Colors.white : const Color(0xFF0F172A);
 
     showModalBottomSheet(
       context: context,
       backgroundColor: cardBg,
-      barrierColor: Colors.black.withOpacity(0.6),
+      barrierColor: Colors.black.withOpacity(0.7),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(24.0),
@@ -82,7 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             _buildSheetTile(
               icon: Icons.chat_bubble_outline_rounded,
-              color: const Color(0xFF10B981),
+              color: const Color(0xFF0066FF),
               title: 'New Encrypted Chat',
               subtitle: 'Connect with a user via Username or Private ID',
               onTap: () {
@@ -93,7 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 12),
             _buildSheetTile(
               icon: Icons.mic_none_rounded,
-              color: const Color(0xFF3B82F6),
+              color: const Color(0xFF0066FF),
               title: 'New Audio Call',
               subtitle: 'Start an E2E encrypted HD voice call',
               onTap: () {
@@ -104,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 12),
             _buildSheetTile(
               icon: Icons.videocam_outlined,
-              color: const Color(0xFFA855F7),
+              color: const Color(0xFF0066FF),
               title: 'New Video Call',
               subtitle: 'Start an E2E encrypted HD video call',
               onTap: () {
@@ -115,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 12),
             _buildSheetTile(
               icon: Icons.link_rounded,
-              color: const Color(0xFFF59E0B),
+              color: const Color(0xFF0066FF),
               title: 'Create Call Link',
               subtitle: 'Generate a guest WebRTC link to share anywhere',
               onTap: () {
@@ -187,11 +211,11 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setStateDialog) => AlertDialog(
-          backgroundColor: isDark ? const Color(0xFF141824) : Colors.white,
+          backgroundColor: isDark ? const Color(0xFF14161C) : Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           title: Row(
             children: [
-              const Icon(Icons.person_search_rounded, color: Color(0xFF10B981), size: 24),
+              const Icon(Icons.person_search_rounded, color: Color(0xFF0066FF), size: 24),
               const SizedBox(width: 10),
               Text('Search Identity', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold)),
             ],
@@ -217,7 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 46,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
+                    backgroundColor: const Color(0xFF0066FF),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: loading
@@ -242,7 +266,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             });
                           }
                         },
-                  child: Text(loading ? 'Searching...' : 'Find & Connect', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                  child: Text(loading ? 'Searching...' : 'Find & Connect', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
               if (searchError != null) ...[
@@ -259,16 +283,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   decoration: BoxDecoration(
                     color: isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+                    border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.3)),
                   ),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: const Color(0xFF10B981).withOpacity(0.2),
-                      child: Text(searchResult!['username'].toString().substring(1, 3).toUpperCase(), style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
+                      backgroundColor: const Color(0xFF0066FF).withOpacity(0.2),
+                      child: Text(searchResult!['username'].toString().substring(0, 2).toUpperCase(), style: const TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.bold)),
                     ),
                     title: Text(searchResult!['username'], style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
                     subtitle: Text(searchResult!['privateId'], style: const TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace')),
-                    trailing: const Icon(Icons.chat_bubble_outline, color: Color(0xFF10B981)),
+                    trailing: const Icon(Icons.chat_bubble_outline, color: Color(0xFF0066FF)),
                     onTap: () {
                       Navigator.pop(ctx);
                       widget.onOpenChat(searchResult!);
@@ -294,11 +318,11 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setStateDialog) => AlertDialog(
-          backgroundColor: isDark ? const Color(0xFF141824) : Colors.white,
+          backgroundColor: isDark ? const Color(0xFF14161C) : Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           title: Row(
             children: [
-              const Icon(Icons.add_link_rounded, color: Color(0xFF10B981), size: 24),
+              const Icon(Icons.add_link_rounded, color: Color(0xFF0066FF), size: 24),
               const SizedBox(width: 10),
               Text('Create Guest Call Link', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold)),
             ],
@@ -315,8 +339,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
-                            color: callType == 'video' ? const Color(0xFF10B981).withOpacity(0.2) : (isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.04)),
-                            border: Border.all(color: callType == 'video' ? const Color(0xFF10B981) : Colors.transparent),
+                            color: callType == 'video' ? const Color(0xFF0066FF).withOpacity(0.2) : (isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.04)),
+                            border: Border.all(color: callType == 'video' ? const Color(0xFF0066FF) : Colors.transparent),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
@@ -337,8 +361,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
-                            color: callType == 'audio' ? const Color(0xFF10B981).withOpacity(0.2) : (isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.04)),
-                            border: Border.all(color: callType == 'audio' ? const Color(0xFF10B981) : Colors.transparent),
+                            color: callType == 'audio' ? const Color(0xFF0066FF).withOpacity(0.2) : (isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.04)),
+                            border: Border.all(color: callType == 'audio' ? const Color(0xFF0066FF) : Colors.transparent),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
@@ -374,7 +398,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   height: 46,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
+                      backgroundColor: const Color(0xFF0066FF),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: loading
@@ -398,27 +422,27 @@ class _HomeScreenState extends State<HomeScreen> {
                               });
                             }
                           },
-                    child: Text(loading ? 'Generating...' : 'Generate Encrypted Link', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                    child: Text(loading ? 'Generating...' : 'Generate Encrypted Link', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ] else ...[
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.1),
-                    border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+                    color: const Color(0xFF0066FF).withOpacity(0.1),
+                    border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.3)),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
                     children: [
-                      const Icon(Icons.check_circle_outline, color: Color(0xFF10B981), size: 36),
+                      const Icon(Icons.check_circle_outline, color: Color(0xFF0066FF), size: 36),
                       const SizedBox(height: 8),
                       Text('Call Link Ready!', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 15)),
                       const SizedBox(height: 10),
                       SelectableText(
                         generatedUrl!,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Color(0xFF10B981), fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.bold),
+                        style: const TextStyle(color: Color(0xFF0066FF), fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -437,239 +461,350 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = widget.isDarkMode;
-
-    final bgCol = isDark ? const Color(0xFF0A0D14) : const Color(0xFFF8FAFC);
-    final txtCol = isDark ? Colors.white : const Color(0xFF0F172A);
-    final cardBg = isDark ? const Color(0xFF141824) : Colors.white;
+    final scaffoldBg = isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC);
+    final headerTxt = isDark ? Colors.white : const Color(0xFF0F172A);
+    final searchBg = isDark ? const Color(0xFF191B20) : const Color(0xFFEDF2F7);
+    final searchTxt = isDark ? Colors.white : const Color(0xFF0F172A);
+    final searchHint = isDark ? const Color(0xFF6C727F) : const Color(0xFF94A3B8);
+    final cardBg = isDark ? const Color(0xFF121317) : const Color(0xFFFFFFFF);
+    final handleColor = isDark ? Colors.white.withOpacity(0.12) : Colors.black.withOpacity(0.12);
+    final itemSelectedBg = isDark ? const Color(0xFF1B1D23) : const Color(0xFFF1F5F9);
+    final itemTxt = isDark ? Colors.white : const Color(0xFF0F172A);
+    final itemSubtxt = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final avatarBg = isDark ? const Color(0xFF26282F) : const Color(0xFFE2E8F0);
+    final avatarTxt = isDark ? Colors.white : const Color(0xFF0F172A);
+    final dockPillBg = isDark ? const Color(0xFF1A1C24) : const Color(0xFFFFFFFF);
+    final dockBorder = isDark ? Colors.white.withOpacity(0.14) : const Color(0xFFE2E8F0);
+    final dockShadow = isDark
+        ? [
+            BoxShadow(
+              color: const Color(0xFF0066FF).withOpacity(0.20),
+              blurRadius: 24,
+              spreadRadius: 2,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.6),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ]
+        : [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
+            ),
+          ];
 
     return Scaffold(
-      backgroundColor: bgCol,
-      appBar: AppBar(
-        backgroundColor: bgCol,
-        elevation: 0,
-        titleSpacing: 16,
-        title: Text(
-          'OurSpace',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-            color: txtCol,
-            letterSpacing: -0.5,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(_isSearching ? Icons.close : Icons.search_rounded, color: isDark ? Colors.white70 : const Color(0xFF475569)),
-            onPressed: () => setState(() => _isSearching = !_isSearching),
-          ),
-          IconButton(
-            icon: Icon(Icons.settings_outlined, color: isDark ? Colors.white70 : const Color(0xFF475569)),
-            onPressed: widget.onOpenSettings,
-          ),
-          const SizedBox(width: 6),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Search Bar
-          if (_isSearching)
+      backgroundColor: scaffoldBg,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // TOP HEADER WITH TITLE
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: TextField(
-                controller: _searchCtrl,
-                style: TextStyle(color: txtCol, fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: 'Search chats or Private ID...',
-                  hintStyle: const TextStyle(color: Colors.grey),
-                  filled: true,
-                  fillColor: cardBg,
-                  prefixIcon: const Icon(Icons.search, color: Color(0xFF10B981), size: 20),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
-
-          // Navigation Pill Tabs
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.06)),
-                boxShadow: isDark
-                    ? null
-                    : [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-              ),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(child: _buildNavTab(0, 'Chats', badgeCount: 1)),
-                  Expanded(child: _buildNavTab(1, 'Calls')),
-                  Expanded(child: _buildNavTab(2, 'Security')),
+                  Text(
+                    _activeTab == 0 ? 'Chat' : (_activeTab == 1 ? 'Calls' : 'Voice Notes'),
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: headerTxt,
+                      letterSpacing: -0.4,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: widget.onOpenSettings,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF0066FF),
+                        shape: BoxShape.circle,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Image.asset(
+                          'assets/images/Our Space Logo.png',
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-          ),
 
-          // Tab Content
-          Expanded(
-            child: _buildTabContent(),
-          ),
-        ],
+            // SEARCH BAR ("Type your search...")
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+              child: Container(
+                height: 48,
+                decoration: BoxDecoration(
+                  color: searchBg,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: TextField(
+                  controller: _searchCtrl,
+                  style: TextStyle(color: searchTxt, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Type your search...',
+                    hintStyle: TextStyle(color: searchHint, fontSize: 14),
+                    prefixIcon: Icon(Icons.search, color: searchHint, size: 22),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 13),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // CHAT LIST SECTION CONTAINER
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+                  boxShadow: isDark
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 10,
+                            offset: const Offset(0, -4),
+                          ),
+                        ],
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 12),
+                    Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: handleColor,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: _activeTab == 0
+                          ? ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(14, 8, 14, 16),
+                              itemCount: _conversations.length,
+                              itemBuilder: (ctx, idx) {
+                                final item = _conversations[idx];
+                                final unread = item['unread'] as int;
+                                final isSelected = idx == 0;
+
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? itemSelectedBg : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                                    onTap: () => widget.onOpenChat(item),
+                                    leading: CircleAvatar(
+                                      radius: 25,
+                                      backgroundColor: avatarBg,
+                                      child: Text(
+                                        item['username'].toString().substring(0, 1).toUpperCase(),
+                                        style: TextStyle(color: avatarTxt, fontWeight: FontWeight.bold, fontSize: 17),
+                                      ),
+                                    ),
+                                    title: Text(
+                                      item['username'],
+                                      style: TextStyle(
+                                        color: itemTxt,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                    subtitle: Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Text(
+                                        item['lastMessage'],
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: itemSubtxt,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                    trailing: unread > 0
+                                        ? Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF0066FF),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              '$unread',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          )
+                                        : null,
+                                  ),
+                                );
+                              },
+                            )
+                          : _buildSecondaryTabContent(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFF10B981),
-        elevation: 6,
-        onPressed: _showNewActionSheet,
-        icon: const Icon(Icons.add_rounded, color: Colors.black, size: 22),
-        label: const Text('New Chat', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 14)),
+
+      // ULTRA PREMIUM FLOATING GLASSMORPHIC BOTTOM DOCK
+      bottomNavigationBar: Container(
+        color: cardBg, // Seamless single background matching body
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+        child: Container(
+          height: 72,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: dockPillBg,
+            borderRadius: BorderRadius.circular(40), // Full round capsule
+            border: Border.all(
+              color: dockBorder,
+              width: 1.2,
+            ),
+            boxShadow: dockShadow,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              // 1. Chat Tab
+              _buildNavItem(
+                index: 0,
+                icon: _activeTab == 0 ? Icons.chat_bubble_rounded : Icons.chat_bubble_outline_rounded,
+                label: 'Chat',
+                isSelected: _activeTab == 0,
+                onTap: () => setState(() => _activeTab = 0),
+              ),
+              // 2. Calls Tab
+              _buildNavItem(
+                index: 1,
+                icon: _activeTab == 1 ? Icons.call_rounded : Icons.call_outlined,
+                label: 'Calls',
+                isSelected: _activeTab == 1,
+                onTap: () => setState(() => _activeTab = 1),
+              ),
+              // 3. Glowing Gradient Center FAB Button (+)
+              GestureDetector(
+                onTap: _showNewActionSheet,
+                child: Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF0066FF), Color(0xFF0052CC)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF0066FF).withOpacity(0.45),
+                        blurRadius: 16,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.add_rounded, color: Colors.white, size: 28),
+                  ),
+                ),
+              ),
+              // 4. Voice Notes Tab (Coming Soon)
+              _buildNavItem(
+                index: 2,
+                icon: _activeTab == 2 ? Icons.graphic_eq_rounded : Icons.graphic_eq_outlined,
+                label: 'Voice',
+                isSelected: _activeTab == 2,
+                onTap: () => setState(() => _activeTab = 2),
+              ),
+              // 5. Profile Tab (WhatsApp style: Profile & Settings)
+              _buildNavItem(
+                index: 3,
+                icon: Icons.person_outline_rounded,
+                label: 'Profile',
+                isSelected: false,
+                onTap: widget.onOpenSettings,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildNavTab(int index, String label, {int badgeCount = 0}) {
-    final isSelected = _activeTab == index;
+  Widget _buildNavItem({
+    required int index,
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final isDark = widget.isDarkMode;
+    final unselectedNav = isDark ? const Color(0xFF8E95A5) : const Color(0xFF64748B);
+    final selectedText = isDark ? Colors.white : const Color(0xFF0F172A);
 
     return GestureDetector(
-      onTap: () => setState(() => _activeTab = index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF10B981) : Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
+            Icon(
+              icon,
+              color: isSelected ? const Color(0xFF0066FF) : unselectedNav,
+              size: 24,
+            ),
+            const SizedBox(height: 3),
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? Colors.black : Colors.grey,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                fontSize: 13,
+                color: isSelected ? selectedText : unselectedNav,
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                letterSpacing: 0.2,
               ),
             ),
-            if (badgeCount > 0 && !isSelected) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle),
-                child: Text('$badgeCount', style: const TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold)),
-              ),
-            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTabContent() {
+  Widget _buildSecondaryTabContent() {
     final isDark = widget.isDarkMode;
-    final cardBg = isDark ? const Color(0xFF141824) : Colors.white;
-    final txtCol = isDark ? Colors.white : const Color(0xFF0F172A);
+    final itemBg = isDark ? const Color(0xFF1B1D23) : const Color(0xFFF1F5F9);
+    final txtColor = isDark ? Colors.white : const Color(0xFF0F172A);
 
-    if (_activeTab == 0) {
-      // CHATS TAB
-      return ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount: _conversations.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 8),
-        itemBuilder: (ctx, idx) {
-          final item = _conversations[idx];
-          final isOnline = item['isOnline'] == true;
-          final unread = item['unread'] as int;
-
-          return Container(
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.06)),
-              boxShadow: isDark
-                  ? null
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              onTap: () => widget.onOpenChat(item),
-              leading: Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundColor: const Color(0xFF10B981).withOpacity(0.15),
-                    child: Text(
-                      item['username'].toString().substring(1, 3).toUpperCase(),
-                      style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.w800, fontSize: 15),
-                    ),
-                  ),
-                  if (isOnline)
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: cardBg, width: 2),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              title: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(item['username'], style: TextStyle(color: txtCol, fontWeight: FontWeight.bold, fontSize: 15)),
-                  Text(item['time'], style: TextStyle(color: unread > 0 ? const Color(0xFF10B981) : Colors.grey, fontSize: 11, fontWeight: FontWeight.w600)),
-                ],
-              ),
-              subtitle: Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        item['lastMessage'],
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.grey, fontSize: 13),
-                      ),
-                    ),
-                    if (unread > 0)
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle),
-                        child: Text('$unread', style: const TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold)),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      );
-    } else if (_activeTab == 1) {
-      // CALLS TAB
+    if (_activeTab == 1) {
       return Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             InkWell(
               onTap: _showCreateCallLinkModal,
@@ -677,56 +812,27 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [const Color(0xFF10B981).withOpacity(0.15), const Color(0xFF059669).withOpacity(0.05)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+                  color: itemBg,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   children: [
                     const CircleAvatar(
-                      backgroundColor: Color(0xFF10B981),
-                      child: Icon(Icons.link_rounded, color: Colors.black),
+                      backgroundColor: Color(0xFF0066FF),
+                      child: Icon(Icons.link_rounded, color: Colors.white),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Create Guest Call Link', style: TextStyle(color: txtCol, fontWeight: FontWeight.bold, fontSize: 15)),
+                          Text('Create Guest Call Link', style: TextStyle(color: txtColor, fontWeight: FontWeight.bold, fontSize: 15)),
                           const SizedBox(height: 2),
-                          const Text('Share a WebRTC audio/video call link with anyone without app install', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                          const Text('Share an audio/video call link with anyone', style: TextStyle(color: Colors.grey, fontSize: 11)),
                         ],
                       ),
                     ),
-                    const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF10B981)),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text('RECENT ENCRYPTED CALLS', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1)),
-            const SizedBox(height: 12),
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.06)),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.shield_outlined, size: 42, color: isDark ? Colors.white24 : Colors.black26),
-                    const SizedBox(height: 12),
-                    Text('Zero-Knowledge Call Logs', style: TextStyle(color: txtCol, fontWeight: FontWeight.bold, fontSize: 15)),
-                    const SizedBox(height: 6),
-                    const Text('Your call metadata is never stored on servers. Calls expire automatically.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF0066FF)),
                   ],
                 ),
               ),
@@ -735,43 +841,47 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     } else {
-      // SECURITY TAB
-      return Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(20),
+                width: 76,
+                height: 76,
                 decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+                  color: const Color(0xFF0066FF).withOpacity(0.12),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.3)),
                 ),
-                child: Column(
+                child: const Icon(Icons.mic_none_rounded, color: Color(0xFF0066FF), size: 38),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Voice Notes Coming Soon',
+                style: TextStyle(color: txtColor, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Encrypted voice memos and instant audio notes feature will be available in the upcoming update.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), fontSize: 13, height: 1.4),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0066FF).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.4)),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 28),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('End-to-End Encryption', style: TextStyle(color: txtCol, fontWeight: FontWeight.bold, fontSize: 16)),
-                            const Text('Status: ACTIVE & VERIFIED', style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 11)),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Divider(color: isDark ? Colors.white10 : Colors.black12),
-                    const SizedBox(height: 12),
-                    _buildSecurityDetailRow(Icons.key_rounded, 'Curve25519 & AES-256-GCM', 'Cryptographic protocol active', txtCol),
-                    const SizedBox(height: 10),
-                    _buildSecurityDetailRow(Icons.visibility_off_rounded, 'Zero Server Logs', 'No metadata or IP retention', txtCol),
-                    const SizedBox(height: 10),
-                    _buildSecurityDetailRow(Icons.timer_rounded, 'Auto Disappearing Chat', 'Messages wipe after countdown', txtCol),
+                    Icon(Icons.hourglass_top_rounded, color: Color(0xFF0066FF), size: 14),
+                    SizedBox(width: 6),
+                    Text('IN DEVELOPMENT', style: TextStyle(color: Color(0xFF0066FF), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1)),
                   ],
                 ),
               ),
@@ -780,21 +890,5 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     }
-  }
-
-  Widget _buildSecurityDetailRow(IconData icon, String title, String subtitle, Color txtCol) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: const Color(0xFF10B981)),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: TextStyle(color: txtCol, fontWeight: FontWeight.bold, fontSize: 13)),
-            Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 11)),
-          ],
-        ),
-      ],
-    );
   }
 }

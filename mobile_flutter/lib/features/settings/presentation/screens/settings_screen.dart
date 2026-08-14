@@ -51,7 +51,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Row(
             children: [
-              const Icon(Icons.lock_reset, color: Color(0xFF10B981), size: 22),
+              const Icon(Icons.lock_reset, color: Color(0xFF0066FF), size: 22),
               const SizedBox(width: 8),
               Text('Change Password', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold)),
             ],
@@ -71,8 +71,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               if (successMsg) ...[
                 Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: const Color(0xFF10B981).withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
-                  child: const Text('Password changed successfully!', style: TextStyle(color: Color(0xFF10B981), fontSize: 12, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                  decoration: BoxDecoration(color: const Color(0xFF0066FF).withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
+                  child: const Text('Password changed successfully!', style: TextStyle(color: Color(0xFF0066FF), fontSize: 12, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
                 ),
                 const SizedBox(height: 10),
               ] else ...[
@@ -82,7 +82,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13),
                   decoration: InputDecoration(
                     hintText: 'Current Password',
-                    hintStyle: const TextStyle(color: Colors.grey),
+                    hintStyle: TextStyle(color: isDark ? Colors.grey : const Color(0xFF94A3B8)),
                     filled: true,
                     fillColor: isDark ? Colors.black.withOpacity(0.4) : const Color(0xFFF1F5F9),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
@@ -95,7 +95,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13),
                   decoration: InputDecoration(
                     hintText: 'New Password',
-                    hintStyle: const TextStyle(color: Colors.grey),
+                    hintStyle: TextStyle(color: isDark ? Colors.grey : const Color(0xFF94A3B8)),
                     filled: true,
                     fillColor: isDark ? Colors.black.withOpacity(0.4) : const Color(0xFFF1F5F9),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
@@ -108,7 +108,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13),
                   decoration: InputDecoration(
                     hintText: 'Confirm New Password',
-                    hintStyle: const TextStyle(color: Colors.grey),
+                    hintStyle: TextStyle(color: isDark ? Colors.grey : const Color(0xFF94A3B8)),
                     filled: true,
                     fillColor: isDark ? Colors.black.withOpacity(0.4) : const Color(0xFFF1F5F9),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
@@ -124,7 +124,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             if (!successMsg)
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0066FF)),
                 onPressed: () {
                   if (currPassCtrl.text.isEmpty || newPassCtrl.text.isEmpty) {
                     setStateModal(() => modalError = 'Please fill all fields');
@@ -142,7 +142,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     if (ctx.mounted) Navigator.pop(ctx);
                   });
                 },
-                child: const Text('Update', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                child: const Text('Update', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
           ],
         ),
@@ -156,48 +156,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final privateId = widget.user?['privateId'] ?? 'USER-7XK92P';
     final isDark = widget.isDarkMode;
 
-    final bgCol = isDark ? const Color(0xFF0A0D14) : const Color(0xFFF8FAFC);
+    final bgCol = isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC);
     final txtCol = isDark ? Colors.white : const Color(0xFF0F172A);
-    final cardBg = isDark ? const Color(0xFF141824) : Colors.white;
+    final subtxtCol = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final sectionHeaderCol = isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
+    final cardBg = isDark ? const Color(0xFF121317) : Colors.white;
+    final cardBorderCol = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+    final cardShadows = isDark
+        ? null
+        : [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ];
 
     return Scaffold(
       backgroundColor: bgCol,
       appBar: AppBar(
         backgroundColor: bgCol,
         elevation: 0,
-        leading: IconButton(icon: Icon(Icons.arrow_back, color: txtCol), onPressed: widget.onBack),
-        title: Text('Privacy & Security Settings', style: TextStyle(color: txtCol, fontSize: 16, fontWeight: FontWeight.bold)),
+        centerTitle: true,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: txtCol, size: 20),
+          onPressed: widget.onBack,
+        ),
+        title: Text(
+          'Profile & Settings',
+          style: TextStyle(color: txtCol, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: -0.2),
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // WhatsApp Style Profile Card
+            // 1. Profile User Card
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 color: cardBg,
-                border: Border.all(color: isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.06)),
+                border: Border.all(color: cardBorderCol),
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: isDark
-                    ? null
-                    : [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
+                boxShadow: cardShadows,
               ),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: const Color(0xFF10B981).withOpacity(0.2),
-                    child: Text(
-                      username.length > 2 ? username.substring(1, 3).toUpperCase() : 'ME',
-                      style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, fontSize: 18),
+                  Container(
+                    width: 58,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0066FF).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.3)),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: Image.asset(
+                        'assets/images/Our Space Logo.png',
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -205,58 +224,84 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(username, style: TextStyle(color: txtCol, fontWeight: FontWeight.bold, fontSize: 18)),
-                        const SizedBox(height: 4),
+                        Text(
+                          username,
+                          style: TextStyle(color: txtCol, fontWeight: FontWeight.bold, fontSize: 18),
+                        ),
+                        const SizedBox(height: 5),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF10B981).withOpacity(0.1),
+                            color: const Color(0xFF0066FF).withOpacity(0.12),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             privateId,
-                            style: const TextStyle(color: Color(0xFF10B981), fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                              color: Color(0xFF0066FF),
+                              fontSize: 11,
+                              fontFamily: 'monospace',
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Icon(Icons.qr_code_rounded, color: Color(0xFF10B981), size: 24),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFF1F5F9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.qr_code_rounded, color: Color(0xFF0066FF), size: 22),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
 
-            // App Appearance & Theme Selector Tile
+            // 2. App Appearance & Theme Selector Tile
             Container(
               decoration: BoxDecoration(
                 color: cardBg,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.06)),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: cardBorderCol),
+                boxShadow: cardShadows,
               ),
               child: ListTile(
-                leading: Icon(
-                  isDark ? Icons.wb_sunny_outlined : Icons.nightlight_round,
-                  color: isDark ? Colors.amber : const Color(0xFF0F172A),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0066FF).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    isDark ? Icons.wb_sunny_outlined : Icons.nightlight_round,
+                    color: isDark ? Colors.amber : const Color(0xFF0066FF),
+                    size: 20,
+                  ),
                 ),
-                title: Text('App Appearance', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.bold)),
-                subtitle: Text(isDark ? 'Dark Mode Active' : 'Light Mode Active', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                title: Text('App Appearance', style: TextStyle(color: txtCol, fontSize: 15, fontWeight: FontWeight.bold)),
+                subtitle: Text(isDark ? 'Dark Mode Active' : 'Light Mode Active', style: TextStyle(color: subtxtCol, fontSize: 12)),
                 trailing: Switch(
                   value: !isDark,
-                  activeColor: const Color(0xFF10B981),
+                  activeColor: const Color(0xFF0066FF),
                   onChanged: (_) => widget.onToggleTheme(),
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
 
-            // Ghost Mode Card
+            // 3. Ultra-Sleek Ghost Mode Card
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withOpacity(0.08),
-                border: Border.all(color: const Color(0xFF10B981).withOpacity(0.25)),
-                borderRadius: BorderRadius.circular(16),
+                color: isDark ? const Color(0xFF0066FF).withOpacity(0.12) : const Color(0xFFEFF6FF),
+                border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.3), width: 1.2),
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: cardShadows,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,104 +311,165 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       const Row(
                         children: [
-                          Icon(Icons.visibility_off_outlined, color: Color(0xFF10B981), size: 20),
-                          SizedBox(width: 8),
-                          Text('GHOST MODE', style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold, letterSpacing: 1, fontSize: 13)),
+                          Icon(Icons.visibility_off_outlined, color: Color(0xFF0066FF), size: 20),
+                          SizedBox(width: 10),
+                          Text('GHOST MODE', style: TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.bold, letterSpacing: 1.2, fontSize: 13)),
                         ],
                       ),
                       Switch(
                         value: _ghostMode,
-                        activeColor: const Color(0xFF10B981),
+                        activeColor: const Color(0xFF0066FF),
                         onChanged: (val) => setState(() => _ghostMode = val),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  const Text(
+                  const SizedBox(height: 8),
+                  Text(
                     'Enforces 30s auto-disappearing messages, view-once media, hidden notification previews, and aggressive cache wiping.',
-                    style: TextStyle(color: Colors.grey, fontSize: 11),
+                    style: TextStyle(
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                      fontSize: 12,
+                      height: 1.4,
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
 
-            const Text('PRIVACY & LOCK', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
+            // 4. PRIVACY & LOCK Section
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 8),
+              child: Text('PRIVACY & LOCK', style: TextStyle(color: sectionHeaderCol, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+            ),
             Container(
               decoration: BoxDecoration(
                 color: cardBg,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.06)),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: cardBorderCol),
+                boxShadow: cardShadows,
               ),
               child: Column(
                 children: [
                   SwitchListTile(
-                    title: Text('App Lock (PIN)', style: TextStyle(color: txtCol, fontSize: 14)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                    title: Text('App Lock (PIN)', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
                     value: _appLock,
-                    activeColor: const Color(0xFF10B981),
+                    activeColor: const Color(0xFF0066FF),
                     onChanged: (val) => setState(() => _appLock = val),
                   ),
-                  Divider(height: 1, color: isDark ? Colors.white10 : Colors.black12),
+                  Divider(height: 1, color: isDark ? Colors.white10 : const Color(0xFFF1F5F9)),
                   SwitchListTile(
-                    title: Text('Biometric Unlock', style: TextStyle(color: txtCol, fontSize: 14)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                    title: Text('Biometric Unlock', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
                     value: _biometric,
-                    activeColor: const Color(0xFF10B981),
+                    activeColor: const Color(0xFF0066FF),
                     onChanged: (val) => setState(() => _biometric = val),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 20),
-            const Text('SECURITY & KEYS', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
+            const SizedBox(height: 24),
+
+            // 5. SECURITY & KEYS Section
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 8),
+              child: Text('SECURITY & KEYS', style: TextStyle(color: sectionHeaderCol, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+            ),
             Container(
               decoration: BoxDecoration(
                 color: cardBg,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.06)),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: cardBorderCol),
+                boxShadow: cardShadows,
               ),
               child: Column(
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.lock_reset, color: Color(0xFF10B981)),
-                    title: Text('Change Password', style: TextStyle(color: txtCol, fontSize: 14)),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                    leading: Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0066FF).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.lock_reset, color: Color(0xFF0066FF), size: 18),
+                    ),
+                    title: Text('Change Password', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
+                    trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: subtxtCol),
                     onTap: _showChangePasswordModal,
                   ),
-                  Divider(height: 1, color: isDark ? Colors.white10 : Colors.black12),
+                  Divider(height: 1, color: isDark ? Colors.white10 : const Color(0xFFF1F5F9)),
                   ListTile(
-                    leading: const Icon(Icons.key, color: Colors.amber),
-                    title: Text('View Recovery Key', style: TextStyle(color: txtCol, fontSize: 14)),
-                    trailing: Text(_showRecoveryKey ? 'Hide' : 'View', style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                    leading: Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0066FF).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.key_rounded, color: Color(0xFF0066FF), size: 18),
+                    ),
+                    title: Text('View Recovery Key', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
+                    trailing: Text(_showRecoveryKey ? 'Hide' : 'View', style: const TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.bold, fontSize: 13)),
                     onTap: () => setState(() => _showRecoveryKey = !_showRecoveryKey),
                   ),
                   if (_showRecoveryKey)
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
                       color: isDark ? Colors.black.withOpacity(0.5) : const Color(0xFFFEF3C7),
-                      child: Text(widget.recoveryKey, textAlign: TextAlign.center, style: TextStyle(color: isDark ? Colors.amber : const Color(0xFFB45309), fontFamily: 'monospace', fontSize: 12)),
+                      child: Text(
+                        widget.recoveryKey,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: isDark ? Colors.amber : const Color(0xFFB45309),
+                          fontFamily: 'monospace',
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                 ],
               ),
             ),
 
             const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF43F5E).withOpacity(0.1),
-                  side: BorderSide(color: const Color(0xFFF43F5E).withOpacity(0.3)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+
+            // 6. Professional Destructive Logout Button
+            InkWell(
+              onTap: _handleLogout,
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                width: double.infinity,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF3F1D24) : const Color(0xFFFFF1F2),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFFF43F5E).withOpacity(0.4) : const Color(0xFFFECDD3),
+                    width: 1.2,
+                  ),
                 ),
-                icon: const Icon(Icons.logout, color: Color(0xFFF43F5E), size: 18),
-                label: const Text('Logout / Clear Identity', style: TextStyle(color: Color(0xFFF43F5E), fontWeight: FontWeight.bold)),
-                onPressed: _handleLogout,
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.logout_rounded, color: Color(0xFFE11D48), size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Logout / Clear Identity',
+                      style: TextStyle(
+                        color: Color(0xFFE11D48),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
+            const SizedBox(height: 24),
           ],
         ),
       ),

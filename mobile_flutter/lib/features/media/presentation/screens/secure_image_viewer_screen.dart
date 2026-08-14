@@ -48,7 +48,7 @@ class _SecureImageViewerScreenState extends State<SecureImageViewerScreen> {
         appBar: AppBar(
           backgroundColor: Colors.black,
           elevation: 0,
-          title: Text(widget.isViewOnce ? 'View Once Image' : 'Protected Image', style: const TextStyle(color: Color(0xFF10B981), fontSize: 14)),
+          title: Text(widget.isViewOnce ? 'View Once Image' : 'Protected Image', style: const TextStyle(color: Color(0xFF0066FF), fontSize: 14)),
           leading: IconButton(
             icon: const Icon(Icons.close, color: Colors.white),
             onPressed: widget.onClose,
@@ -58,7 +58,7 @@ class _SecureImageViewerScreenState extends State<SecureImageViewerScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.lock_outline, size: 64, color: Color(0xFF10B981)),
+              const Icon(Icons.lock_outline, size: 64, color: Color(0xFF0066FF)),
               const SizedBox(height: 16),
               const Text('Secure Image Viewer', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),

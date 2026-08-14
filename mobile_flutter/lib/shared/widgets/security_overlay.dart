@@ -54,7 +54,7 @@ class _SecurityOverlayState extends State<SecurityOverlay> with WidgetsBindingOb
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.security, size: 54, color: Color(0xFF10B981)),
+                  Icon(Icons.security, size: 54, color: Color(0xFF0066FF)),
                   SizedBox(height: 16),
                   Text(
                     'Protected View',
