@@ -92,28 +92,6 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF0066FF).withOpacity(0.35),
-                      blurRadius: 18,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Image.asset(
-                    'assets/images/Our Space Logo.png',
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
               Text(
                 !_isConfirm ? 'Create App PIN' : 'Confirm Your PIN',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textTitle),
