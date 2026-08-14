@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 
@@ -221,12 +222,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     icon: const Icon(Icons.copy_rounded, color: Color(0xFF0066FF), size: 18),
                     label: const Text('Copy ID', style: TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.bold)),
-                    onPressed: () {
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: '$username\nPrivate ID: $privateId'));
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Identity ID copied to clipboard!'),
-                          duration: Duration(seconds: 2),
-                          backgroundColor: Color(0xFF0066FF),
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text('Copied: $username ($privateId)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              ),
+                            ],
+                          ),
+                          duration: const Duration(seconds: 2),
+                          backgroundColor: const Color(0xFF10B981),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                       );
                     },
@@ -242,12 +256,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     icon: const Icon(Icons.share_rounded, color: Colors.white, size: 18),
                     label: const Text('Share ID', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    onPressed: () {
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: 'Connect with me on OurSpace Privacy Chat!\nUsername: $username\nPrivate ID: $privateId'));
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Sharing identity: $username ($privateId)'),
+                          content: Row(
+                            children: [
+                              const Icon(Icons.share_rounded, color: Colors.white, size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text('Share text copied to clipboard!\n$username | $privateId', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              ),
+                            ],
+                          ),
                           duration: const Duration(seconds: 2),
                           backgroundColor: const Color(0xFF0066FF),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                       );
                     },
