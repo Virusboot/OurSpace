@@ -1,69 +1,136 @@
 import React from 'react';
-import { Download } from 'lucide-react';
+import { Download, ShieldCheck } from 'lucide-react';
 import logoImg from '../assets/logo.png';
 
 export const Header: React.FC = () => {
   return (
     <header
       style={{
-        borderBottom: '1px solid #f1f5f9',
-        backgroundColor: 'rgba(255, 255, 255, 0.98)',
-        backdropFilter: 'blur(20px)',
+        borderBottom: '1px solid #e2e8f0',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
         position: 'sticky',
         top: 0,
-        zIndex: 50,
-        padding: '14px 32px',
-        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.02)',
+        zIndex: 100,
+        padding: '16px 24px',
+        boxShadow: '0 4px 20px rgba(15, 23, 42, 0.03)',
       }}
     >
       <div
         style={{
-          width: '100%',
+          maxWidth: '1280px',
           margin: '0 auto',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '16px',
+          gap: '20px',
         }}
       >
         {/* Brand Official Transparent Logo Image */}
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <a href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+          <a href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', transition: 'opacity 0.2s' }}>
             <img
               src={logoImg}
               alt="OurSpace - A Private Space For Two"
-              style={{ height: '44px', width: 'auto', display: 'block', objectFit: 'contain' }}
+              style={{ height: '52px', width: 'auto', display: 'block', objectFit: 'contain' }}
             />
           </a>
         </div>
 
-        {/* Right-Aligned Desktop & Mobile Nav Links */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginLeft: 'auto', flexWrap: 'wrap' }}>
-          <a href="/" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Home</a>
-          <a href="/about" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>About Us</a>
-          <a href="/contact" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Contact Us</a>
+        {/* Right-Aligned Professional Nav Links & Action Button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '28px', flexWrap: 'wrap' }}>
+          <nav style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+            <a
+              href="/"
+              style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#334155',
+                textDecoration: 'none',
+                transition: 'color 0.2s ease',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = '#c026d3')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = '#334155')}
+            >
+              Home
+            </a>
+            <a
+              href="/about"
+              style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#334155',
+                textDecoration: 'none',
+                transition: 'color 0.2s ease',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = '#c026d3')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = '#334155')}
+            >
+              About Us
+            </a>
+            <a
+              href="/contact"
+              style={{
+                fontSize: '14px',
+                fontWeight: '600',
+                color: '#334155',
+                textDecoration: 'none',
+                transition: 'color 0.2s ease',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = '#c026d3')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = '#334155')}
+            >
+              Contact Us
+            </a>
+          </nav>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '20px', backgroundColor: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#059669', fontSize: '12px', fontWeight: 700 }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
+          {/* E2EE Active Security Badge */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '9999px',
+              backgroundColor: '#ecfdf5',
+              border: '1px solid rgba(16, 185, 129, 0.25)',
+              color: '#059669',
+              fontSize: '12px',
+              fontWeight: 700,
+              letterSpacing: '0.01em',
+            }}
+          >
+            <ShieldCheck style={{ width: '15px', height: '15px', color: '#10b981' }} />
             <span>E2EE Active</span>
           </div>
 
+          {/* Primary Gradient Action Button */}
           <button
             onClick={() => alert('OurSpace Mobile App (v1.0.0) is available on Google Play Store.')}
             style={{
               fontSize: '14px',
-              fontWeight: 'bold',
-              padding: '10px 20px',
+              fontWeight: 700,
+              padding: '10px 22px',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, #d946ef 0%, #8b5cf6 50%, #2563eb 100%)',
+              background: 'linear-gradient(135deg, #c026d3 0%, #7c3aed 100%)',
               color: '#ffffff',
               border: 'none',
               cursor: 'pointer',
-              boxShadow: '0 6px 20px rgba(217, 70, 239, 0.25)',
+              boxShadow: '0 4px 14px rgba(192, 38, 211, 0.3)',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(192, 38, 211, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 14px rgba(192, 38, 211, 0.3)';
             }}
           >
             <Download style={{ width: '16px', height: '16px' }} />
