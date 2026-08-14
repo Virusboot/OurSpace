@@ -51,7 +51,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF000000),
+      backgroundColor: const Color(0xFFFFFFFF),
       body: SafeArea(
         child: Column(
           children: [
@@ -70,13 +70,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       const SizedBox(width: 8),
                       const Text(
                         'OurSpace',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                        style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                     ],
                   ),
                   TextButton(
                     onPressed: widget.onFinish,
-                    child: const Text('Skip', style: TextStyle(color: Color(0xFF8E95A5), fontSize: 14, fontWeight: FontWeight.w600)),
+                    child: const Text('Skip', style: TextStyle(color: Color(0xFF64748B), fontSize: 14, fontWeight: FontWeight.w600)),
                   ),
                 ],
               ),
@@ -100,16 +100,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           width: 140,
                           height: 140,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0066FF).withOpacity(0.12),
+                            color: const Color(0xFF0066FF).withOpacity(0.08),
                             shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.35), width: 1.5),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF0066FF).withOpacity(0.25),
-                                blurRadius: 40,
-                                spreadRadius: 4,
-                              ),
-                            ],
+                            border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.25), width: 1.5),
                           ),
                           child: Icon(
                             slide['icon'] as IconData,
@@ -123,9 +116,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0066FF).withOpacity(0.15),
+                            color: const Color(0xFF0066FF).withOpacity(0.10),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.4)),
+                            border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.3)),
                           ),
                           child: Text(
                             (slide['tag'] as String).toUpperCase(),
@@ -146,7 +139,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           style: const TextStyle(
                             fontSize: 26,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: Color(0xFF0F172A),
                             letterSpacing: -0.4,
                           ),
                         ),
@@ -156,8 +149,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 13,
-                            color: Color(0xFF8E95A5),
-                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF0066FF),
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: 18),
@@ -168,7 +161,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 14,
-                            color: Color(0xFF94A3B8),
+                            color: Color(0xFF475569),
                             height: 1.5,
                           ),
                         ),
@@ -195,7 +188,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         width: isSel ? 28 : 8,
                         height: 8,
                         decoration: BoxDecoration(
-                          color: isSel ? const Color(0xFF0066FF) : Colors.white24,
+                          color: isSel ? const Color(0xFF0066FF) : const Color(0xFFCBD5E1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                       );
@@ -212,7 +205,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         backgroundColor: const Color(0xFF0066FF),
                         elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                        shadowColor: const Color(0xFF0066FF).withOpacity(0.4),
                       ),
                       onPressed: _nextPage,
                       child: Row(
