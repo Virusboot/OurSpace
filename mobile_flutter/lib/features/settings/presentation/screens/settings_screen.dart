@@ -96,6 +96,150 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _showQrCodeModal(String username, String privateId) {
+    final isDark = widget.isDarkMode;
+    final cardBg = isDark ? const Color(0xFF14161C) : Colors.white;
+    final txtColor = isDark ? Colors.white : const Color(0xFF0F172A);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: cardBg,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (ctx) => SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(ctx).padding.bottom + 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(color: Colors.grey.withOpacity(0.4), borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('My Identity QR Code', style: TextStyle(color: txtColor, fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            const Text('Scan or share your unique identity to connect', style: TextStyle(color: Colors.grey, fontSize: 12)),
+            const SizedBox(height: 20),
+
+            // Main QR Code Box Container
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1B1D24) : const Color(0xFFF8FAFC),
+                border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.3), width: 1.5),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0066FF).withOpacity(0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.06),
+                          blurRadius: 12,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.qr_code_2_rounded,
+                      size: 160,
+                      color: Color(0xFF0066FF),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    username,
+                    style: TextStyle(color: txtColor, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0066FF).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      privateId,
+                      style: const TextStyle(
+                        color: Color(0xFF0066FF),
+                        fontSize: 12,
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Share & Copy Action Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: const BorderSide(color: Color(0xFF0066FF), width: 1.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    icon: const Icon(Icons.copy_rounded, color: Color(0xFF0066FF), size: 18),
+                    label: const Text('Copy ID', style: TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.bold)),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Identity ID copied to clipboard!'),
+                          duration: Duration(seconds: 2),
+                          backgroundColor: Color(0xFF0066FF),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      backgroundColor: const Color(0xFF0066FF),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    icon: const Icon(Icons.share_rounded, color: Colors.white, size: 18),
+                    label: const Text('Share ID', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Sharing identity: $username ($privateId)'),
+                          duration: const Duration(seconds: 2),
+                          backgroundColor: const Color(0xFF0066FF),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _handleLogout() async {
     await SecureStorageService.delete('auth_token');
     await SecureStorageService.delete('user_info');
@@ -353,13 +497,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ],
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFF1F5F9),
-                      shape: BoxShape.circle,
+                  GestureDetector(
+                    onTap: () => _showQrCodeModal(username, privateId),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFF1F5F9),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.qr_code_rounded, color: Color(0xFF0066FF), size: 22),
                     ),
-                    child: const Icon(Icons.qr_code_rounded, color: Color(0xFF0066FF), size: 22),
                   ),
                 ],
               ),
