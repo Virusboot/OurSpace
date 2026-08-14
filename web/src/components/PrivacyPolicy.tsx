@@ -1,36 +1,12 @@
 import React from 'react';
-import { Shield, Lock, ArrowLeft, CheckCircle2 } from 'lucide-react';
-import logoImg from '../assets/logo.png';
+import { Shield, Lock, CheckCircle2 } from 'lucide-react';
+import { Header } from './Header';
+import { Footer } from './Footer';
 
 export const PrivacyPolicy: React.FC = () => {
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#ffffff', color: '#0f172a', fontFamily: "'Inter', sans-serif" }}>
-      {/* Header */}
-      <header style={{ borderBottom: '1px solid #f1f5f9', padding: '16px 32px', backgroundColor: '#ffffff', position: 'sticky', top: 0 }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <a href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', gap: '12px' }}>
-            <img src={logoImg} alt="OurSpace Logo" style={{ height: '42px', width: 'auto' }} />
-          </a>
-          <a
-            href="/"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              color: '#c026d3',
-              fontWeight: 700,
-              fontSize: '14px',
-              textDecoration: 'none',
-              padding: '8px 16px',
-              borderRadius: '10px',
-              backgroundColor: 'rgba(217, 70, 239, 0.08)',
-            }}
-          >
-            <ArrowLeft style={{ width: '16px', height: '16px' }} />
-            <span>Back to Home</span>
-          </a>
-        </div>
-      </header>
+    <div style={{ minHeight: '100vh', backgroundColor: '#ffffff', color: '#0f172a', fontFamily: "'Inter', sans-serif", display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+      <Header />
 
       {/* Main Content */}
       <main style={{ maxWidth: '900px', margin: '0 auto', padding: '48px 24px', textAlign: 'left' }}>
@@ -83,10 +59,7 @@ export const PrivacyPolicy: React.FC = () => {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer style={{ borderTop: '1px solid #e2e8f0', padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '13px', backgroundColor: '#f8fafc' }}>
-        <p style={{ margin: 0 }}>© 2026 OurSpace Privacy Chat. All rights reserved.</p>
-      </footer>
+      <Footer />
     </div>
   );
 };

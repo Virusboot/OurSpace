@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import {
   Shield, Lock, Video, Phone, EyeOff, Key, Sparkles, ArrowRight,
-  Copy, Check, Menu, X, Cpu, RefreshCw, Zap, Download, Activity,
+  Copy, Check, Cpu, RefreshCw, Zap, Download, Activity,
   Globe, Server, Terminal, Radio, ShieldCheck, Heart, Users
 } from 'lucide-react';
-import logoImg from '../assets/logo.png';
+import { Header } from './Header';
+import { Footer } from './Footer';
 
 export const WebHome: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'join' | 'create'>('join');
@@ -15,12 +16,6 @@ export const WebHome: React.FC = () => {
   const [callType, setCallType] = useState<'video' | 'audio'>('video');
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-
-  // Live E2EE Terminal Simulator State
-  const [simText, setSimText] = useState('OurSpace Private Chat: End-to-End Encrypted 🔒✨');
-
-  // Mobile Nav Drawer State
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleJoinByToken = (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,17 +45,6 @@ export const WebHome: React.FC = () => {
     navigator.clipboard.writeText(generatedLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  // Hex Ciphertext Simulator
-  const getCiphertext = (text: string) => {
-    if (!text) return '0x00000000000000000000000000000000';
-    let hash = '';
-    for (let i = 0; i < text.length; i++) {
-      const charCode = text.charCodeAt(i) ^ 0x7e;
-      hash += charCode.toString(16).padStart(2, '0');
-    }
-    return `payload_aes256_gcm:${hash.padEnd(48, 'e9a2')}`;
   };
 
   return (
@@ -93,140 +77,7 @@ export const WebHome: React.FC = () => {
         }}
       />
 
-      {/* Navigation Header (Crisp Light Header with Perfect 3.54:1 Aspect Ratio Official Logo Image) */}
-      <header
-        style={{
-          borderBottom: '1px solid #f1f5f9',
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(20px)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 50,
-          padding: '14px 40px',
-          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.02)',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: '1280px',
-            margin: '0 auto',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          {/* Brand New Official Logo Image with Fixed Aspect Ratio */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <a href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-              <img
-                src={logoImg}
-                alt="OurSpace - A Private Space For Two"
-                style={{ height: '50px', width: 'auto', display: 'block', objectFit: 'contain' }}
-              />
-            </a>
-            <span
-              style={{
-                fontSize: '11px',
-                padding: '4px 12px',
-                borderRadius: '9999px',
-                backgroundColor: 'rgba(217, 70, 239, 0.08)',
-                border: '1px solid rgba(217, 70, 239, 0.2)',
-                color: '#c026d3',
-                fontWeight: 800,
-                letterSpacing: '0.04em',
-              }}
-              className="hidden md:inline-block"
-            >
-              ZERO KNOWLEDGE E2EE
-            </span>
-          </div>
-
-          {/* Desktop Nav Links */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }} className="hidden lg:flex">
-            <a href="/about" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>About Us</a>
-            <a href="/privacy" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Privacy Policy</a>
-            <a href="/terms" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Terms & Conditions</a>
-            <a href="/contact" style={{ fontSize: '14px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Contact Us</a>
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '20px', backgroundColor: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#059669', fontSize: '12px', fontWeight: 700 }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
-              <span>E2EE Active</span>
-            </div>
-
-            <button
-              onClick={() => alert('OurSpace Mobile App (v1.0.0) is available on Google Play Store.')}
-              style={{
-                fontSize: '14px',
-                fontWeight: 'bold',
-                padding: '10px 20px',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #d946ef 0%, #8b5cf6 50%, #2563eb 100%)',
-                color: '#ffffff',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 6px 20px rgba(217, 70, 239, 0.25)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              <Download style={{ width: '16px', height: '16px' }} />
-              <span>Get Mobile App</span>
-            </button>
-          </div>
-
-          {/* Mobile Hamburger Toggle */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            style={{
-              display: 'flex',
-              background: 'none',
-              border: '1px solid #e2e8f0',
-              padding: '8px',
-              borderRadius: '10px',
-              color: '#0f172a',
-              cursor: 'pointer',
-            }}
-            className="lg:hidden"
-          >
-            {mobileMenuOpen ? <X style={{ width: '22px', height: '22px' }} /> : <Menu style={{ width: '22px', height: '22px' }} />}
-          </button>
-        </div>
-
-        {/* Mobile Navigation Drawer */}
-        {mobileMenuOpen && (
-          <div
-            style={{
-              padding: '20px 24px 28px',
-              borderTop: '1px solid #f1f5f9',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-              backgroundColor: '#ffffff',
-            }}
-          >
-            <a href="/about" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '15px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>About Us</a>
-            <a href="/privacy" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '15px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Privacy Policy</a>
-            <a href="/terms" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '15px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Terms & Conditions</a>
-            <a href="/contact" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '15px', color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Contact Us</a>
-            <button
-              onClick={() => alert('OurSpace Mobile App (v1.0.0) is available on Google Play Store.')}
-              style={{
-                fontSize: '15px',
-                fontWeight: 'bold',
-                padding: '14px',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #d946ef 0%, #8b5cf6 50%, #2563eb 100%)',
-                color: '#ffffff',
-                border: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              Get Mobile App
-            </button>
-          </div>
-        )}
-      </header>
+      <Header />
 
       {/* Main Container (Centered 1280px Container with Generous Side Margins) */}
       <main style={{ maxWidth: '1280px', margin: '0 auto', padding: '56px 40px', flex: 1, zIndex: 1, width: '100%', boxSizing: 'border-box' }}>
@@ -665,45 +516,7 @@ export const WebHome: React.FC = () => {
 
       </main>
 
-      {/* Footer (Play Store Compliant Footer with Legal & Contact Links) */}
-      <footer
-        style={{
-          borderTop: '1px solid #e2e8f0',
-          backgroundColor: '#f8fafc',
-          padding: '32px 40px',
-          textAlign: 'center',
-          fontSize: '13px',
-          color: '#64748b',
-          zIndex: 1,
-        }}
-      >
-        <div
-          style={{
-            maxWidth: '1280px',
-            margin: '0 auto',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '20px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <img src={logoImg} alt="OurSpace Logo" style={{ height: '36px', width: 'auto', display: 'block', objectFit: 'contain' }} />
-            <p style={{ margin: 0, fontWeight: 600, color: '#475569' }}>© 2026 OurSpace Privacy Chat. All rights reserved.</p>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
-            <a href="/about" style={{ color: '#475569', textDecoration: 'none', fontWeight: 600 }}>About Us</a>
-            <span>•</span>
-            <a href="/privacy" style={{ color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Privacy Policy</a>
-            <span>•</span>
-            <a href="/terms" style={{ color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Terms & Conditions</a>
-            <span>•</span>
-            <a href="/contact" style={{ color: '#c026d3', textDecoration: 'none', fontWeight: 700 }}>Contact Us</a>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };
