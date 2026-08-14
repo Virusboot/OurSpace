@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:local_auth/local_auth.dart';
 import '../../../../core/storage/secure_storage_service.dart';
+import '../../../auth/presentation/screens/create_pin_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final Map<String, dynamic>? user;
@@ -41,6 +43,70 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _loadSavedProfileImage();
+    _loadLockSettings();
+  }
+
+  Future<void> _loadLockSettings() async {
+    final appLock = await SecureStorageService.read('app_lock_enabled');
+    final biometric = await SecureStorageService.read('biometric_enabled');
+    setState(() {
+      _appLock = appLock == 'true';
+      _biometric = biometric == 'true';
+    });
+  }
+
+  Future<void> _toggleAppLock(bool value) async {
+    if (value) {
+      final pin = await SecureStorageService.read('user_pin_hash');
+      if (pin == null || pin.isEmpty) {
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (ctx) => CreatePinScreen(
+              isUnlockMode: false,
+              onPinComplete: () async {
+                Navigator.pop(ctx);
+                await SecureStorageService.write('app_lock_enabled', 'true');
+                setState(() => _appLock = true);
+              },
+            ),
+          ),
+        );
+        return;
+      }
+      await SecureStorageService.write('app_lock_enabled', 'true');
+      setState(() => _appLock = true);
+    } else {
+      await SecureStorageService.write('app_lock_enabled', 'false');
+      setState(() => _appLock = false);
+    }
+  }
+
+  Future<void> _toggleBiometric(bool value) async {
+    if (value) {
+      try {
+        final auth = LocalAuthentication();
+        final canCheck = await auth.canCheckBiometrics;
+        if (canCheck) {
+          final authenticated = await auth.authenticate(
+            localizedReason: 'Verify Phone Fingerprint / Face ID to enable Biometric Unlock',
+            options: const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
+          );
+          if (authenticated) {
+            await SecureStorageService.write('biometric_enabled', 'true');
+            await SecureStorageService.write('app_lock_enabled', 'true');
+            setState(() {
+              _biometric = true;
+              _appLock = true;
+            });
+            return;
+          }
+        }
+      } catch (_) {}
+    }
+    await SecureStorageService.write('biometric_enabled', value ? 'true' : 'false');
+    setState(() => _biometric = value);
   }
 
   Future<void> _loadSavedProfileImage() async {
@@ -794,15 +860,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: Text('App Lock (PIN)', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
                     value: _appLock,
                     activeColor: const Color(0xFF0066FF),
-                    onChanged: (val) => setState(() => _appLock = val),
+                    onChanged: _toggleAppLock,
                   ),
                   Divider(height: 1, color: isDark ? Colors.white10 : const Color(0xFFF1F5F9)),
                   SwitchListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                    title: Text('Biometric Unlock', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
+                    title: Text('Biometric Unlock (Fingerprint / Face ID)', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
                     value: _biometric,
                     activeColor: const Color(0xFF0066FF),
-                    onChanged: (val) => setState(() => _biometric = val),
+                    onChanged: _toggleBiometric,
                   ),
                 ],
               ),

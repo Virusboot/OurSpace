@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:local_auth/local_auth.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 
 class CreatePinScreen extends StatefulWidget {
+  final bool isUnlockMode;
   final VoidCallback onPinComplete;
 
-  const CreatePinScreen({super.key, required this.onPinComplete});
+  const CreatePinScreen({
+    super.key,
+    this.isUnlockMode = false,
+    required this.onPinComplete,
+  });
 
   @override
   State<CreatePinScreen> createState() => _CreatePinScreenState();
@@ -17,9 +23,50 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
   bool _biometricEnabled = false;
   String? _errorMsg;
 
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isUnlockMode) {
+      _checkAndTriggerBiometrics();
+    }
+  }
+
+  Future<void> _checkAndTriggerBiometrics() async {
+    final bioSetting = await SecureStorageService.read('biometric_enabled');
+    if (bioSetting == 'true') {
+      _triggerBiometricAuth();
+    }
+  }
+
+  Future<void> _triggerBiometricAuth() async {
+    try {
+      final auth = LocalAuthentication();
+      final canCheck = await auth.canCheckBiometrics;
+      if (canCheck) {
+        final authenticated = await auth.authenticate(
+          localizedReason: 'Authenticate to access OurSpace Privacy Chat',
+          options: const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
+        );
+        if (authenticated) {
+          widget.onPinComplete();
+        }
+      }
+    } catch (_) {}
+  }
+
   void _handleKeyPress(String digit) {
     setState(() {
       _errorMsg = null;
+      if (widget.isUnlockMode) {
+        if (_pin.length < 4) {
+          _pin += digit;
+          if (_pin.length == 4) {
+            _verifyUnlockPin();
+          }
+        }
+        return;
+      }
+
       if (!_isConfirm) {
         if (_pin.length < 4) {
           _pin += digit;
@@ -33,7 +80,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
         if (_confirmPin.length < 4) {
           _confirmPin += digit;
           if (_confirmPin.length == 4) {
-            _verifyPin();
+            _verifyCreatePin();
           }
         }
       }
@@ -42,6 +89,10 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
 
   void _handleDelete() {
     setState(() {
+      if (widget.isUnlockMode) {
+        if (_pin.isNotEmpty) _pin = _pin.substring(0, _pin.length - 1);
+        return;
+      }
       if (!_isConfirm) {
         if (_pin.isNotEmpty) _pin = _pin.substring(0, _pin.length - 1);
       } else {
@@ -50,10 +101,25 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
     });
   }
 
-  Future<void> _verifyPin() async {
+  Future<void> _verifyUnlockPin() async {
+    final storedPin = await SecureStorageService.read('user_pin_hash');
+    if (_pin == storedPin || storedPin == null) {
+      widget.onPinComplete();
+    } else {
+      setState(() {
+        _errorMsg = 'Incorrect PIN. Try again.';
+        _pin = '';
+      });
+    }
+  }
+
+  Future<void> _verifyCreatePin() async {
     if (_pin == _confirmPin) {
       await SecureStorageService.write('user_pin_hash', _pin);
-      await SecureStorageService.write('biometric_enabled', _biometricEnabled ? 'true' : 'false');
+      await SecureStorageService.write('app_lock_enabled', 'true');
+      if (_biometricEnabled) {
+        await SecureStorageService.write('biometric_enabled', 'true');
+      }
       widget.onPinComplete();
     } else {
       setState(() {
@@ -84,21 +150,26 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: widget.onPinComplete,
-                  child: const Text('Skip for now →', style: TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.bold, fontSize: 13)),
+              if (!widget.isUnlockMode)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: widget.onPinComplete,
+                    child: const Text('Skip for now →', style: TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
                 ),
-              ),
               const SizedBox(height: 8),
               Text(
-                !_isConfirm ? 'Create App PIN' : 'Confirm Your PIN',
+                widget.isUnlockMode
+                    ? 'Enter App PIN'
+                    : (!_isConfirm ? 'Create App PIN' : 'Confirm Your PIN'),
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textTitle),
               ),
               const SizedBox(height: 4),
               Text(
-                !_isConfirm ? 'Set a 4-digit security PIN to protect app access' : 'Re-enter your 4-digit PIN',
+                widget.isUnlockMode
+                    ? 'Enter your 4-digit PIN or use Phone Biometrics'
+                    : (!_isConfirm ? 'Set a 4-digit security PIN to protect app access' : 'Re-enter your 4-digit PIN'),
                 style: TextStyle(fontSize: 12, color: textSub),
               ),
               const SizedBox(height: 12),
@@ -128,32 +199,33 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Biometric switch
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: cardBg,
-                  border: Border.all(color: cardBorder),
-                  borderRadius: BorderRadius.circular(14),
+              // Biometric switch (Only for creation)
+              if (!widget.isUnlockMode)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: cardBg,
+                    border: Border.all(color: cardBorder),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.fingerprint, size: 20, color: Color(0xFF0066FF)),
+                          const SizedBox(width: 10),
+                          Text('Enable Face ID / Biometrics', style: TextStyle(color: textTitle, fontSize: 13)),
+                        ],
+                      ),
+                      Switch(
+                        value: _biometricEnabled,
+                        activeColor: const Color(0xFF0066FF),
+                        onChanged: (val) => setState(() => _biometricEnabled = val),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.fingerprint, size: 20, color: Color(0xFF0066FF)),
-                        const SizedBox(width: 10),
-                        Text('Enable Face ID / Biometrics', style: TextStyle(color: textTitle, fontSize: 13)),
-                      ],
-                    ),
-                    Switch(
-                      value: _biometricEnabled,
-                      activeColor: const Color(0xFF0066FF),
-                      onChanged: (val) => setState(() => _biometricEnabled = val),
-                    ),
-                  ],
-                ),
-              ),
               const SizedBox(height: 20),
 
               // Keypad
@@ -168,7 +240,12 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                   crossAxisSpacing: 12,
                   children: [
                     ...['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => _buildKey(num, isDark)),
-                    const SizedBox(),
+                    widget.isUnlockMode
+                        ? IconButton(
+                            icon: const Icon(Icons.fingerprint, color: Color(0xFF0066FF), size: 28),
+                            onPressed: _triggerBiometricAuth,
+                          )
+                        : const SizedBox(),
                     _buildKey('0', isDark),
                     IconButton(
                       icon: Icon(Icons.backspace_outlined, color: textSub),

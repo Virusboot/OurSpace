@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:local_auth/local_auth.dart';
 import 'core/storage/secure_storage_service.dart';
 import 'core/networking/websocket_client.dart';
 import 'features/auth/presentation/screens/splash_screen.dart';
@@ -60,14 +61,45 @@ class _SecureChatAppState extends State<SecureChatApp> {
   Future<void> _checkStoredUser() async {
     final stored = await SecureStorageService.read('user_info');
     final savedImg = await SecureStorageService.read('profile_image_path');
+    final appLock = await SecureStorageService.read('app_lock_enabled');
+    final biometric = await SecureStorageService.read('biometric_enabled');
+
     if (stored != null) {
       try {
         final parsed = jsonDecode(stored) as Map<String, dynamic>;
         if (savedImg != null) {
           parsed['profileImage'] = savedImg;
         }
+        _user = parsed;
+
+        if (appLock == 'true') {
+          if (biometric == 'true') {
+            try {
+              final auth = LocalAuthentication();
+              final canCheck = await auth.canCheckBiometrics;
+              if (canCheck) {
+                final authenticated = await auth.authenticate(
+                  localizedReason: 'Authenticate to access OurSpace Privacy Chat',
+                  options: const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
+                );
+                if (authenticated) {
+                  setState(() {
+                    _currentScreen = 'home';
+                  });
+                  WebSocketClient().connect();
+                  return;
+                }
+              }
+            } catch (_) {}
+          }
+
+          setState(() {
+            _currentScreen = 'enter_pin';
+          });
+          return;
+        }
+
         setState(() {
-          _user = parsed;
           _currentScreen = 'home';
         });
         WebSocketClient().connect();
@@ -163,6 +195,12 @@ class _SecureChatAppState extends State<SecureChatApp> {
         );
       case 'create_pin':
         return CreatePinScreen(
+          isUnlockMode: false,
+          onPinComplete: _handlePinComplete,
+        );
+      case 'enter_pin':
+        return CreatePinScreen(
+          isUnlockMode: true,
           onPinComplete: _handlePinComplete,
         );
       case 'home':
