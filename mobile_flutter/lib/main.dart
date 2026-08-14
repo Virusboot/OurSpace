@@ -91,11 +91,12 @@ class _SecureChatAppState extends State<SecureChatApp> {
     });
   }
 
-  void _handleLogout() {
+  void _handleLogout() async {
     WebSocketClient().disconnect();
+    await SecureStorageService.delete('user_info');
     setState(() {
       _user = null;
-      _currentScreen = 'onboarding';
+      _currentScreen = 'create_identity';
     });
   }
 
