@@ -49,10 +49,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadLockSettings() async {
     final appLock = await SecureStorageService.read('app_lock_enabled');
     final biometric = await SecureStorageService.read('biometric_enabled');
+    final ghost = await SecureStorageService.read('ghost_mode_enabled');
     setState(() {
       _appLock = appLock == 'true';
       _biometric = biometric == 'true';
+      _ghostMode = ghost == 'true';
     });
+  }
+
+  Future<void> _toggleGhostMode(bool value) async {
+    await SecureStorageService.write('ghost_mode_enabled', value ? 'true' : 'false');
+    setState(() => _ghostMode = value);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(value ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Text(value ? 'Ghost Mode Activated (30s Disappearing & View-Once)' : 'Ghost Mode Deactivated'),
+            ],
+          ),
+          backgroundColor: value ? const Color(0xFF0066FF) : const Color(0xFF64748B),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
   }
 
   Future<void> _toggleAppLock(bool value) async {
@@ -817,7 +840,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Switch(
                         value: _ghostMode,
                         activeColor: const Color(0xFF0066FF),
-                        onChanged: (val) => setState(() => _ghostMode = val),
+                        onChanged: _toggleGhostMode,
                       ),
                     ],
                   ),

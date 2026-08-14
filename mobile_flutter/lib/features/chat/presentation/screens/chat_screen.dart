@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../core/crypto/e2ee_crypto_service.dart';
 import '../../../../core/networking/api_client.dart';
 import '../../../../core/networking/websocket_client.dart';
+import '../../../../core/storage/secure_storage_service.dart';
 import '../../../../shared/widgets/security_overlay.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -35,14 +36,26 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<Map<String, dynamic>> _messages = [];
   String? _conversationId;
   int _ttlSeconds = 30; // default 30s
+  bool _isGhostMode = false;
   StreamSubscription<Map<String, dynamic>>? _wsSubscription;
 
   @override
   void initState() {
     super.initState();
+    _checkGhostMode();
     _loadSampleMessages();
     _initChat();
     _listenToWebSockets();
+  }
+
+  Future<void> _checkGhostMode() async {
+    final ghost = await SecureStorageService.read('ghost_mode_enabled');
+    if (ghost == 'true') {
+      setState(() {
+        _isGhostMode = true;
+        _ttlSeconds = 30;
+      });
+    }
   }
 
   @override
@@ -63,18 +76,32 @@ class _ChatScreenState extends State<ChatScreen> {
         final msg = event['message'] ?? event;
         final encrypted = msg['encryptedPayload'] ?? '';
         final text = E2EECryptoService.decryptPayload(encrypted, widget.recipient['publicKey'] ?? '');
+        final newMsg = {
+          'id': msg['id'] ?? 'm_${DateTime.now().millisecondsSinceEpoch}',
+          'senderId': msg['senderId'] ?? widget.recipient['id'],
+          'encryptedPayload': encrypted,
+          'decryptedText': text.isNotEmpty ? text : (msg['text'] ?? 'Encrypted message'),
+          'time': 'Just now',
+          'isTyping': false,
+        };
 
         setState(() {
           _messages.removeWhere((m) => m['isTyping'] == true);
-          _messages.add({
-            'id': msg['id'] ?? 'm_${DateTime.now().millisecondsSinceEpoch}',
-            'senderId': msg['senderId'] ?? widget.recipient['id'],
-            'encryptedPayload': encrypted,
-            'decryptedText': text.isNotEmpty ? text : (msg['text'] ?? 'Encrypted message'),
-            'time': 'Just now',
-            'isTyping': false,
-          });
+          _messages.add(newMsg);
         });
+        _scrollToBottom();
+
+        // Ghost Mode / TTL 30s Auto Disappear
+        if (_isGhostMode || _ttlSeconds > 0) {
+          final msgId = newMsg['id'];
+          Timer(Duration(seconds: _ttlSeconds), () {
+            if (mounted) {
+              setState(() {
+                _messages.removeWhere((m) => m['id'] == msgId);
+              });
+            }
+          });
+        }
       } else if (type == 'chat_typing') {
         if (event['senderId'] == widget.recipient['id']) {
           setState(() {
@@ -89,6 +116,7 @@ class _ChatScreenState extends State<ChatScreen> {
               });
             }
           });
+          _scrollToBottom();
         }
       }
     });
@@ -184,6 +212,17 @@ class _ChatScreenState extends State<ChatScreen> {
       _messages.add(localMsg);
     });
     _scrollToBottom();
+
+    if (_isGhostMode || _ttlSeconds > 0) {
+      final msgId = localMsg['id'];
+      Timer(Duration(seconds: _ttlSeconds), () {
+        if (mounted) {
+          setState(() {
+            _messages.removeWhere((m) => m['id'] == msgId);
+          });
+        }
+      });
+    }
 
     if (_conversationId != null) {
       WebSocketClient().send({
@@ -832,9 +871,33 @@ class _ChatScreenState extends State<ChatScreen> {
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
                     boxShadow: isDark ? null : [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, -4))],
                   ),
-                  child: ListView.builder(
-                    controller: _scrollCtrl,
-                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+                  child: Column(
+                    children: [
+                      if (_isGhostMode)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0066FF).withOpacity(0.14),
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+                            border: Border(bottom: BorderSide(color: const Color(0xFF0066FF).withOpacity(0.3))),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.visibility_off_rounded, color: Color(0xFF0066FF), size: 16),
+                              SizedBox(width: 8),
+                              Text(
+                                '👻 GHOST MODE ACTIVE: 30s Auto-Disappear & View-Once',
+                                style: TextStyle(color: Color(0xFF0066FF), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                              ),
+                            ],
+                          ),
+                        ),
+                      Expanded(
+                        child: ListView.builder(
+                          controller: _scrollCtrl,
+                          padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
                     itemCount: _messages.length,
                     itemBuilder: (ctx, idx) {
                       final item = _messages[idx];
@@ -943,7 +1006,10 @@ class _ChatScreenState extends State<ChatScreen> {
                     },
                   ),
                 ),
-              ),
+              ],
+            ),
+          ),
+        ),
 
               // BOTTOM FLOATING INPUT DOCK
               Container(
