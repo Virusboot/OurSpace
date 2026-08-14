@@ -13,10 +13,10 @@ class CreateIdentityScreen extends StatefulWidget {
 }
 
 class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
-  final TextEditingController _nameController = TextEditingController(text: 'Harsh');
-  final TextEditingController _emailController = TextEditingController(text: 'harsh@ourspace.app');
-  final TextEditingController _passwordController = TextEditingController(text: '123456');
-  final TextEditingController _confirmPasswordController = TextEditingController(text: '123456');
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
 
   bool _isSignUp = false;
   bool _obscurePassword = true;
