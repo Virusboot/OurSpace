@@ -116,7 +116,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
 
                 Text(
                   _isSignUp ? 'Create OurSpace Account' : 'Welcome Back',
-                  textAlign: TextAlign.center,
+                  textAlign: TextAlign.left,
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: textTitle),
                 ),
                 const SizedBox(height: 6),
@@ -124,7 +124,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                   _isSignUp
                       ? 'Fill in your details to create a new account'
                       : 'Log in easily with your Email & Password',
-                  textAlign: TextAlign.center,
+                  textAlign: TextAlign.left,
                   style: TextStyle(fontSize: 13, color: textSub),
                 ),
                 const SizedBox(height: 28),
