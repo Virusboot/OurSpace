@@ -25,7 +25,7 @@ class SecureChatApp extends StatefulWidget {
 }
 
 class _SecureChatAppState extends State<SecureChatApp> {
-  String _currentScreen = 'onboarding';
+  String _currentScreen = 'splash';
   Map<String, dynamic>? _user;
   String _recoveryKey = 'sample-recovery-key-1234';
   Map<String, dynamic>? _activeRecipient;
@@ -103,8 +103,14 @@ class _SecureChatAppState extends State<SecureChatApp> {
           _currentScreen = 'home';
         });
         WebSocketClient().connect();
+        return;
       } catch (_) {}
     }
+
+    // If user is not logged in, show onboarding
+    setState(() {
+      _currentScreen = 'onboarding';
+    });
   }
 
   void _handleIdentityCreated(Map<String, dynamic> newUser, String recKey) {

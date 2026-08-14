@@ -20,42 +20,42 @@ class SplashScreen extends StatelessWidget {
                   children: [
                     // User Provided PNG App Logo Asset
                     Container(
-                      width: 140,
-                      height: 140,
+                      width: 180,
+                      height: 180,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(36),
-                        border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.4), width: 1.5),
+                        borderRadius: BorderRadius.circular(44),
+                        border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.5), width: 2),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF0066FF).withOpacity(0.4),
-                            blurRadius: 40,
-                            spreadRadius: 4,
-                            offset: const Offset(0, 12),
+                            color: const Color(0xFF0066FF).withOpacity(0.45),
+                            blurRadius: 48,
+                            spreadRadius: 6,
+                            offset: const Offset(0, 14),
                           ),
                           BoxShadow(
                             color: Colors.black.withOpacity(0.8),
-                            blurRadius: 16,
+                            blurRadius: 20,
                           ),
                         ],
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(36),
+                        borderRadius: BorderRadius.circular(42),
                         child: Image.asset(
                           'assets/images/Our Space Logo.png',
-                          fit: BoxFit.contain,
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 36),
 
                     // App Title & Tagline
                     const Text(
                       'OurSpace',
                       style: TextStyle(
-                        fontSize: 40,
+                        fontSize: 44,
                         fontWeight: FontWeight.w900,
                         color: Color(0xFF0066FF),
-                        letterSpacing: -0.8,
+                        letterSpacing: -1.0,
                       ),
                     ),
                     const SizedBox(height: 8),
