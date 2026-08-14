@@ -14,13 +14,13 @@ export const Header: React.FC = () => {
         position: 'sticky',
         top: 0,
         zIndex: 50,
-        padding: '14px 40px',
+        padding: '14px 32px',
         boxShadow: '0 2px 10px rgba(0, 0, 0, 0.02)',
       }}
     >
       <div
         style={{
-          maxWidth: '1280px',
+          width: '100%',
           margin: '0 auto',
           display: 'flex',
           alignItems: 'center',

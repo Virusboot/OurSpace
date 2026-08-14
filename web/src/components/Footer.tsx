@@ -15,7 +15,7 @@ export const Footer: React.FC = () => {
     >
       <div
         style={{
-          maxWidth: '1280px',
+          width: '100%',
           margin: '0 auto',
           display: 'flex',
           justifyContent: 'space-between',
