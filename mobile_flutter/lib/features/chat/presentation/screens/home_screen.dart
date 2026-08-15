@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/networking/api_client.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -167,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               const Icon(Icons.person_search_rounded, color: Color(0xFF0066FF), size: 24),
               const SizedBox(width: 10),
-              Text('Search Identity', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold)),
+              Text('Find Someone', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold)),
             ],
           ),
           content: Column(
@@ -177,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 controller: searchCtrl,
                 style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14),
                 decoration: InputDecoration(
-                  hintText: 'Enter @username or USER-XXXXXX',
+                  hintText: 'Enter name or @username (e.g. @rahul_k)',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
                   fillColor: isDark ? Colors.black.withOpacity(0.4) : const Color(0xFFF1F5F9),
@@ -334,7 +335,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   keyboardType: TextInputType.number,
                   style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13),
                   decoration: InputDecoration(
-                    hintText: 'Optional PIN Code (e.g. 1234)',
+                    hintText: 'Enter 4-digit passcode (e.g. 1234)',
                     hintStyle: const TextStyle(color: Colors.grey),
                     filled: true,
                     fillColor: isDark ? Colors.black.withOpacity(0.4) : const Color(0xFFF1F5F9),
@@ -363,12 +364,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               });
                               setStateDialog(() {
                                 loading = false;
-                                generatedUrl = 'http://localhost:3000/c/${res['token']}';
+                                generatedUrl = '${ApiClient.webBaseUrl}/c/${res['token']}';
                               });
                             } catch (_) {
                               setStateDialog(() {
                                 loading = false;
-                                generatedUrl = 'http://localhost:3000/c/demo_${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+                                generatedUrl = '${ApiClient.webBaseUrl}/c/demo_${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
                               });
                             }
                           },
@@ -393,6 +394,29 @@ class _HomeScreenState extends State<HomeScreen> {
                         generatedUrl!,
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: Color(0xFF0066FF), fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 42,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0066FF),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          icon: const Icon(Icons.copy_rounded, size: 16, color: Colors.white),
+                          label: const Text('Copy Call Link', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(text: generatedUrl!));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Call link copied to clipboard! Share it anywhere.'),
+                                duration: Duration(seconds: 2),
+                                backgroundColor: Color(0xFF0066FF),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ],
                   ),
@@ -465,14 +489,20 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    _activeTab == 0 ? 'Chat' : (_activeTab == 1 ? 'Calls' : 'Voice Notes'),
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: headerTxt,
-                      letterSpacing: -0.4,
-                    ),
+                  Row(
+                    children: [
+                      Image.asset('assets/images/app_logo.png', height: 32),
+                      const SizedBox(width: 10),
+                      Text(
+                        _activeTab == 0 ? 'Chat' : (_activeTab == 1 ? 'Calls' : 'Voice Notes'),
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          color: headerTxt,
+                          letterSpacing: -0.4,
+                        ),
+                      ),
+                    ],
                   ),
                   Material(
                     color: Colors.transparent,
@@ -514,7 +544,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   controller: _searchCtrl,
                   style: TextStyle(color: searchTxt, fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: 'Type your search...',
+                    hintText: 'Search chats, calls & contacts...',
                     hintStyle: TextStyle(color: searchHint, fontSize: 14),
                     prefixIcon: Icon(Icons.search, color: searchHint, size: 22),
                     border: InputBorder.none,
@@ -680,58 +710,61 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
 
       // ULTRA PREMIUM FLOATING GLASSMORPHIC BOTTOM DOCK
-      bottomNavigationBar: Container(
-        color: cardBg, // Seamless single background matching body
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+      bottomNavigationBar: SafeArea(
+        top: false,
         child: Container(
-          height: 72,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-            color: dockPillBg,
-            borderRadius: BorderRadius.circular(40), // Full round capsule
-            border: Border.all(
-              color: dockBorder,
-              width: 1.2,
+          color: cardBg, // Seamless single background matching body
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+          child: Container(
+            height: 72,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: dockPillBg,
+              borderRadius: BorderRadius.circular(40), // Full round capsule
+              border: Border.all(
+                color: dockBorder,
+                width: 1.2,
+              ),
+              boxShadow: dockShadow,
             ),
-            boxShadow: dockShadow,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              // 1. Chat Tab
-              _buildNavItem(
-                index: 0,
-                icon: _activeTab == 0 ? Icons.chat_bubble_rounded : Icons.chat_bubble_outline_rounded,
-                label: 'Chat',
-                isSelected: _activeTab == 0,
-                onTap: () => setState(() => _activeTab = 0),
-              ),
-              // 2. Calls Tab
-              _buildNavItem(
-                index: 1,
-                icon: _activeTab == 1 ? Icons.call_rounded : Icons.call_outlined,
-                label: 'Calls',
-                isSelected: _activeTab == 1,
-                onTap: () => setState(() => _activeTab = 1),
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                // 1. Chat Tab
+                _buildNavItem(
+                  index: 0,
+                  icon: _activeTab == 0 ? Icons.chat_bubble_rounded : Icons.chat_bubble_outline_rounded,
+                  label: 'Chat',
+                  isSelected: _activeTab == 0,
+                  onTap: () => setState(() => _activeTab = 0),
+                ),
+                // 2. Calls Tab
+                _buildNavItem(
+                  index: 1,
+                  icon: _activeTab == 1 ? Icons.call_rounded : Icons.call_outlined,
+                  label: 'Calls',
+                  isSelected: _activeTab == 1,
+                  onTap: () => setState(() => _activeTab = 1),
+                ),
 
-              // 4. Voice Notes Tab (Coming Soon)
-              _buildNavItem(
-                index: 2,
-                icon: _activeTab == 2 ? Icons.graphic_eq_rounded : Icons.graphic_eq_outlined,
-                label: 'Voice',
-                isSelected: _activeTab == 2,
-                onTap: () => setState(() => _activeTab = 2),
-              ),
-              // 5. Profile Tab (WhatsApp style: Profile & Settings)
-              _buildNavItem(
-                index: 3,
-                icon: Icons.person_outline_rounded,
-                label: 'Profile',
-                isSelected: false,
-                onTap: widget.onOpenSettings,
-              ),
-            ],
+                // 4. Voice Notes Tab (Coming Soon)
+                _buildNavItem(
+                  index: 2,
+                  icon: Icons.mic_none_rounded,
+                  label: 'Voice',
+                  isSelected: _activeTab == 2,
+                  onTap: () => setState(() => _activeTab = 2),
+                ),
+                // 5. Settings Tab
+                _buildNavItem(
+                  index: 3,
+                  icon: Icons.person_outline_rounded,
+                  label: 'Profile',
+                  isSelected: false,
+                  onTap: widget.onOpenSettings,
+                ),
+              ],
+            ),
           ),
         ),
       ),

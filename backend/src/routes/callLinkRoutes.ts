@@ -2,19 +2,34 @@ import { Router } from 'express';
 import { authenticateToken, AuthRequest } from '../middleware/authMiddleware';
 import { createCallLink, verifyAndGetCallLink, revokeCallLink } from '../services/callLinkService';
 import { authRateLimiter } from '../middleware/rateLimiter';
+import jwt from 'jsonwebtoken';
+import { config } from '../config';
+import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
 
-// Create call link (Requires Auth)
-router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
+// Create call link (Authenticated or Guest)
+router.post('/create', async (req: AuthRequest, res) => {
   try {
     const { callType, durationMinutes, pin, oneTime } = req.body;
     if (!callType || (callType !== 'audio' && callType !== 'video')) {
       return res.status(400).json({ error: 'Valid callType (audio or video) is required' });
     }
 
+    let hostId = 'guest_' + uuidv4().substring(0, 8);
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, config.jwtSecret) as any;
+        if (decoded && decoded.userId) {
+          hostId = decoded.userId;
+        }
+      } catch (_) {}
+    }
+
     const result = await createCallLink({
-      hostId: req.user!.userId,
+      hostId,
       callType,
       durationMinutes,
       pin,

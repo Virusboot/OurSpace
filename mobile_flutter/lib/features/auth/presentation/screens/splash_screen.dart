@@ -8,7 +8,7 @@ class SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF000000),
+      backgroundColor: const Color(0xFFFFFFFF), // Always Clean White Screen
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 20.0),
@@ -18,16 +18,46 @@ class SplashScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Full OurSpace Logo (horizontal layout with text included)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                    // Full OurSpace Logo
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0066FF).withOpacity(0.2),
+                            blurRadius: 32,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
                       child: Image.asset(
-                        'assets/images/Our Space Logo.png',
-                        width: double.infinity,
+                        'assets/images/app_logo.png',
                         fit: BoxFit.contain,
                       ),
                     ),
-                    const SizedBox(height: 36),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'OurSpace',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'CHAT. CALL. DISAPPEAR.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0066FF),
+                        letterSpacing: 2.0,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
 
                     // Feature Badges Row
                     Row(
@@ -45,7 +75,7 @@ class SplashScreen extends StatelessWidget {
                     const Text(
                       'Zero tracking. No phone numbers required.\nEncrypted peer-to-peer messaging built for maximum privacy.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8), height: 1.5),
+                      style: TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.5),
                     ),
                   ],
                 ),
@@ -59,7 +89,7 @@ class SplashScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(18),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFC026D3).withOpacity(0.4),
+                      color: const Color(0xFF0066FF).withOpacity(0.3),
                       blurRadius: 24,
                       offset: const Offset(0, 6),
                     ),
@@ -67,7 +97,7 @@ class SplashScreen extends StatelessWidget {
                 ),
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFC026D3),
+                    backgroundColor: const Color(0xFF0066FF),
                     elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                   ),
@@ -93,16 +123,16 @@ class SplashScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        color: const Color(0xFF0066FF).withOpacity(0.06),
+        border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.18)),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: const Color(0xFFC026D3)),
+          Icon(icon, size: 13, color: const Color(0xFF0066FF)),
           const SizedBox(width: 5),
-          Text(label, style: const TextStyle(fontSize: 10, color: Colors.white70, fontWeight: FontWeight.w600)),
+          Text(label, style: const TextStyle(fontSize: 10, color: Color(0xFF0F172A), fontWeight: FontWeight.w600)),
         ],
       ),
     );

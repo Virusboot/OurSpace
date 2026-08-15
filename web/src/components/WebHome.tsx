@@ -33,11 +33,26 @@ export const WebHome: React.FC = () => {
     }
   };
 
-  const handleGenerateCallLink = (e: React.FormEvent) => {
+  const handleGenerateCallLink = async (e: React.FormEvent) => {
     e.preventDefault();
-    const randomTok = 'room_' + Math.random().toString(36).substring(2, 10);
-    const fullUrl = `${window.location.origin}/c/${randomTok}`;
-    setGeneratedLink(fullUrl);
+    try {
+      const res = await fetch('/api/call-links/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callType, durationMinutes: 60 })
+      });
+      const data = await res.json();
+      if (data && data.token) {
+        const fullUrl = `${window.location.origin}/c/${data.token}`;
+        setGeneratedLink(fullUrl);
+      } else {
+        const fallbackTok = 'room_' + Math.random().toString(36).substring(2, 10);
+        setGeneratedLink(`${window.location.origin}/c/${fallbackTok}`);
+      }
+    } catch (_) {
+      const fallbackTok = 'room_' + Math.random().toString(36).substring(2, 10);
+      setGeneratedLink(`${window.location.origin}/c/${fallbackTok}`);
+    }
   };
 
   const handleCopyLink = () => {

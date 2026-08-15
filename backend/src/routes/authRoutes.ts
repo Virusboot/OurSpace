@@ -4,20 +4,30 @@ import { authRateLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
+// Store registered users by email in memory for backend auth
+const usersByEmail = new Map<string, any>();
+
 router.post('/login', authRateLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
-    const username = '@' + email.split('@')[0];
-    const privateId = 'USER-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = usersByEmail.get(cleanEmail);
+    if (!existing) {
+      return res.status(400).json({ error: 'No account found with this email. Please register first.' });
+    }
+    if (existing.password !== password) {
+      return res.status(400).json({ error: 'Incorrect password' });
+    }
     return res.json({
       user: {
-        id: 'usr_' + Date.now(),
-        email,
-        username,
-        privateId,
+        id: existing.id,
+        name: existing.name,
+        email: existing.email,
+        username: existing.username,
+        privateId: existing.privateId,
       },
       token: 'jwt_token_' + Date.now(),
     });
@@ -28,10 +38,41 @@ router.post('/login', authRateLimiter, async (req, res) => {
 
 router.post('/register', authRateLimiter, async (req, res) => {
   try {
-    const { email, username, publicKey, recoveryKey } = req.body;
+    const { name, email, password, username } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+    const cleanEmail = email.trim().toLowerCase();
+    if (usersByEmail.has(cleanEmail)) {
+      return res.status(400).json({ error: 'An account with this email already exists' });
+    }
+
     const cleanUsername = username || (email ? '@' + email.split('@')[0] : '@user');
-    const result = await createIdentity(cleanUsername, publicKey || 'PUBKEY_DEFAULT', recoveryKey || 'RECKEY_DEFAULT');
-    return res.json(result);
+    const privateId = 'USER-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+    const userId = 'usr_' + Date.now();
+
+    const userObj = {
+      id: userId,
+      name: name || 'User',
+      email: cleanEmail,
+      password,
+      username: cleanUsername,
+      privateId,
+      createdAt: new Date().toISOString(),
+    };
+
+    usersByEmail.set(cleanEmail, userObj);
+
+    return res.json({
+      user: {
+        id: userObj.id,
+        name: userObj.name,
+        email: userObj.email,
+        username: userObj.username,
+        privateId: userObj.privateId,
+      },
+      token: 'jwt_token_' + Date.now(),
+    });
   } catch (err: any) {
     return res.status(400).json({ error: err.message || 'Registration failed' });
   }

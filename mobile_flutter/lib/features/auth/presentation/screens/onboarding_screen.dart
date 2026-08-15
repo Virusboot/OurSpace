@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 
 class OnboardingScreen extends StatefulWidget {
+  final bool isDarkMode;
   final VoidCallback onFinish;
 
-  const OnboardingScreen({Key? key, required this.onFinish}) : super(key: key);
+  const OnboardingScreen({
+    super.key,
+    this.isDarkMode = false,
+    required this.onFinish,
+  });
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -50,8 +55,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = widget.isDarkMode;
+    final bgCol = isDark ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
+    final titleTxt = isDark ? Colors.white : const Color(0xFF0F172A);
+    final bodyTxt = isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
+    final skipTxt = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final indicatorUnsel = isDark ? Colors.white24 : const Color(0xFFCBD5E1);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFFFF),
+      backgroundColor: bgCol,
       body: SafeArea(
         child: Column(
           children: [
@@ -61,13 +73,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'OurSpace',
-                    style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 18, letterSpacing: -0.3),
+                  Row(
+                    children: [
+                      Image.asset('assets/images/app_logo.png', height: 28),
+                      const SizedBox(width: 8),
+                      Text(
+                        'OurSpace',
+                        style: TextStyle(color: titleTxt, fontWeight: FontWeight.bold, fontSize: 18, letterSpacing: -0.3),
+                      ),
+                    ],
                   ),
                   TextButton(
                     onPressed: widget.onFinish,
-                    child: const Text('Skip', style: TextStyle(color: Color(0xFF64748B), fontSize: 14, fontWeight: FontWeight.w600)),
+                    child: Text('Skip', style: TextStyle(color: skipTxt, fontSize: 14, fontWeight: FontWeight.w600)),
                   ),
                 ],
               ),
@@ -127,10 +145,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         Text(
                           slide['title'] as String,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 26,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF0F172A),
+                            color: titleTxt,
                             letterSpacing: -0.4,
                           ),
                         ),
@@ -150,9 +168,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         Text(
                           slide['description'] as String,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
-                            color: Color(0xFF475569),
+                            color: bodyTxt,
                             height: 1.5,
                           ),
                         ),
@@ -179,7 +197,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         width: isSel ? 28 : 8,
                         height: 8,
                         decoration: BoxDecoration(
-                          color: isSel ? const Color(0xFF0066FF) : const Color(0xFFCBD5E1),
+                          color: isSel ? const Color(0xFF0066FF) : indicatorUnsel,
                           borderRadius: BorderRadius.circular(4),
                         ),
                       );

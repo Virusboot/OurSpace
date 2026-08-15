@@ -113,11 +113,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (value) {
       try {
         final auth = LocalAuthentication();
-        final canCheck = await auth.canCheckBiometrics;
+        final canCheck = await auth.canCheckBiometrics || await auth.isDeviceSupported();
         if (canCheck) {
           final authenticated = await auth.authenticate(
             localizedReason: 'Verify Phone Fingerprint / Face ID to enable Biometric Unlock',
-            options: const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
+            options: const AuthenticationOptions(
+              stickyAuth: true,
+              useErrorDialogs: true,
+            ),
           );
           if (authenticated) {
             await SecureStorageService.write('biometric_enabled', 'true');
@@ -220,11 +223,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: isDark ? const Color(0xFF14161C) : Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 24),
-        child: Column(
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 16),
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -253,6 +258,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               controller: nameCtrl,
               style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14),
               decoration: InputDecoration(
+                hintText: 'e.g. Rahul Kumar',
+                hintStyle: TextStyle(color: isDark ? Colors.grey : const Color(0xFF94A3B8), fontSize: 13),
                 prefixIcon: const Icon(Icons.person_outline_rounded, color: Color(0xFF0066FF), size: 20),
                 filled: true,
                 fillColor: isDark ? Colors.black.withOpacity(0.4) : const Color(0xFFF1F5F9),
@@ -266,6 +273,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               controller: usernameCtrl,
               style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14),
               decoration: InputDecoration(
+                hintText: 'e.g. @rahul_k',
+                hintStyle: TextStyle(color: isDark ? Colors.grey : const Color(0xFF94A3B8), fontSize: 13),
                 prefixIcon: const Icon(Icons.alternate_email_rounded, color: Color(0xFF0066FF), size: 20),
                 filled: true,
                 fillColor: isDark ? Colors.black.withOpacity(0.4) : const Color(0xFFF1F5F9),
@@ -280,6 +289,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               maxLines: 2,
               style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14),
               decoration: InputDecoration(
+                hintText: 'Write a short bio...',
+                hintStyle: TextStyle(color: isDark ? Colors.grey : const Color(0xFF94A3B8), fontSize: 13),
                 prefixIcon: const Icon(Icons.info_outline_rounded, color: Color(0xFF0066FF), size: 20),
                 filled: true,
                 fillColor: isDark ? Colors.black.withOpacity(0.4) : const Color(0xFFF1F5F9),
@@ -329,7 +340,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   void _showQrCodeModal(String username, String privateId) {
@@ -554,7 +566,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   obscureText: true,
                   style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13),
                   decoration: InputDecoration(
-                    hintText: 'Current Password',
+                    hintText: 'Enter current password',
                     hintStyle: TextStyle(color: isDark ? Colors.grey : const Color(0xFF94A3B8)),
                     filled: true,
                     fillColor: isDark ? Colors.black.withOpacity(0.4) : const Color(0xFFF1F5F9),
@@ -567,7 +579,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   obscureText: true,
                   style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13),
                   decoration: InputDecoration(
-                    hintText: 'New Password',
+                    hintText: 'Enter new password',
                     hintStyle: TextStyle(color: isDark ? Colors.grey : const Color(0xFF94A3B8)),
                     filled: true,
                     fillColor: isDark ? Colors.black.withOpacity(0.4) : const Color(0xFFF1F5F9),
@@ -580,7 +592,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   obscureText: true,
                   style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13),
                   decoration: InputDecoration(
-                    hintText: 'Confirm New Password',
+                    hintText: 'Re-enter new password',
                     hintStyle: TextStyle(color: isDark ? Colors.grey : const Color(0xFF94A3B8)),
                     filled: true,
                     fillColor: isDark ? Colors.black.withOpacity(0.4) : const Color(0xFFF1F5F9),
@@ -652,9 +664,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           style: TextStyle(color: txtCol, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: -0.2),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        child: Column(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 1. Sleek Profile User Section (Seamless Flat Background, No Outer Box/Shadow)
@@ -1267,6 +1280,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }

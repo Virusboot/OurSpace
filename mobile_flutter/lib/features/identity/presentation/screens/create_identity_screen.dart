@@ -4,9 +4,14 @@ import '../../../../core/networking/api_client.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 
 class CreateIdentityScreen extends StatefulWidget {
+  final bool isDarkMode;
   final Function(Map<String, dynamic> user, String recoveryKey) onIdentityCreated;
 
-  const CreateIdentityScreen({super.key, required this.onIdentityCreated});
+  const CreateIdentityScreen({
+    super.key,
+    this.isDarkMode = false,
+    required this.onIdentityCreated,
+  });
 
   @override
   State<CreateIdentityScreen> createState() => _CreateIdentityScreenState();
@@ -19,7 +24,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
 
-  bool _isSignUp = false;
+  bool _isSignUp = true; // Default to Create Account mode
   bool _obscurePassword = true;
   bool _loading = false;
   String? _errorMsg;
@@ -41,74 +46,166 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
     final confirmPassword = _confirmPasswordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      setState(() => _errorMsg = 'Please enter Email and Password');
+      setState(() => _errorMsg = 'Please enter Email Address and Password');
       return;
     }
 
+    final lowerEmail = email.toLowerCase();
+
+    // Fetch existing registered accounts from SecureStorageService
+    final accountsJson = await SecureStorageService.read('registered_accounts');
+    Map<String, dynamic> accountsMap = {};
+    if (accountsJson != null && accountsJson.isNotEmpty) {
+      try {
+        accountsMap = Map<String, dynamic>.from(jsonDecode(accountsJson));
+      } catch (_) {}
+    }
+
     if (_isSignUp) {
+      // REGISTRATION FLOW
+      if (name.isEmpty) {
+        setState(() => _errorMsg = 'Please enter your Full Name');
+        return;
+      }
+      if (password.length < 4) {
+        setState(() => _errorMsg = 'Password must be at least 4 characters long');
+        return;
+      }
       if (password != confirmPassword) {
         setState(() => _errorMsg = 'Passwords do not match');
         return;
       }
-    }
 
-    setState(() {
-      _loading = true;
-      _errorMsg = null;
-    });
+      // Check if email is already registered locally
+      if (accountsMap.containsKey(lowerEmail)) {
+        setState(() => _errorMsg = 'An account with this email already exists. Please Log In instead.');
+        return;
+      }
 
-    final customUsername = _usernameController.text.trim();
-    final baseUsername = email.contains('@') ? email.split('@')[0] : email;
-    final randomSuffix = (DateTime.now().millisecondsSinceEpoch % 9000 + 1000).toString();
-    final username = customUsername.isNotEmpty
-        ? (customUsername.startsWith('@') ? customUsername : '@$customUsername')
-        : '@${baseUsername.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '')}_$randomSuffix';
-    final privateId = 'USER-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
-    Map<String, dynamic> userObj;
-    String token;
+      setState(() {
+        _loading = true;
+        _errorMsg = null;
+      });
 
-    try {
-      final endpoint = _isSignUp ? '/auth/register' : '/auth/login';
-      final res = await ApiClient.post(endpoint, {
-        'name': name.isNotEmpty ? name : 'User',
-        'email': email,
-        'password': password,
-        'username': username,
-      }).timeout(const Duration(seconds: 2));
-      userObj = res['user'] ?? {
-        'id': 'usr_${DateTime.now().millisecondsSinceEpoch}',
-        'name': name.isNotEmpty ? name : 'User',
-        'email': email,
-        'username': username,
-        'privateId': privateId,
-      };
-      token = res['token'] ?? 'token_${DateTime.now().millisecondsSinceEpoch}';
-    } catch (_) {
-      // Instant error-free fallback login/register
-      userObj = {
-        'id': 'usr_${DateTime.now().millisecondsSinceEpoch}',
-        'name': name.isNotEmpty ? name : 'User',
-        'email': email,
-        'username': username,
-        'privateId': privateId,
-      };
-      token = 'token_local_${DateTime.now().millisecondsSinceEpoch}';
-    }
+      final customUsername = _usernameController.text.trim();
+      final baseUsername = email.contains('@') ? email.split('@')[0] : email;
+      final randomSuffix = (DateTime.now().millisecondsSinceEpoch % 9000 + 1000).toString();
+      final username = customUsername.isNotEmpty
+          ? (customUsername.startsWith('@') ? customUsername : '@$customUsername')
+          : '@${baseUsername.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '')}_$randomSuffix';
+      final privateId = 'USER-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
 
-    try {
+      Map<String, dynamic> userObj;
+      String token;
+
+      try {
+        final res = await ApiClient.post('/auth/register', {
+          'name': name,
+          'email': lowerEmail,
+          'password': password,
+          'username': username,
+        }).timeout(const Duration(seconds: 2));
+
+        if (res['user'] != null) {
+          userObj = Map<String, dynamic>.from(res['user']);
+          userObj['password'] = password;
+          token = res['token'] ?? 'token_${DateTime.now().millisecondsSinceEpoch}';
+        } else {
+          throw Exception(res['error'] ?? 'Registration failed');
+        }
+      } catch (e) {
+        final errMsg = e.toString();
+        if (errMsg.contains('already exists') || errMsg.contains('taken')) {
+          setState(() {
+            _loading = false;
+            _errorMsg = 'An account with this email already exists. Please Log In instead.';
+          });
+          return;
+        }
+
+        // Local registration fallback
+        userObj = {
+          'id': 'usr_${DateTime.now().millisecondsSinceEpoch}',
+          'name': name,
+          'email': lowerEmail,
+          'username': username,
+          'privateId': privateId,
+          'password': password,
+          'createdAt': DateTime.now().toIso8601String(),
+        };
+        token = 'token_local_${DateTime.now().millisecondsSinceEpoch}';
+      }
+
+      // Save user to registered accounts database
+      accountsMap[lowerEmail] = userObj;
+      await SecureStorageService.write('registered_accounts', jsonEncode(accountsMap));
       await SecureStorageService.write('auth_token', token);
       await SecureStorageService.write('user_info', jsonEncode(userObj));
-    } catch (_) {}
 
-    if (mounted) {
-      setState(() => _loading = false);
-      widget.onIdentityCreated(userObj, 'rec_key_${DateTime.now().millisecondsSinceEpoch}');
+      if (mounted) {
+        setState(() => _loading = false);
+        widget.onIdentityCreated(userObj, 'rec_key_${DateTime.now().millisecondsSinceEpoch}');
+      }
+
+    } else {
+      // LOGIN FLOW
+      setState(() {
+        _loading = true;
+        _errorMsg = null;
+      });
+
+      Map<String, dynamic>? userObj;
+      String token = 'token_local_${DateTime.now().millisecondsSinceEpoch}';
+
+      try {
+        final res = await ApiClient.post('/auth/login', {
+          'email': lowerEmail,
+          'password': password,
+        }).timeout(const Duration(seconds: 2));
+
+        if (res['user'] != null) {
+          userObj = Map<String, dynamic>.from(res['user']);
+          userObj['password'] = password;
+          token = res['token'] ?? 'token_${DateTime.now().millisecondsSinceEpoch}';
+        } else {
+          throw Exception(res['error'] ?? 'Login failed');
+        }
+      } catch (e) {
+        // Local Login Verification Fallback
+        if (!accountsMap.containsKey(lowerEmail)) {
+          setState(() {
+            _loading = false;
+            _errorMsg = 'No account found with this email. Please Create an Account first.';
+          });
+          return;
+        }
+
+        final existingUser = Map<String, dynamic>.from(accountsMap[lowerEmail] as Map);
+        if (existingUser['password'] != password) {
+          setState(() {
+            _loading = false;
+            _errorMsg = 'Incorrect Password. Please try again.';
+          });
+          return;
+        }
+
+        userObj = existingUser;
+        token = 'token_local_${DateTime.now().millisecondsSinceEpoch}';
+      }
+
+      await SecureStorageService.write('auth_token', token);
+      await SecureStorageService.write('user_info', jsonEncode(userObj));
+
+      if (mounted) {
+        setState(() => _loading = false);
+        widget.onIdentityCreated(userObj, 'rec_key_${DateTime.now().millisecondsSinceEpoch}');
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = widget.isDarkMode;
     final scaffoldBg = isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC);
     final cardBorder = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
     final inputBg = isDark ? Colors.black.withOpacity(0.4) : const Color(0xFFF1F5F9);
@@ -126,21 +223,105 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-
+                Center(
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0066FF).withOpacity(0.25),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Image.asset(
+                      'assets/images/app_logo.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
                 Text(
                   _isSignUp ? 'Create OurSpace Account' : 'Welcome Back',
-                  textAlign: TextAlign.left,
+                  textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: textTitle),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   _isSignUp
-                      ? 'Fill in your details to create a new account'
-                      : 'Log in easily with your Email & Password',
-                  textAlign: TextAlign.left,
+                      ? 'Fill in your details below to create your account'
+                      : 'Log in with your registered Email & Password',
+                  textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 13, color: textSub),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 20),
+
+                // Mode Switcher Segmented Control (Create Account vs Log In)
+                Container(
+                  height: 48,
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: inputBg,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: cardBorder),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() {
+                            _isSignUp = true;
+                            _errorMsg = null;
+                          }),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            decoration: BoxDecoration(
+                              color: _isSignUp ? const Color(0xFF0066FF) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'Create Account',
+                              style: TextStyle(
+                                color: _isSignUp ? Colors.white : textSub,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() {
+                            _isSignUp = false;
+                            _errorMsg = null;
+                          }),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            decoration: BoxDecoration(
+                              color: !_isSignUp ? const Color(0xFF0066FF) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'Log In',
+                              style: TextStyle(
+                                color: !_isSignUp ? Colors.white : textSub,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
 
                 if (_errorMsg != null) ...[
                   Container(
@@ -169,12 +350,12 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cardBorder)),
                       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cardBorder)),
                       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF0066FF), width: 1.5)),
-                      hintText: 'e.g. Alex Smith',
+                      hintText: 'e.g. Rahul Kumar',
                       hintStyle: TextStyle(color: textSub, fontSize: 13),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Text('Choose Unique Username', style: TextStyle(fontSize: 13, color: textTitle, fontWeight: FontWeight.w600)),
+                  Text('Choose Username (Optional)', style: TextStyle(fontSize: 13, color: textTitle, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
                   TextField(
                     controller: _usernameController,
@@ -186,7 +367,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cardBorder)),
                       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cardBorder)),
                       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF0066FF), width: 1.5)),
-                      hintText: 'e.g. @alex_smith',
+                      hintText: 'e.g. @rahul_k',
                       hintStyle: TextStyle(color: textSub, fontSize: 13),
                     ),
                   ),
@@ -207,7 +388,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cardBorder)),
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cardBorder)),
                     focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF0066FF), width: 1.5)),
-                    hintText: 'name@domain.com',
+                    hintText: 'e.g. rahul@gmail.com',
                     hintStyle: TextStyle(color: textSub, fontSize: 13),
                   ),
                 ),
@@ -235,7 +416,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cardBorder)),
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cardBorder)),
                     focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF0066FF), width: 1.5)),
-                    hintText: 'Enter Password',
+                    hintText: 'Enter your password',
                     hintStyle: TextStyle(color: textSub, fontSize: 13),
                   ),
                 ),
@@ -256,14 +437,14 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cardBorder)),
                       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cardBorder)),
                       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF0066FF), width: 1.5)),
-                      hintText: 'Re-enter Password',
+                      hintText: 'Re-enter your password',
                       hintStyle: TextStyle(color: textSub, fontSize: 13),
                     ),
                   ),
                   const SizedBox(height: 16),
                 ],
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
 
                 // Big Primary Action Button
                 SizedBox(
@@ -285,7 +466,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Toggle Login / Sign Up Tab
+                // Toggle Login / Sign Up Text Button at Bottom
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

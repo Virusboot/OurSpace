@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:local_auth/local_auth.dart';
+import 'package:flutter/services.dart';
 import 'core/storage/secure_storage_service.dart';
 import 'core/networking/websocket_client.dart';
 import 'features/auth/presentation/screens/onboarding_screen.dart';
@@ -11,8 +11,11 @@ import 'features/chat/presentation/screens/chat_screen.dart';
 import 'features/media/presentation/screens/secure_image_viewer_screen.dart';
 import 'features/calls/presentation/screens/call_screen.dart';
 import 'features/settings/presentation/screens/settings_screen.dart';
+import 'features/auth/presentation/screens/splash_screen.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   runApp(const SecureChatApp());
 }
 
@@ -23,8 +26,9 @@ class SecureChatApp extends StatefulWidget {
   State<SecureChatApp> createState() => _SecureChatAppState();
 }
 
-class _SecureChatAppState extends State<SecureChatApp> {
+class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserver {
   String _currentScreen = 'loading';
+  String? _savedScreenBeforeLock;
   Map<String, dynamic>? _user;
   String _recoveryKey = 'sample-recovery-key-1234';
   Map<String, dynamic>? _activeRecipient;
@@ -36,8 +40,39 @@ class _SecureChatAppState extends State<SecureChatApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkStoredUser();
     _loadThemeMode();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _lockAppIfEnabled();
+    }
+  }
+
+  Future<void> _lockAppIfEnabled() async {
+    if (_user == null) return;
+    final appLock = await SecureStorageService.read('app_lock_enabled');
+    if (appLock == 'true') {
+      if (_currentScreen != 'enter_pin' &&
+          _currentScreen != 'loading' &&
+          _currentScreen != 'onboarding' &&
+          _currentScreen != 'create_identity' &&
+          _currentScreen != 'create_pin') {
+        setState(() {
+          _savedScreenBeforeLock = _currentScreen;
+          _currentScreen = 'enter_pin';
+        });
+      }
+    }
   }
 
   Future<void> _loadThemeMode() async {
@@ -61,7 +96,8 @@ class _SecureChatAppState extends State<SecureChatApp> {
     final stored = await SecureStorageService.read('user_info');
     final savedImg = await SecureStorageService.read('profile_image_path');
     final appLock = await SecureStorageService.read('app_lock_enabled');
-    final biometric = await SecureStorageService.read('biometric_enabled');
+
+    await Future.delayed(const Duration(milliseconds: 1000));
 
     if (stored != null) {
       try {
@@ -72,26 +108,6 @@ class _SecureChatAppState extends State<SecureChatApp> {
         _user = parsed;
 
         if (appLock == 'true') {
-          if (biometric == 'true') {
-            try {
-              final auth = LocalAuthentication();
-              final canCheck = await auth.canCheckBiometrics;
-              if (canCheck) {
-                final authenticated = await auth.authenticate(
-                  localizedReason: 'Authenticate to access OurSpace Privacy Chat',
-                  options: const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
-                );
-                if (authenticated) {
-                  setState(() {
-                    _currentScreen = 'home';
-                  });
-                  WebSocketClient().connect();
-                  return;
-                }
-              }
-            } catch (_) {}
-          }
-
           setState(() {
             _currentScreen = 'enter_pin';
           });
@@ -124,7 +140,8 @@ class _SecureChatAppState extends State<SecureChatApp> {
   void _handlePinComplete() {
     WebSocketClient().connect();
     setState(() {
-      _currentScreen = 'home';
+      _currentScreen = _savedScreenBeforeLock ?? 'home';
+      _savedScreenBeforeLock = null;
     });
   }
 
@@ -187,23 +204,34 @@ class _SecureChatAppState extends State<SecureChatApp> {
   Widget _buildScreen() {
     switch (_currentScreen) {
       case 'loading':
-        return const Scaffold(backgroundColor: Colors.black, body: SizedBox());
+      case 'splash':
+        return SplashScreen(
+          onContinue: () {
+            setState(() {
+              _currentScreen = (_user != null) ? 'home' : 'onboarding';
+            });
+          },
+        );
       case 'onboarding':
         return OnboardingScreen(
+          isDarkMode: _isDarkMode,
           onFinish: () => setState(() => _currentScreen = 'create_identity'),
         );
       case 'create_identity':
         return CreateIdentityScreen(
+          isDarkMode: _isDarkMode,
           onIdentityCreated: _handleIdentityCreated,
         );
       case 'create_pin':
         return CreatePinScreen(
           isUnlockMode: false,
+          isDarkMode: _isDarkMode,
           onPinComplete: _handlePinComplete,
         );
       case 'enter_pin':
         return CreatePinScreen(
           isUnlockMode: true,
+          isDarkMode: _isDarkMode,
           onPinComplete: _handlePinComplete,
         );
       case 'home':
@@ -251,12 +279,14 @@ class _SecureChatAppState extends State<SecureChatApp> {
         return SecureImageViewerScreen(
           imageUri: _activeImageUri,
           isViewOnce: _activeIsViewOnce,
+          isDarkMode: _isDarkMode,
           onClose: () => setState(() => _currentScreen = 'chat'),
         );
       case 'call':
         return CallScreen(
           callType: _activeCallType,
           recipient: _activeRecipient,
+          isDarkMode: _isDarkMode,
           onEndCall: () => setState(() => _currentScreen = 'home'),
         );
       case 'settings':
@@ -277,6 +307,7 @@ class _SecureChatAppState extends State<SecureChatApp> {
         );
       default:
         return OnboardingScreen(
+          isDarkMode: _isDarkMode,
           onFinish: () => setState(() => _currentScreen = 'create_identity'),
         );
     }

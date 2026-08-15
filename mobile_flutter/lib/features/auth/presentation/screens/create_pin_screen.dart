@@ -4,11 +4,13 @@ import '../../../../core/storage/secure_storage_service.dart';
 
 class CreatePinScreen extends StatefulWidget {
   final bool isUnlockMode;
+  final bool isDarkMode;
   final VoidCallback onPinComplete;
 
   const CreatePinScreen({
     super.key,
     this.isUnlockMode = false,
+    this.isDarkMode = false,
     required this.onPinComplete,
   });
 
@@ -27,27 +29,32 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
   void initState() {
     super.initState();
     if (widget.isUnlockMode) {
-      _checkAndTriggerBiometrics();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkAndTriggerBiometrics();
+      });
     }
   }
 
   Future<void> _checkAndTriggerBiometrics() async {
     final bioSetting = await SecureStorageService.read('biometric_enabled');
     if (bioSetting == 'true') {
-      _triggerBiometricAuth();
+      await _triggerBiometricAuth();
     }
   }
 
   Future<void> _triggerBiometricAuth() async {
     try {
       final auth = LocalAuthentication();
-      final canCheck = await auth.canCheckBiometrics;
+      final canCheck = await auth.canCheckBiometrics || await auth.isDeviceSupported();
       if (canCheck) {
         final authenticated = await auth.authenticate(
-          localizedReason: 'Authenticate to access OurSpace Privacy Chat',
-          options: const AuthenticationOptions(biometricOnly: true, stickyAuth: true),
+          localizedReason: 'Authenticate to unlock OurSpace Privacy Chat',
+          options: const AuthenticationOptions(
+            stickyAuth: true,
+            useErrorDialogs: true,
+          ),
         );
-        if (authenticated) {
+        if (authenticated && mounted) {
           widget.onPinComplete();
         }
       }
@@ -134,7 +141,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
   @override
   Widget build(BuildContext context) {
     final digits = _isConfirm ? _confirmPin : _pin;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = widget.isDarkMode;
     final scaffoldBg = isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC);
     final textTitle = isDark ? Colors.white : const Color(0xFF0F172A);
     final textSub = isDark ? Colors.grey : const Color(0xFF64748B);
@@ -159,6 +166,27 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                   ),
                 ),
               const SizedBox(height: 8),
+              Center(
+                child: Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF0066FF).withOpacity(0.25),
+                        blurRadius: 18,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Image.asset(
+                    'assets/images/app_logo.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
               Text(
                 widget.isUnlockMode
                     ? 'Enter App PIN'

@@ -43,9 +43,10 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
           style: TextStyle(color: txtCol, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: -0.2),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Column(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Official Email Card
@@ -142,8 +143,10 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                       controller: _subjectCtrl,
                       style: TextStyle(color: txtCol, fontSize: 14),
                       decoration: InputDecoration(
-                        labelText: 'Subject / Issue Type',
+                        labelText: 'Subject',
+                        hintText: 'e.g. Help with messaging',
                         labelStyle: TextStyle(color: subtxtCol, fontSize: 13),
+                        hintStyle: TextStyle(color: subtxtCol.withOpacity(0.6), fontSize: 13),
                         filled: true,
                         fillColor: widget.isDarkMode ? Colors.white.withOpacity(0.04) : const Color(0xFFF8FAFC),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -155,8 +158,10 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                       maxLines: 4,
                       style: TextStyle(color: txtCol, fontSize: 14),
                       decoration: InputDecoration(
-                        labelText: 'Describe your issue or feedback...',
+                        labelText: 'Your Message',
+                        hintText: 'Type your message or feedback here...',
                         labelStyle: TextStyle(color: subtxtCol, fontSize: 13),
+                        hintStyle: TextStyle(color: subtxtCol.withOpacity(0.6), fontSize: 13),
                         filled: true,
                         fillColor: widget.isDarkMode ? Colors.white.withOpacity(0.04) : const Color(0xFFF8FAFC),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -185,7 +190,7 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                         _subjectCtrl.clear();
                         _messageCtrl.clear();
                       },
-                      child: const Text('Submit Ticket', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                      child: const Text('Send Message', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
                     ),
                   ],
                 ),
@@ -194,6 +199,7 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }

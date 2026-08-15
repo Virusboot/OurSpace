@@ -6,6 +6,17 @@ import '../storage/secure_storage_service.dart';
 
 class ApiClient {
   static String? customBaseUrl;
+  static String? customWebUrl;
+
+  static String get webBaseUrl {
+    if (customWebUrl != null && customWebUrl!.isNotEmpty) {
+      return customWebUrl!;
+    }
+    if (kReleaseMode) {
+      return 'https://ourspace-web.onrender.com';
+    }
+    return 'http://localhost:3000';
+  }
 
   static String get baseUrl {
     if (customBaseUrl != null && customBaseUrl!.isNotEmpty) {

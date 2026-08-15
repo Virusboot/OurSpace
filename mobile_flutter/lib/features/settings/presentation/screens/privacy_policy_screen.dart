@@ -33,9 +33,10 @@ class PrivacyPolicyScreen extends StatelessWidget {
           style: TextStyle(color: txtCol, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: -0.2),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Column(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header Pill
@@ -111,7 +112,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildPolicySection(Color cardBg, Color cardBorder, Color titleColor, Color textColor, String title, String content) {

@@ -288,48 +288,50 @@ class _ChatScreenState extends State<ChatScreen> {
       backgroundColor: modalBg,
       barrierColor: Colors.black.withOpacity(0.5),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 12),
-          Container(width: 36, height: 4, decoration: BoxDecoration(color: isDark ? Colors.white24 : Colors.black12, borderRadius: BorderRadius.circular(2))),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.timer_rounded, color: Color(0xFF0066FF), size: 20),
-              const SizedBox(width: 8),
-              Text('Disappearing Messages Timer', style: TextStyle(color: titleTxt, fontWeight: FontWeight.bold, fontSize: 16)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24.0),
-            child: Text('Messages sent after changing this timer will automatically disappear after being read.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 12)),
-          ),
-          const SizedBox(height: 16),
-          ...[
-            {'label': 'Off', 'sec': 0},
-            {'label': '10 Seconds', 'sec': 10},
-            {'label': '30 Seconds', 'sec': 30},
-            {'label': '1 Minute', 'sec': 60},
-            {'label': '5 Minutes', 'sec': 300},
-            {'label': '24 Hours', 'sec': 86400},
-          ].map((opt) {
-            final sec = opt['sec'] as int;
-            final isSel = _ttlSeconds == sec;
-            return ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-              title: Text(opt['label'] as String, style: TextStyle(color: isSel ? const Color(0xFF0066FF) : titleTxt, fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
-              trailing: isSel ? const Icon(Icons.check_circle_rounded, color: Color(0xFF0066FF)) : null,
-              onTap: () {
-                setState(() => _ttlSeconds = sec);
-                Navigator.pop(ctx);
-              },
-            );
-          }),
-          const SizedBox(height: 16),
-        ],
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(width: 36, height: 4, decoration: BoxDecoration(color: isDark ? Colors.white24 : Colors.black12, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.timer_rounded, color: Color(0xFF0066FF), size: 20),
+                const SizedBox(width: 8),
+                Text('Disappearing Messages Timer', style: TextStyle(color: titleTxt, fontWeight: FontWeight.bold, fontSize: 16)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24.0),
+              child: Text('Messages sent after changing this timer will automatically disappear after being read.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 12)),
+            ),
+            const SizedBox(height: 16),
+            ...[
+              {'label': 'Off', 'sec': 0},
+              {'label': '10 Seconds', 'sec': 10},
+              {'label': '30 Seconds', 'sec': 30},
+              {'label': '1 Minute', 'sec': 60},
+              {'label': '5 Minutes', 'sec': 300},
+              {'label': '24 Hours', 'sec': 86400},
+            ].map((opt) {
+              final sec = opt['sec'] as int;
+              final isSel = _ttlSeconds == sec;
+              return ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+                title: Text(opt['label'] as String, style: TextStyle(color: isSel ? const Color(0xFF0066FF) : titleTxt, fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
+                trailing: isSel ? const Icon(Icons.check_circle_rounded, color: Color(0xFF0066FF)) : null,
+                onTap: () {
+                  setState(() => _ttlSeconds = sec);
+                  Navigator.pop(ctx);
+                },
+              );
+            }),
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }
@@ -1018,7 +1020,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 onSubmitted: (_) => _handleSend(),
                                 style: TextStyle(color: inputTxt, fontSize: 14),
                                 decoration: InputDecoration(
-                                  hintText: 'Type your message...',
+                                  hintText: 'Message...',
                                   hintStyle: TextStyle(color: inputHint, fontSize: 13),
                                   border: InputBorder.none,
                                   contentPadding: const EdgeInsets.symmetric(horizontal: 16),
