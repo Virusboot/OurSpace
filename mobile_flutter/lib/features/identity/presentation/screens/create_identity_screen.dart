@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/networking/api_client.dart';
 import '../../../../core/storage/secure_storage_service.dart';
+import '../../../../shared/widgets/app_gradient_button.dart';
 
 class CreateIdentityScreen extends StatefulWidget {
   final bool isDarkMode;
@@ -343,12 +344,12 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
             width: 140,
             height: 140,
             decoration: BoxDecoration(
-              color: const Color(0xFF0066FF).withValues(alpha: 0.08),
+              color: const Color(0xFF7B2FBE).withValues(alpha: 0.08),
               shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.2), width: 1.5),
+              border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.2), width: 1.5),
             ),
             child: const Center(
-              child: Icon(Icons.shield_rounded, size: 72, color: Color(0xFF0066FF)),
+              child: Icon(Icons.shield_rounded, size: 72, color: Color(0xFF7B2FBE)),
             ),
           ),
         ),
@@ -367,21 +368,10 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
         const SizedBox(height: 100),
 
         // Action Buttons
-        SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0066FF),
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-            ),
-            onPressed: () => setState(() => _currentStep = 1),
-            child: const Text(
-              'Create New Identity',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-          ),
+        AppGradientButton(
+          label: 'Create New Identity',
+          onTap: () => setState(() => _currentStep = 1),
+          borderRadius: 28,
         ),
         const SizedBox(height: 16),
         TextButton(
@@ -391,7 +381,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
           }),
           child: const Text(
             'Import Existing',
-            style: TextStyle(color: Color(0xFF0066FF), fontSize: 15, fontWeight: FontWeight.bold),
+            style: TextStyle(color: Color(0xFF7B2FBE), fontSize: 15, fontWeight: FontWeight.bold),
           ),
         ),
       ],
@@ -449,7 +439,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.copy_rounded, color: Color(0xFF0066FF), size: 24),
+                icon: const Icon(Icons.copy_rounded, color: Color(0xFF7B2FBE), size: 24),
                 onPressed: () {
                   _privateId = _privateIdController.text.trim().toUpperCase();
                   _copyToClipboard(_privateId, 'Private ID');
@@ -461,17 +451,10 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
         const SizedBox(height: 120),
 
         // Continue Button
-        SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0066FF),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-            ),
-            onPressed: () => setState(() => _currentStep = 2),
-            child: const Text('Continue', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-          ),
+        AppGradientButton(
+          label: 'Continue',
+          onTap: () => setState(() => _currentStep = 2),
+          borderRadius: 28,
         ),
       ],
     );
@@ -506,7 +489,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
           controller: _usernameController,
           style: TextStyle(color: titleColor, fontSize: 16, fontWeight: FontWeight.bold),
           decoration: InputDecoration(
-            prefixIcon: const Icon(Icons.alternate_email_rounded, color: Color(0xFF0066FF), size: 22),
+            prefixIcon: const Icon(Icons.alternate_email_rounded, color: Color(0xFF7B2FBE), size: 22),
             filled: true,
             fillColor: inputBg,
             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
@@ -520,7 +503,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(20),
-              borderSide: const BorderSide(color: Color(0xFF0066FF), width: 1.5),
+              borderSide: const BorderSide(color: Color(0xFF7B2FBE), width: 1.5),
             ),
             hintText: 'e.g. priyanshu',
             hintStyle: const TextStyle(color: Colors.grey, fontSize: 15),
@@ -529,17 +512,10 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
         const SizedBox(height: 120),
 
         // Continue Button
-        SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isValid ? const Color(0xFF0066FF) : const Color(0xFF0066FF).withValues(alpha: 0.3),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-            ),
-            onPressed: isValid ? () => setState(() => _currentStep = 3) : null,
-            child: const Text('Continue', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-          ),
+        AppGradientButton(
+          label: 'Continue',
+          onTap: isValid ? () => setState(() => _currentStep = 3) : null,
+          borderRadius: 28,
         ),
       ],
     );
@@ -575,7 +551,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
           obscureText: _obscurePassword,
           style: TextStyle(color: titleColor, fontSize: 16, fontWeight: FontWeight.bold),
           decoration: InputDecoration(
-            prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF0066FF), size: 22),
+            prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF7B2FBE), size: 22),
             suffixIcon: IconButton(
               icon: Icon(
                 _obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
@@ -597,7 +573,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(20),
-              borderSide: const BorderSide(color: Color(0xFF0066FF), width: 1.5),
+              borderSide: const BorderSide(color: Color(0xFF7B2FBE), width: 1.5),
             ),
             hintText: 'Minimum 6 characters',
             hintStyle: const TextStyle(color: Colors.grey, fontSize: 15),
@@ -606,17 +582,10 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
         const SizedBox(height: 120),
 
         // Continue Button
-        SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isValid ? const Color(0xFF0066FF) : const Color(0xFF0066FF).withValues(alpha: 0.3),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-            ),
-            onPressed: isValid ? () => setState(() => _currentStep = 4) : null,
-            child: const Text('Continue', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-          ),
+        AppGradientButton(
+          label: 'Continue',
+          onTap: isValid ? () => setState(() => _currentStep = 4) : null,
+          borderRadius: 28,
         ),
       ],
     );
@@ -648,9 +617,9 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
               width: 16,
               height: 16,
               decoration: BoxDecoration(
-                color: active ? const Color(0xFF0066FF) : Colors.transparent,
+                color: active ? const Color(0xFF7B2FBE) : Colors.transparent,
                 shape: BoxShape.circle,
-                border: Border.all(color: active ? const Color(0xFF0066FF) : (isDark ? Colors.white24 : Colors.black26), width: 2),
+                border: Border.all(color: active ? const Color(0xFF7B2FBE) : (isDark ? Colors.white24 : Colors.black26), width: 2),
               ),
             );
           }),
@@ -759,32 +728,23 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
             width: 150,
             height: 150,
             decoration: BoxDecoration(
-              color: const Color(0xFF0066FF).withValues(alpha: 0.08),
+              color: const Color(0xFF7B2FBE).withValues(alpha: 0.08),
               shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.2), width: 1.5),
+              border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.2), width: 1.5),
             ),
             child: const Center(
-              child: Icon(Icons.face_unlock_rounded, size: 68, color: Color(0xFF0066FF)),
+              child: Icon(Icons.face_unlock_rounded, size: 68, color: Color(0xFF7B2FBE)),
             ),
           ),
         ),
         const SizedBox(height: 100),
 
         // Buttons
-        SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0066FF),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-            ),
-            onPressed: _loading ? null : _completeRegistration,
-            child: Text(
-              _loading ? 'Completing...' : 'Enable',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-          ),
+        AppGradientButton(
+          label: _loading ? 'Completing...' : 'Enable',
+          onTap: _loading ? null : _completeRegistration,
+          isLoading: _loading,
+          borderRadius: 28,
         ),
         const SizedBox(height: 16),
         TextButton(
@@ -840,12 +800,12 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
           controller: _importIdController,
           style: TextStyle(color: titleColor, fontSize: 15),
           decoration: InputDecoration(
-            prefixIcon: const Icon(Icons.alternate_email_rounded, color: Color(0xFF0066FF), size: 20),
+            prefixIcon: const Icon(Icons.alternate_email_rounded, color: Color(0xFF7B2FBE), size: 20),
             filled: true,
             fillColor: inputBg,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: inputBorder)),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: inputBorder)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF0066FF), width: 1.5)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF7B2FBE), width: 1.5)),
             hintText: 'e.g. @priyanshu or USER-1234',
             hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
           ),
@@ -860,12 +820,12 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
           obscureText: true,
           style: TextStyle(color: titleColor, fontSize: 15),
           decoration: InputDecoration(
-            prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF0066FF), size: 20),
+            prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF7B2FBE), size: 20),
             filled: true,
             fillColor: inputBg,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: inputBorder)),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: inputBorder)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF0066FF), width: 1.5)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF7B2FBE), width: 1.5)),
             hintText: 'Enter your password',
             hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
           ),
@@ -873,20 +833,11 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
         const SizedBox(height: 60),
 
         // Action Buttons
-        SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0066FF),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-            ),
-            onPressed: _loading ? null : _handleImport,
-            child: Text(
-              _loading ? 'Restoring...' : 'Restore Identity',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-          ),
+        AppGradientButton(
+          label: _loading ? 'Restoring...' : 'Restore Identity',
+          onTap: _loading ? null : _handleImport,
+          isLoading: _loading,
+          borderRadius: 28,
         ),
         const SizedBox(height: 16),
         Center(

@@ -48,7 +48,7 @@ class AboutUsScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(30),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF0066FF).withValues(alpha: 0.3),
+                    color: const Color(0xFF7B2FBE).withValues(alpha: 0.3),
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
@@ -60,7 +60,7 @@ class AboutUsScreen extends StatelessWidget {
                   'assets/images/Our Space Logo.png',
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(
-                    color: const Color(0xFF0066FF),
+                    color: const Color(0xFF7B2FBE),
                     child: const Icon(Icons.shield_rounded, color: Colors.white, size: 50),
                   ),
                 ),
@@ -146,7 +146,7 @@ class AboutUsScreen extends StatelessWidget {
           child: Text(
             value,
             textAlign: TextAlign.right,
-            style: const TextStyle(color: Color(0xFF0066FF), fontSize: 11, fontWeight: FontWeight.bold),
+            style: const TextStyle(color: Color(0xFF7B2FBE), fontSize: 11, fontWeight: FontWeight.bold),
           ),
         ),
       ],

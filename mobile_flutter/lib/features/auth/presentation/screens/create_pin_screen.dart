@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 
+
 class CreatePinScreen extends StatefulWidget {
   final bool isUnlockMode;
   final bool isDarkMode;
@@ -162,7 +163,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: widget.onPinComplete,
-                    child: const Text('Skip for now →', style: TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.bold, fontSize: 13)),
+                    child: Text('Skip for now →', style: TextStyle(color: Color(0xFFE91E8C), fontWeight: FontWeight.bold, fontSize: 13)),
                   ),
                 ),
               const SizedBox(height: 8),
@@ -174,7 +175,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF0066FF).withValues(alpha: 0.25),
+                        color: const Color(0xFF7B2FBE).withValues(alpha: 0.25),
                         blurRadius: 18,
                         offset: const Offset(0, 4),
                       ),
@@ -219,8 +220,8 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                     height: 14,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: filled ? const Color(0xFF0066FF) : Colors.transparent,
-                      border: Border.all(color: filled ? const Color(0xFF0066FF) : dotUnfilledBorder),
+                      color: filled ? const Color(0xFF7B2FBE) : Colors.transparent,
+                      border: Border.all(color: filled ? const Color(0xFF7B2FBE) : dotUnfilledBorder),
                     ),
                   );
                 }),
@@ -241,14 +242,14 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.fingerprint, size: 20, color: Color(0xFF0066FF)),
+                          const Icon(Icons.fingerprint, size: 20, color: Color(0xFF7B2FBE)),
                           const SizedBox(width: 10),
                           Text('Enable Face ID / Biometrics', style: TextStyle(color: textTitle, fontSize: 13)),
                         ],
                       ),
                       Switch(
                         value: _biometricEnabled,
-                        activeThumbColor: const Color(0xFF0066FF),
+                        activeThumbColor: const Color(0xFF7B2FBE),
                         onChanged: (val) => setState(() => _biometricEnabled = val),
                       ),
                     ],
@@ -270,7 +271,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                     ...['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => _buildKey(num, isDark)),
                     widget.isUnlockMode
                         ? IconButton(
-                            icon: const Icon(Icons.fingerprint, color: Color(0xFF0066FF), size: 28),
+                            icon: const Icon(Icons.fingerprint, color: Color(0xFF7B2FBE), size: 28),
                             onPressed: _triggerBiometricAuth,
                           )
                         : const SizedBox(),

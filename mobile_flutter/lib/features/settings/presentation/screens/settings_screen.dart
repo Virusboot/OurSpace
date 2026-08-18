@@ -10,6 +10,7 @@ import 'privacy_policy_screen.dart';
 import 'terms_conditions_screen.dart';
 import 'about_us_screen.dart';
 import 'contact_us_screen.dart';
+import '../../../../shared/widgets/app_gradient_button.dart';
 
 class SettingsScreen extends StatefulWidget {
   final Map<String, dynamic>? user;
@@ -79,7 +80,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ],
           ),
-          backgroundColor: value ? const Color(0xFF0066FF) : const Color(0xFF64748B),
+          backgroundColor: value ? const Color(0xFF7B2FBE) : const Color(0xFF64748B),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
@@ -181,7 +182,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Text('Change Profile Photo', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               ListTile(
-                leading: const CircleAvatar(backgroundColor: Color(0xFF0066FF), child: Icon(Icons.camera_alt_rounded, color: Colors.white, size: 20)),
+                leading: const CircleAvatar(backgroundColor: Color(0xFF7B2FBE), child: Icon(Icons.camera_alt_rounded, color: Colors.white, size: 20)),
                 title: Text('Take Photo', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.w600)),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -189,7 +190,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
               ListTile(
-                leading: const CircleAvatar(backgroundColor: Color(0xFF0066FF), child: Icon(Icons.photo_library_rounded, color: Colors.white, size: 20)),
+                leading: const CircleAvatar(backgroundColor: Color(0xFF7B2FBE), child: Icon(Icons.photo_library_rounded, color: Colors.white, size: 20)),
                 title: Text('Choose from Gallery', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.w600)),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -260,7 +261,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               decoration: InputDecoration(
                 hintText: 'e.g. Rahul Kumar',
                 hintStyle: TextStyle(color: isDark ? Colors.grey : const Color(0xFF94A3B8), fontSize: 13),
-                prefixIcon: const Icon(Icons.person_outline_rounded, color: Color(0xFF0066FF), size: 20),
+                prefixIcon: const Icon(Icons.person_outline_rounded, color: Color(0xFF7B2FBE), size: 20),
                 filled: true,
                 fillColor: isDark ? Colors.black.withValues(alpha: 0.4) : const Color(0xFFF1F5F9),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -275,7 +276,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               decoration: InputDecoration(
                 hintText: 'e.g. @rahul_k',
                 hintStyle: TextStyle(color: isDark ? Colors.grey : const Color(0xFF94A3B8), fontSize: 13),
-                prefixIcon: const Icon(Icons.alternate_email_rounded, color: Color(0xFF0066FF), size: 20),
+                prefixIcon: const Icon(Icons.alternate_email_rounded, color: Color(0xFF7B2FBE), size: 20),
                 filled: true,
                 fillColor: isDark ? Colors.black.withValues(alpha: 0.4) : const Color(0xFFF1F5F9),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -291,51 +292,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
               decoration: InputDecoration(
                 hintText: 'Write a short bio...',
                 hintStyle: TextStyle(color: isDark ? Colors.grey : const Color(0xFF94A3B8), fontSize: 13),
-                prefixIcon: const Icon(Icons.info_outline_rounded, color: Color(0xFF0066FF), size: 20),
+                prefixIcon: const Icon(Icons.info_outline_rounded, color: Color(0xFF7B2FBE), size: 20),
                 filled: true,
                 fillColor: isDark ? Colors.black.withValues(alpha: 0.4) : const Color(0xFFF1F5F9),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
             ),
             const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
+            AppGradientButton(
+              label: 'Save Profile Changes',
               height: 48,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0066FF),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                onPressed: () async {
-                  final updatedName = nameCtrl.text.trim();
-                  final updatedUsername = usernameCtrl.text.trim();
-                  final updatedBio = bioCtrl.text.trim();
-                  if (widget.user != null) {
-                    widget.user!['name'] = updatedName;
-                    widget.user!['username'] = updatedUsername.startsWith('@') ? updatedUsername : '@$updatedUsername';
-                    widget.user!['bio'] = updatedBio;
-                    await SecureStorageService.write('user_info', jsonEncode(widget.user));
-                  }
-                  if (!mounted) return;
-                  Navigator.pop(ctx);
-                  setState(() {});
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Row(
-                        children: [
-                          Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                          SizedBox(width: 10),
-                          Text('Profile details updated successfully!'),
-                        ],
-                      ),
-                      backgroundColor: const Color(0xFF10B981),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              borderRadius: 14,
+              onTap: () async {
+                final updatedName = nameCtrl.text.trim();
+                final updatedUsername = usernameCtrl.text.trim();
+                final updatedBio = bioCtrl.text.trim();
+                if (widget.user != null) {
+                  widget.user!['name'] = updatedName;
+                  widget.user!['username'] = updatedUsername.startsWith('@') ? updatedUsername : '@$updatedUsername';
+                  widget.user!['bio'] = updatedBio;
+                  await SecureStorageService.write('user_info', jsonEncode(widget.user));
+                }
+                if (!mounted) return;
+                Navigator.pop(ctx);
+                setState(() {});
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Row(
+                      children: [
+                        Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                        SizedBox(width: 10),
+                        Text('Profile details updated successfully!'),
+                      ],
                     ),
-                  );
-                },
-                child: const Text('Save Profile Changes', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-              ),
+                    backgroundColor: const Color(0xFF10B981),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -378,11 +373,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1B1D24) : const Color(0xFFF8FAFC),
-                border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.3), width: 1.5),
+                border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.3), width: 1.5),
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF0066FF).withValues(alpha: 0.08),
+                    color: const Color(0xFF7B2FBE).withValues(alpha: 0.08),
                     blurRadius: 16,
                     offset: const Offset(0, 4),
                   ),
@@ -406,7 +401,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: const Icon(
                       Icons.qr_code_2_rounded,
                       size: 160,
-                      color: Color(0xFF0066FF),
+                      color: Color(0xFF7B2FBE),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -418,13 +413,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0066FF).withValues(alpha: 0.12),
+                      color: const Color(0xFF7B2FBE).withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       privateId,
                       style: const TextStyle(
-                        color: Color(0xFF0066FF),
+                        color: Color(0xFF7B2FBE),
                         fontSize: 12,
                         fontFamily: 'monospace',
                         fontWeight: FontWeight.bold,
@@ -443,11 +438,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: const BorderSide(color: Color(0xFF0066FF), width: 1.5),
+                      side: const BorderSide(color: Color(0xFF7B2FBE), width: 1.5),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
-                    icon: const Icon(Icons.copy_rounded, color: Color(0xFF0066FF), size: 18),
-                    label: const Text('Copy ID', style: TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.bold)),
+                    icon: const Icon(Icons.copy_rounded, color: Color(0xFF7B2FBE), size: 18),
+                    label: const Text('Copy ID', style: TextStyle(color: Color(0xFF7B2FBE), fontWeight: FontWeight.bold)),
                     onPressed: () async {
                       await Clipboard.setData(ClipboardData(text: '$username\nPrivate ID: $privateId'));
                       if (!mounted) return;
@@ -474,15 +469,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      backgroundColor: const Color(0xFF0066FF),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                    icon: const Icon(Icons.share_rounded, color: Colors.white, size: 18),
-                    label: const Text('Share ID', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    onPressed: () async {
+                  child: GestureDetector(
+                    onTap: () async {
                       await Clipboard.setData(ClipboardData(text: 'Connect with me on OurSpace Privacy Chat!\nUsername: $username\nPrivate ID: $privateId'));
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -498,12 +486,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ],
                           ),
                           duration: const Duration(seconds: 2),
-                          backgroundColor: const Color(0xFF0066FF),
+                          backgroundColor: const Color(0xFF7B2FBE),
                           behavior: SnackBarBehavior.floating,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                       );
                     },
+                    child: Container(
+                      height: 48,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF7B2FBE), Color(0xFFE91E8C)],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF7B2FBE).withValues(alpha: 0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.share_rounded, color: Colors.white, size: 18),
+                          SizedBox(width: 6),
+                          Text('Share ID', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -536,7 +550,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Row(
             children: [
-              const Icon(Icons.lock_reset, color: Color(0xFF0066FF), size: 22),
+              const Icon(Icons.lock_reset, color: Color(0xFF7B2FBE), size: 22),
               const SizedBox(width: 8),
               Text('Change Password', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold)),
             ],
@@ -556,8 +570,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               if (successMsg) ...[
                 Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: const Color(0xFF0066FF).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
-                  child: const Text('Password changed successfully!', style: TextStyle(color: Color(0xFF0066FF), fontSize: 12, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                  decoration: BoxDecoration(color: const Color(0xFF7B2FBE).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
+                  child: const Text('Password changed successfully!', style: TextStyle(color: Color(0xFF7B2FBE), fontSize: 12, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
                 ),
                 const SizedBox(height: 10),
               ] else ...[
@@ -609,7 +623,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             if (!successMsg)
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0066FF)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF7B2FBE),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
                 onPressed: () {
                   if (currPassCtrl.text.isEmpty || newPassCtrl.text.isEmpty) {
                     setStateModal(() => modalError = 'Please fill all fields');
@@ -689,7 +706,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               decoration: const BoxDecoration(
                                 shape: BoxShape.circle,
                                 gradient: LinearGradient(
-                                  colors: [Color(0xFF0066FF), Color(0xFF00C6FF), Color(0xFF0044B3)],
+                                  colors: [Color(0xFF7B2FBE), Color(0xFFE91E8C), Color(0xFFBB3FDE)],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
@@ -714,7 +731,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           decoration: const BoxDecoration(
                                             shape: BoxShape.circle,
                                             gradient: LinearGradient(
-                                              colors: [Color(0xFF0066FF), Color(0xFF0044B3)],
+                                              colors: [Color(0xFF7B2FBE), Color(0xFFBB3FDE)],
                                               begin: Alignment.topLeft,
                                               end: Alignment.bottomRight,
                                             ),
@@ -739,7 +756,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               child: Container(
                                 padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF0066FF),
+                                  color: const Color(0xFF7B2FBE),
                                   shape: BoxShape.circle,
                                   border: Border.all(color: bgCol, width: 2.5),
                                 ),
@@ -761,7 +778,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             const SizedBox(height: 3),
                             Text(
                               username,
-                              style: const TextStyle(color: Color(0xFF0066FF), fontSize: 13, fontWeight: FontWeight.w600),
+                              style: const TextStyle(color: Color(0xFF7B2FBE), fontSize: 13, fontWeight: FontWeight.w600),
                             ),
                             const SizedBox(height: 6),
                             GestureDetector(
@@ -781,9 +798,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF0066FF).withValues(alpha: 0.10),
+                                  color: const Color(0xFF7B2FBE).withValues(alpha: 0.10),
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.2)),
+                                  border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.2)),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -791,14 +808,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     Text(
                                       privateId,
                                       style: const TextStyle(
-                                        color: Color(0xFF0066FF),
+                                        color: Color(0xFF7B2FBE),
                                         fontSize: 11,
                                         fontFamily: 'monospace',
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                     const SizedBox(width: 6),
-                                    const Icon(Icons.copy_rounded, color: Color(0xFF0066FF), size: 11),
+                                    const Icon(Icons.copy_rounded, color: Color(0xFF7B2FBE), size: 11),
                                   ],
                                 ),
                               ),
@@ -831,22 +848,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             side: BorderSide(color: isDark ? Colors.white24 : const Color(0xFFCBD5E1)),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          icon: const Icon(Icons.edit_outlined, color: Color(0xFF0066FF), size: 16),
-                          label: const Text('Edit Profile', style: TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.bold, fontSize: 13)),
+                          icon: const Icon(Icons.edit_outlined, color: Color(0xFF7B2FBE), size: 16),
+                          label: const Text('Edit Profile', style: TextStyle(color: Color(0xFF7B2FBE), fontWeight: FontWeight.bold, fontSize: 13)),
                           onPressed: _showEditProfileModal,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            backgroundColor: const Color(0xFF0066FF),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: GestureDetector(
+                          onTap: () => _showQrCodeModal(username, privateId),
+                          child: Container(
+                            height: 40,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF7B2FBE), Color(0xFFE91E8C)],
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF7B2FBE).withValues(alpha: 0.3),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.qr_code_rounded, color: Colors.white, size: 18),
+                                SizedBox(width: 6),
+                                Text('My QR Code', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                              ],
+                            ),
                           ),
-                          icon: const Icon(Icons.qr_code_rounded, color: Colors.white, size: 18),
-                          label: const Text('My QR Code', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                          onPressed: () => _showQrCodeModal(username, privateId),
                         ),
                       ),
                     ],
@@ -860,8 +896,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0066FF).withValues(alpha: 0.12) : const Color(0xFFEFF6FF),
-                border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.35), width: 1.2),
+                color: isDark ? const Color(0xFF7B2FBE).withValues(alpha: 0.12) : const Color(0xFFEFF6FF),
+                border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.35), width: 1.2),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: cardShadows,
               ),
@@ -875,16 +911,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: [
                           CircleAvatar(
                             radius: 14,
-                            backgroundColor: Color(0xFF0066FF),
+                            backgroundColor: Color(0xFF7B2FBE),
                             child: Icon(Icons.visibility_off_outlined, color: Colors.white, size: 15),
                           ),
                           SizedBox(width: 10),
-                          Text('GHOST MODE PRIVACY', style: TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.w900, letterSpacing: 1.2, fontSize: 13)),
+                          Text('GHOST MODE PRIVACY', style: TextStyle(color: Color(0xFF7B2FBE), fontWeight: FontWeight.w900, letterSpacing: 1.2, fontSize: 13)),
                         ],
                       ),
                       Switch(
                         value: _ghostMode,
-                        activeThumbColor: const Color(0xFF0066FF),
+                        activeThumbColor: const Color(0xFF7B2FBE),
                         onChanged: _toggleGhostMode,
                       ),
                     ],
@@ -921,12 +957,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
                     secondary: Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: const Color(0xFF0066FF).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-                      child: const Icon(Icons.lock_outline_rounded, color: Color(0xFF0066FF), size: 20),
+                      decoration: BoxDecoration(color: const Color(0xFF7B2FBE).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+                      child: const Icon(Icons.lock_outline_rounded, color: Color(0xFF7B2FBE), size: 20),
                     ),
                     title: Text('App Lock (PIN)', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
                     value: _appLock,
-                    activeThumbColor: const Color(0xFF0066FF),
+                    activeThumbColor: const Color(0xFF7B2FBE),
                     onChanged: _toggleAppLock,
                   ),
                   if (_appLock) ...[
@@ -935,8 +971,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
                       leading: Container(
                         padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: const Color(0xFF0066FF).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-                        child: const Icon(Icons.password_rounded, color: Color(0xFF0066FF), size: 20),
+                        decoration: BoxDecoration(color: const Color(0xFF7B2FBE).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+                        child: const Icon(Icons.password_rounded, color: Color(0xFF7B2FBE), size: 20),
                       ),
                       title: Text('Change App PIN', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
                       trailing: Icon(Icons.chevron_right_rounded, color: subtxtCol, size: 20),
@@ -974,12 +1010,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
                     secondary: Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: const Color(0xFF0066FF).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-                      child: const Icon(Icons.fingerprint_rounded, color: Color(0xFF0066FF), size: 20),
+                      decoration: BoxDecoration(color: const Color(0xFF7B2FBE).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+                      child: const Icon(Icons.fingerprint_rounded, color: Color(0xFF7B2FBE), size: 20),
                     ),
                     title: Text('Biometric Unlock (Fingerprint / Face ID)', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
                     value: _biometric,
-                    activeThumbColor: const Color(0xFF0066FF),
+                    activeThumbColor: const Color(0xFF7B2FBE),
                     onChanged: _toggleBiometric,
                   ),
                 ],
@@ -1006,10 +1042,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0066FF).withValues(alpha: 0.1),
+                        color: const Color(0xFF7B2FBE).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.lock_reset_rounded, color: Color(0xFF0066FF), size: 20),
+                      child: const Icon(Icons.lock_reset_rounded, color: Color(0xFF7B2FBE), size: 20),
                     ),
                     title: Text('Change Password', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
                     trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: subtxtCol),
@@ -1021,13 +1057,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0066FF).withValues(alpha: 0.1),
+                        color: const Color(0xFF7B2FBE).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.key_rounded, color: Color(0xFF0066FF), size: 20),
+                      child: const Icon(Icons.key_rounded, color: Color(0xFF7B2FBE), size: 20),
                     ),
                     title: Text('View Master Recovery Key', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
-                    trailing: Text(_showRecoveryKey ? 'Hide' : 'View', style: const TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.bold, fontSize: 13)),
+                    trailing: Text(_showRecoveryKey ? 'Hide' : 'View', style: const TextStyle(color: Color(0xFF7B2FBE), fontWeight: FontWeight.bold, fontSize: 13)),
                     onTap: () => setState(() => _showRecoveryKey = !_showRecoveryKey),
                   ),
                   if (_showRecoveryKey)
@@ -1070,12 +1106,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0066FF).withValues(alpha: 0.1),
+                        color: const Color(0xFF7B2FBE).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
                         isDark ? Icons.wb_sunny_outlined : Icons.nightlight_round,
-                        color: isDark ? Colors.amber : const Color(0xFF0066FF),
+                        color: isDark ? Colors.amber : const Color(0xFF7B2FBE),
                         size: 20,
                       ),
                     ),
@@ -1083,7 +1119,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: Text(isDark ? 'Dark Theme Active' : 'Light Theme Active', style: TextStyle(color: subtxtCol, fontSize: 12)),
                     trailing: Switch(
                       value: !isDark,
-                      activeThumbColor: const Color(0xFF0066FF),
+                      activeThumbColor: const Color(0xFF7B2FBE),
                       onChanged: (_) => widget.onToggleTheme(),
                     ),
                   ),
@@ -1093,10 +1129,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0066FF).withValues(alpha: 0.1),
+                        color: const Color(0xFF7B2FBE).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.cleaning_services_rounded, color: Color(0xFF0066FF), size: 20),
+                      child: const Icon(Icons.cleaning_services_rounded, color: Color(0xFF7B2FBE), size: 20),
                     ),
                     title: Text('Clear Cache & Temp Files', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
                     trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: subtxtCol),
@@ -1141,10 +1177,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0066FF).withValues(alpha: 0.1),
+                        color: const Color(0xFF7B2FBE).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.shield_outlined, color: Color(0xFF0066FF), size: 20),
+                      child: const Icon(Icons.shield_outlined, color: Color(0xFF7B2FBE), size: 20),
                     ),
                     title: Text('Privacy Policy', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
                     subtitle: Text('Zero-Knowledge E2EE Data Protection', style: TextStyle(color: subtxtCol, fontSize: 12)),
@@ -1167,10 +1203,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0066FF).withValues(alpha: 0.1),
+                        color: const Color(0xFF7B2FBE).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.gavel_outlined, color: Color(0xFF0066FF), size: 20),
+                      child: const Icon(Icons.gavel_outlined, color: Color(0xFF7B2FBE), size: 20),
                     ),
                     title: Text('Terms & Conditions', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
                     subtitle: Text('Service Agreement & Use Guidelines', style: TextStyle(color: subtxtCol, fontSize: 12)),
@@ -1193,10 +1229,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0066FF).withValues(alpha: 0.1),
+                        color: const Color(0xFF7B2FBE).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.info_outline_rounded, color: Color(0xFF0066FF), size: 20),
+                      child: const Icon(Icons.info_outline_rounded, color: Color(0xFF7B2FBE), size: 20),
                     ),
                     title: Text('About OurSpace', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
                     subtitle: Text('Version 1.0.0 (Build 100)', style: TextStyle(color: subtxtCol, fontSize: 12)),
@@ -1219,10 +1255,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0066FF).withValues(alpha: 0.1),
+                        color: const Color(0xFF7B2FBE).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.support_agent_rounded, color: Color(0xFF0066FF), size: 20),
+                      child: const Icon(Icons.support_agent_rounded, color: Color(0xFF7B2FBE), size: 20),
                     ),
                     title: Text('Contact Us & Support', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
                     subtitle: Text('support@ourspace.app', style: TextStyle(color: subtxtCol, fontSize: 12)),

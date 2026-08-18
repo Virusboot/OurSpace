@@ -42,16 +42,16 @@ class TermsConditionsScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFF0066FF).withValues(alpha: 0.12),
+                color: const Color(0xFF7B2FBE).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.3)),
+                border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.3)),
               ),
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.gavel_rounded, size: 14, color: Color(0xFF0066FF)),
+                  Icon(Icons.gavel_rounded, size: 14, color: Color(0xFF7B2FBE)),
                   SizedBox(width: 6),
-                  Text('TERMS OF SERVICE AGREEMENT', style: TextStyle(color: Color(0xFF0066FF), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8)),
+                  Text('TERMS OF SERVICE AGREEMENT', style: TextStyle(color: Color(0xFF7B2FBE), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8)),
                 ],
               ),
             ),

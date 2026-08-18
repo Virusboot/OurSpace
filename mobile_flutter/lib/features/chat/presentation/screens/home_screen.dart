@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/networking/api_client.dart';
 import '../../../../core/storage/secure_storage_service.dart';
+import '../../../../shared/widgets/app_gradient_button.dart';
 
 class HomeScreen extends StatefulWidget {
   final Map<String, dynamic>? user;
@@ -119,7 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             _buildSheetTile(
               icon: Icons.chat_bubble_outline_rounded,
-              color: const Color(0xFF0066FF),
+              color: const Color(0xFF7B2FBE),
               title: 'New Encrypted Chat',
               subtitle: 'Connect with a user via unique Username or Private ID',
               onTap: () {
@@ -130,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 12),
             _buildSheetTile(
               icon: Icons.link_rounded,
-              color: const Color(0xFF0066FF),
+              color: const Color(0xFF7B2FBE),
               title: 'Create Call Link',
               subtitle: 'Generate a guest WebRTC call link to share anywhere',
               onTap: () {
@@ -206,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           title: Row(
             children: [
-              const Icon(Icons.person_search_rounded, color: Color(0xFF0066FF), size: 24),
+              const Icon(Icons.person_search_rounded, color: Color(0xFF7B2FBE), size: 24),
               const SizedBox(width: 10),
               Text('Find Someone', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold)),
             ],
@@ -227,38 +228,32 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                height: 46,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0066FF),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: loading
-                      ? null
-                      : () async {
+              AppGradientButton(
+                label: loading ? 'Searching...' : 'Find & Connect',
+                onTap: loading
+                    ? null
+                    : () async {
+                        setStateDialog(() {
+                          loading = true;
+                          searchError = null;
+                          searchResult = null;
+                        });
+                        try {
+                          final query = searchCtrl.text.trim();
+                          final res = await ApiClient.get('/users/lookup?query=${Uri.encodeComponent(query)}');
                           setStateDialog(() {
-                            loading = true;
-                            searchError = null;
-                            searchResult = null;
+                            loading = false;
+                            searchResult = res;
                           });
-                          try {
-                            final query = searchCtrl.text.trim();
-                            final res = await ApiClient.get('/users/lookup?query=${Uri.encodeComponent(query)}');
-                            setStateDialog(() {
-                              loading = false;
-                              searchResult = res;
-                            });
-                          } catch (e) {
-                            setStateDialog(() {
-                              loading = false;
-                              searchError = 'Identity not found';
-                            });
-                          }
-                        },
-                  child: Text(loading ? 'Searching...' : 'Find & Connect', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                ),
+                        } catch (e) {
+                          setStateDialog(() {
+                            loading = false;
+                            searchError = 'Identity not found';
+                          });
+                        }
+                      },
+                isLoading: loading,
+                height: 46,
               ),
               if (searchError != null) ...[
                 const SizedBox(height: 12),
@@ -274,16 +269,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   decoration: BoxDecoration(
                     color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.3)),
+                    border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.3)),
                   ),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: const Color(0xFF0066FF).withValues(alpha: 0.2),
-                      child: Text(searchResult!['username'].toString().substring(0, 2).toUpperCase(), style: const TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.bold)),
+                      backgroundColor: const Color(0xFF7B2FBE).withValues(alpha: 0.2),
+                      child: Text(searchResult!['username'].toString().substring(0, 2).toUpperCase(), style: const TextStyle(color: Color(0xFF7B2FBE), fontWeight: FontWeight.bold)),
                     ),
                     title: Text(searchResult!['username'], style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
                     subtitle: Text(searchResult!['privateId'], style: const TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace')),
-                    trailing: const Icon(Icons.chat_bubble_outline, color: Color(0xFF0066FF)),
+                    trailing: const Icon(Icons.chat_bubble_outline, color: Color(0xFF7B2FBE)),
                     onTap: () async {
                       Navigator.pop(ctx);
                       await _saveRecentChat(searchResult!);
@@ -314,7 +309,7 @@ class _HomeScreenState extends State<HomeScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           title: Row(
             children: [
-              const Icon(Icons.add_link_rounded, color: Color(0xFF0066FF), size: 24),
+              const Icon(Icons.add_link_rounded, color: Color(0xFF7B2FBE), size: 24),
               const SizedBox(width: 10),
               Text('Create Guest Call Link', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold)),
             ],
@@ -331,8 +326,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
-                            color: callType == 'video' ? const Color(0xFF0066FF).withValues(alpha: 0.2) : (isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.04)),
-                            border: Border.all(color: callType == 'video' ? const Color(0xFF0066FF) : Colors.transparent),
+                            color: callType == 'video' ? const Color(0xFF7B2FBE).withValues(alpha: 0.2) : (isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.04)),
+                            border: Border.all(color: callType == 'video' ? const Color(0xFF7B2FBE) : Colors.transparent),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
@@ -353,8 +348,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
-                            color: callType == 'audio' ? const Color(0xFF0066FF).withValues(alpha: 0.2) : (isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.04)),
-                            border: Border.all(color: callType == 'audio' ? const Color(0xFF0066FF) : Colors.transparent),
+                            color: callType == 'audio' ? const Color(0xFF7B2FBE).withValues(alpha: 0.2) : (isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.04)),
+                            border: Border.all(color: callType == 'audio' ? const Color(0xFF7B2FBE) : Colors.transparent),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
@@ -385,56 +380,50 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
+                AppGradientButton(
+                  label: loading ? 'Generating...' : 'Generate Encrypted Link',
+                  onTap: loading
+                      ? null
+                      : () async {
+                          setStateDialog(() => loading = true);
+                          try {
+                            final res = await ApiClient.post('/call-links/create', {
+                              'callType': callType,
+                              'durationMinutes': 60,
+                              'pin': pinCtrl.text.trim().isNotEmpty ? pinCtrl.text.trim() : null,
+                            });
+                            setStateDialog(() {
+                              loading = false;
+                              generatedUrl = '${ApiClient.webBaseUrl}/c/${res['token']}';
+                            });
+                          } catch (_) {
+                            setStateDialog(() {
+                              loading = false;
+                              generatedUrl = '${ApiClient.webBaseUrl}/c/demo_${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+                            });
+                          }
+                        },
+                  isLoading: loading,
                   height: 46,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0066FF),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: loading
-                        ? null
-                        : () async {
-                            setStateDialog(() => loading = true);
-                            try {
-                              final res = await ApiClient.post('/call-links/create', {
-                                'callType': callType,
-                                'durationMinutes': 60,
-                                'pin': pinCtrl.text.trim().isNotEmpty ? pinCtrl.text.trim() : null,
-                              });
-                              setStateDialog(() {
-                                loading = false;
-                                generatedUrl = '${ApiClient.webBaseUrl}/c/${res['token']}';
-                              });
-                            } catch (_) {
-                              setStateDialog(() {
-                                loading = false;
-                                generatedUrl = '${ApiClient.webBaseUrl}/c/demo_${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
-                              });
-                            }
-                          },
-                    child: Text(loading ? 'Generating...' : 'Generate Encrypted Link', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  ),
                 ),
               ] else ...[
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0066FF).withValues(alpha: 0.1),
-                    border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.3)),
+                    color: const Color(0xFF7B2FBE).withValues(alpha: 0.1),
+                    border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.3)),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
                     children: [
-                      const Icon(Icons.check_circle_outline, color: Color(0xFF0066FF), size: 36),
+                      const Icon(Icons.check_circle_outline, color: Color(0xFF7B2FBE), size: 36),
                       const SizedBox(height: 8),
                       Text('Call Link Ready!', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 15)),
                       const SizedBox(height: 10),
                       SelectableText(
                         generatedUrl!,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Color(0xFF0066FF), fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.bold),
+                        style: const TextStyle(color: Color(0xFF7B2FBE), fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 14),
                       SizedBox(
@@ -442,7 +431,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         height: 42,
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF0066FF),
+                            backgroundColor: const Color(0xFF7B2FBE),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
                           icon: const Icon(Icons.copy_rounded, size: 16, color: Colors.white),
@@ -453,7 +442,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               const SnackBar(
                                 content: Text('Call link copied to clipboard! Share it anywhere.'),
                                 duration: Duration(seconds: 2),
-                                backgroundColor: Color(0xFF0066FF),
+                                backgroundColor: Color(0xFF7B2FBE),
                               ),
                             );
                           },
@@ -500,7 +489,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final dockShadow = isDark
         ? [
             BoxShadow(
-              color: const Color(0xFF0066FF).withValues(alpha: 0.20),
+              color: const Color(0xFF7B2FBE).withValues(alpha: 0.25),
               blurRadius: 24,
               spreadRadius: 2,
               offset: const Offset(0, 8),
@@ -558,13 +547,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         width: 42,
                         height: 42,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0066FF).withValues(alpha: 0.12),
+                          color: const Color(0xFF7B2FBE).withValues(alpha: 0.12),
                           shape: BoxShape.circle,
                         ),
                         child: const Center(
                           child: Icon(
                             Icons.add_rounded,
-                            color: Color(0xFF0066FF),
+                            color: Color(0xFF7B2FBE),
                             size: 26,
                           ),
                         ),
@@ -630,11 +619,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                         Container(
                                           padding: const EdgeInsets.all(20),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFF0066FF).withValues(alpha: 0.12),
+                                            color: const Color(0xFF7B2FBE).withValues(alpha: 0.12),
                                             shape: BoxShape.circle,
-                                            border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.3), width: 1.5),
+                                            border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.3), width: 1.5),
                                           ),
-                                          child: const Icon(Icons.shield_outlined, size: 48, color: Color(0xFF0066FF)),
+                                          child: const Icon(Icons.shield_outlined, size: 48, color: Color(0xFF7B2FBE)),
                                         ),
                                         const SizedBox(height: 20),
                                         Text(
@@ -652,15 +641,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                         if (filterQuery.isEmpty) ...[
                                           const SizedBox(height: 24),
-                                          ElevatedButton.icon(
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: const Color(0xFF0066FF),
-                                              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                            ),
-                                            onPressed: _showNewActionSheet,
+                                          AppGradientButton(
+                                            label: 'Start New Secure Chat',
+                                            onTap: _showNewActionSheet,
                                             icon: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
-                                            label: const Text('Start New Secure Chat', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                                            height: 48,
                                           ),
                                         ],
                                       ],
@@ -726,7 +711,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             ? Container(
                                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                                 decoration: BoxDecoration(
-                                                  color: const Color(0xFF0066FF),
+                                                  color: const Color(0xFF7B2FBE),
                                                   borderRadius: BorderRadius.circular(12),
                                                 ),
                                                 child: Text(
@@ -836,7 +821,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Icon(
               icon,
-              color: isSelected ? const Color(0xFF0066FF) : unselectedNav,
+              color: isSelected ? const Color(0xFF7B2FBE) : unselectedNav,
               size: 24,
             ),
             const SizedBox(height: 3),
@@ -877,7 +862,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Row(
                   children: [
                     const CircleAvatar(
-                      backgroundColor: Color(0xFF0066FF),
+                      backgroundColor: Color(0xFF7B2FBE),
                       child: Icon(Icons.link_rounded, color: Colors.white),
                     ),
                     const SizedBox(width: 14),
@@ -891,7 +876,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                     ),
-                    const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF0066FF)),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF7B2FBE)),
                   ],
                 ),
               ),
@@ -910,11 +895,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 76,
                 height: 76,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0066FF).withValues(alpha: 0.12),
+                  color: const Color(0xFF7B2FBE).withValues(alpha: 0.12),
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.3)),
+                  border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.3)),
                 ),
-                child: const Icon(Icons.mic_none_rounded, color: Color(0xFF0066FF), size: 38),
+                child: const Icon(Icons.mic_none_rounded, color: Color(0xFF7B2FBE), size: 38),
               ),
               const SizedBox(height: 18),
               Text(
@@ -931,16 +916,16 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0066FF).withValues(alpha: 0.15),
+                  color: const Color(0xFF7B2FBE).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.4)),
+                  border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.4)),
                 ),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.hourglass_top_rounded, color: Color(0xFF0066FF), size: 14),
+                    Icon(Icons.hourglass_top_rounded, color: Color(0xFF7B2FBE), size: 14),
                     SizedBox(width: 6),
-                    Text('IN DEVELOPMENT', style: TextStyle(color: Color(0xFF0066FF), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                    Text('IN DEVELOPMENT', style: TextStyle(color: Color(0xFF7B2FBE), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1)),
                   ],
                 ),
               ),

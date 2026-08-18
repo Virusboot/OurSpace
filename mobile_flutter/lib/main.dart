@@ -3,9 +3,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:app_links/app_links.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'core/networking/api_client.dart';
 import 'core/storage/secure_storage_service.dart';
 import 'core/networking/websocket_client.dart';
+import 'features/auth/presentation/screens/splash_screen.dart';
 import 'features/auth/presentation/screens/onboarding_screen.dart';
 import 'features/identity/presentation/screens/create_identity_screen.dart';
 import 'features/auth/presentation/screens/create_pin_screen.dart';
@@ -16,7 +18,8 @@ import 'features/calls/presentation/screens/call_screen.dart';
 import 'features/settings/presentation/screens/settings_screen.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   runApp(const SecureChatApp());
 }
@@ -37,7 +40,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
   String _activeCallType = 'video';
   String _activeImageUri = '';
   bool _activeIsViewOnce = false;
-  bool _isDarkMode = true;
+  bool _isDarkMode = false;
 
   final _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
@@ -108,10 +111,19 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
   }
 
   Future<void> _checkStoredUser() async {
+    final startTime = DateTime.now();
     final stored = await SecureStorageService.read('user_info');
     final savedImg = await SecureStorageService.read('profile_image_path');
     final appLock = await SecureStorageService.read('app_lock_enabled');
 
+    // Smooth timing: ensure at least 600ms splash display so transition feels seamless
+    final elapsed = DateTime.now().difference(startTime).inMilliseconds;
+    if (elapsed < 600) {
+      await Future.delayed(Duration(milliseconds: 600 - elapsed));
+    }
+
+    // Remove native splash screen smoothly
+    FlutterNativeSplash.remove();
 
     if (stored != null) {
       try {
@@ -182,7 +194,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
       barrierDismissible: false,
       builder: (context) => const Center(
         child: CircularProgressIndicator(
-          color: Color(0xFF0066FF),
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7B2FBE)),
         ),
       ),
     );
@@ -257,7 +269,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
                 ),
-                prefixIcon: const Icon(Icons.lock_rounded, color: Color(0xFF0066FF), size: 20),
+                prefixIcon: const Icon(Icons.lock_rounded, color: Color(0xFF7B2FBE), size: 20),
               ),
             ),
           ],
@@ -267,17 +279,23 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
           ),
-          ElevatedButton(
-            onPressed: () {
+          GestureDetector(
+            onTap: () {
               Navigator.pop(context);
               _resolveCallLink(token, pin: pinController.text);
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0066FF),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF7B2FBE), Color(0xFFE91E8C)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text('Join Call', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
-            child: const Text('Join Call', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -299,13 +317,20 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
           style: TextStyle(color: _isDarkMode ? Colors.grey : const Color(0xFF475569)),
         ),
         actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0066FF),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF7B2FBE), Color(0xFFE91E8C)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text('OK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
-            child: const Text('OK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -345,14 +370,14 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
       debugShowCheckedModeBanner: false,
       themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
 
-      // CLEAN LIGHT THEME (OurSpace Royal Blue System)
+      // CLEAN LIGHT THEME (OurSpace Purple-Pink Brand System)
       theme: ThemeData.light().copyWith(
         scaffoldBackgroundColor: const Color(0xFFF8FAFC),
-        primaryColor: const Color(0xFF0066FF),
+        primaryColor: const Color(0xFF7B2FBE),
         cardColor: const Color(0xFFFFFFFF),
         colorScheme: const ColorScheme.light(
-          primary: Color(0xFF0066FF),
-          secondary: Color(0xFF0066FF),
+          primary: Color(0xFF7B2FBE),
+          secondary: Color(0xFFE91E8C),
           surface: Color(0xFFFFFFFF),
         ),
         appBarTheme: const AppBarTheme(
@@ -363,14 +388,14 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
         ),
       ),
 
-      // MATCHING DARK THEME SYSTEM (Pitch Black + Royal Blue System)
+      // MATCHING DARK THEME SYSTEM (Pitch Black + OurSpace Purple-Pink System)
       darkTheme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF000000),
-        primaryColor: const Color(0xFF0066FF),
+        primaryColor: const Color(0xFF7B2FBE),
         cardColor: const Color(0xFF121317),
         colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF0066FF),
-          secondary: Color(0xFF0066FF),
+          primary: Color(0xFF7B2FBE),
+          secondary: Color(0xFFE91E8C),
           surface: Color(0xFF121317),
         ),
         appBarTheme: const AppBarTheme(
@@ -382,9 +407,15 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
       ),
 
       home: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 600),
-        switchInCurve: Curves.easeIn,
-        switchOutCurve: Curves.easeOut,
+        duration: const Duration(milliseconds: 500),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
         child: KeyedSubtree(
           key: ValueKey<String>(_currentScreen),
           child: _buildScreen(),
@@ -397,9 +428,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
     switch (_currentScreen) {
       case 'loading':
       case 'splash':
-        return Container(
-          color: _isDarkMode ? const Color(0xFF000000) : const Color(0xFFF8FAFC),
-        );
+        return SplashScreen(onContinue: () {});
       case 'onboarding':
         return OnboardingScreen(
           isDarkMode: _isDarkMode,

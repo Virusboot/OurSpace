@@ -53,16 +53,16 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: widget.isDarkMode ? const Color(0xFF0066FF).withValues(alpha: 0.12) : const Color(0xFFEFF6FF),
+                color: widget.isDarkMode ? const Color(0xFF7B2FBE).withValues(alpha: 0.12) : const Color(0xFFEFF6FF),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.3)),
+                border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0066FF),
+                      color: const Color(0xFF7B2FBE),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: const Icon(Icons.mark_email_read_rounded, color: Colors.white, size: 24),
@@ -72,14 +72,14 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Official Support Email', style: TextStyle(color: Color(0xFF0066FF), fontSize: 12, fontWeight: FontWeight.bold)),
+                        const Text('Official Support Email', style: TextStyle(color: Color(0xFF7B2FBE), fontSize: 12, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 3),
                         Text('support@ourspace.app', style: TextStyle(color: txtCol, fontSize: 15, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.copy_rounded, color: Color(0xFF0066FF), size: 20),
+                    icon: const Icon(Icons.copy_rounded, color: Color(0xFF7B2FBE), size: 20),
                     onPressed: () async {
                       await Clipboard.setData(const ClipboardData(text: 'support@ourspace.app'));
                       if (!mounted) return;
@@ -171,7 +171,7 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        backgroundColor: const Color(0xFF0066FF),
+                        backgroundColor: const Color(0xFF7B2FBE),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                       onPressed: () {

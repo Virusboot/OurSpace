@@ -78,15 +78,15 @@ class _CallScreenState extends State<CallScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0066FF).withValues(alpha: 0.12),
-                        border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.3)),
+                        color: const Color(0xFF7B2FBE).withValues(alpha: 0.12),
+                        border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.3)),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.security_rounded, size: 14, color: Color(0xFF0066FF)),
+                          Icon(Icons.security_rounded, size: 14, color: Color(0xFF7B2FBE)),
                           SizedBox(width: 6),
-                          Text('WebRTC P2P Encrypted', style: TextStyle(color: Color(0xFF0066FF), fontSize: 11, fontWeight: FontWeight.bold)),
+                          Text('WebRTC P2P Encrypted', style: TextStyle(color: Color(0xFF7B2FBE), fontSize: 11, fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ),
@@ -118,13 +118,13 @@ class _CallScreenState extends State<CallScreen> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: const LinearGradient(
-                              colors: [Color(0xFF0066FF), Color(0xFF0052CC)],
+                              colors: [Color(0xFF7B2FBE), Color(0xFF0052CC)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF0066FF).withValues(alpha: 0.4),
+                                color: const Color(0xFF7B2FBE).withValues(alpha: 0.4),
                                 blurRadius: 40,
                                 spreadRadius: 4,
                               ),
@@ -147,11 +147,11 @@ class _CallScreenState extends State<CallScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF0066FF), shape: BoxShape.circle)),
+                            Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF7B2FBE), shape: BoxShape.circle)),
                             const SizedBox(width: 6),
                             Text(
                               widget.callType == 'video' ? 'HD Video Call Connected' : 'HD Voice Call Connected',
-                              style: const TextStyle(color: Color(0xFF0066FF), fontSize: 13, fontWeight: FontWeight.w600),
+                              style: const TextStyle(color: Color(0xFF7B2FBE), fontSize: 13, fontWeight: FontWeight.w600),
                             ),
                           ],
                         ),
@@ -189,8 +189,8 @@ class _CallScreenState extends State<CallScreen> {
                       // Speaker Button
                       _buildControlButton(
                         icon: _speakerEnabled ? Icons.volume_up_rounded : Icons.volume_down_rounded,
-                        color: _speakerEnabled ? const Color(0xFF0066FF) : (isDark ? Colors.white : const Color(0xFF0F172A)),
-                        bgColor: _speakerEnabled ? const Color(0xFF0066FF).withValues(alpha: 0.2) : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.06)),
+                        color: _speakerEnabled ? const Color(0xFF7B2FBE) : (isDark ? Colors.white : const Color(0xFF0F172A)),
+                        bgColor: _speakerEnabled ? const Color(0xFF7B2FBE).withValues(alpha: 0.2) : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.06)),
                         onTap: () => setState(() => _speakerEnabled = !_speakerEnabled),
                       ),
 
