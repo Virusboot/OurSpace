@@ -12,23 +12,14 @@ class ApiClient {
     if (customWebUrl != null && customWebUrl!.isNotEmpty) {
       return customWebUrl!;
     }
-    if (kReleaseMode) {
-      return 'https://ourspace-web.onrender.com';
-    }
-    return 'http://localhost:3000';
+    return 'https://ourspace-web.onrender.com';
   }
 
   static String get baseUrl {
     if (customBaseUrl != null && customBaseUrl!.isNotEmpty) {
       return customBaseUrl!;
     }
-    if (kReleaseMode) {
-      return 'https://ourspace-backend.onrender.com/api';
-    }
-    if (!kIsWeb && Platform.isAndroid) {
-      return 'http://10.0.2.2:4000/api';
-    }
-    return 'http://localhost:4000/api';
+    return 'https://ourspace-backend.onrender.com/api';
   }
 
   static Future<Map<String, dynamic>> post(String endpoint, Map<String, dynamic> body) async {

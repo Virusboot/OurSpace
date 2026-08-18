@@ -167,6 +167,7 @@ export const App: React.FC = () => {
 
   return (
     <LandingJoin
+      token={token}
       callType={linkDetails?.callType || 'video'}
       pinRequired={pinRequired}
       onJoin={handleJoin}

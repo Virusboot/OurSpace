@@ -1,16 +1,28 @@
-import React, { useState } from 'react';
-import { Shield, Video, Mic, Lock, Smartphone } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Shield, Video, Mic, Lock, Smartphone, Download, ExternalLink } from 'lucide-react';
 
 interface LandingJoinProps {
+  token: string | null;
   callType: 'audio' | 'video';
   pinRequired: boolean;
   onJoin: (nickname: string, pin?: string) => void;
   errorMsg?: string;
 }
 
-export const LandingJoin: React.FC<LandingJoinProps> = ({ callType, pinRequired, onJoin, errorMsg }) => {
+export const LandingJoin: React.FC<LandingJoinProps> = ({ token, callType, pinRequired, onJoin, errorMsg }) => {
   const [nickname, setNickname] = useState('');
   const [pin, setPin] = useState('');
+
+  useEffect(() => {
+    if (token) {
+      // Auto-redirect to the custom app scheme immediately on mobile device detection
+      const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+      const isMobile = /android|iPad|iPhone|iPod/.test(userAgent.toLowerCase());
+      if (isMobile) {
+        window.location.href = `ourspace://c/${token}`;
+      }
+    }
+  }, [token]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,13 +99,41 @@ export const LandingJoin: React.FC<LandingJoinProps> = ({ callType, pinRequired,
           </button>
         </form>
 
-        <div className="mt-6 pt-6 border-t border-white/10 flex items-center space-x-3 text-xs text-gray-400">
-          <Smartphone className="w-5 h-5 text-gray-500 flex-shrink-0" />
+        {/* Deep Linking and App Downloads Section */}
+        <div className="mt-6 pt-6 border-t border-white/10 space-y-3">
+          <div className="flex items-center space-x-2 text-emerald-400 text-xs font-semibold">
+            <Smartphone className="w-4 h-4" />
+            <span>Have the Mobile App?</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <a
+              href={`ourspace://c/${token || ''}`}
+              className="flex items-center justify-center space-x-1.5 py-2.5 px-3 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 text-xs font-medium transition cursor-pointer text-center"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Open in App</span>
+            </a>
+
+            <a
+              href="/downloads/ourspace.apk"
+              download
+              className="flex items-center justify-center space-x-1.5 py-2.5 px-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 text-xs font-medium transition cursor-pointer text-center"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download APK</span>
+            </a>
+          </div>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-white/5 flex items-center space-x-3 text-xs text-gray-500">
+          <Shield className="w-4 h-4 text-gray-600 flex-shrink-0" />
           <p>
-            <span className="font-semibold text-gray-300">Privacy Notice:</span> For maximum screenshot protection and encrypted chat, download the native mobile app.
+            <span className="font-semibold text-gray-400">Privacy Notice:</span> For maximum screenshot protection and encrypted chat, download the native mobile app.
           </p>
         </div>
       </div>
     </div>
   );
 };
+export default LandingJoin;

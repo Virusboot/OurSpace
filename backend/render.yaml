@@ -14,3 +14,12 @@ services:
         generateValue: true
       - key: CORS_ORIGIN
         value: "*"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ourspace-db
+          property: connectionString
+
+databases:
+  - name: ourspace-db
+    plan: free
+    region: singapore

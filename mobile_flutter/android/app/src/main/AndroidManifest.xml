@@ -39,6 +39,16 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="https" android:host="localhost" android:pathPrefix="/c/"/>
+                <data android:scheme="https" android:host="ourspace-web.onrender.com" android:pathPrefix="/c/"/>
+                <data android:scheme="http" android:host="localhost" android:pathPrefix="/c/"/>
+            </intent-filter>
+
+            <!-- Deep linking for custom URL scheme ourspace://c/<token> -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="ourspace" android:host="c"/>
             </intent-filter>
         </activity>
 

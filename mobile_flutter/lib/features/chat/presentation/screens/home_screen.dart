@@ -491,7 +491,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Row(
                     children: [
-                      Image.asset('assets/images/app_logo.png', height: 32),
+                      Image.asset(
+                        'assets/images/app_logo.png',
+                        height: 32,
+                      ),
                       const SizedBox(width: 10),
                       Text(
                         _activeTab == 0 ? 'Chat' : (_activeTab == 1 ? 'Calls' : 'Voice Notes'),

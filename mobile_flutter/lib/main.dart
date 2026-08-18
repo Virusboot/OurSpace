@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:app_links/app_links.dart';
+import 'core/networking/api_client.dart';
 import 'core/storage/secure_storage_service.dart';
 import 'core/networking/websocket_client.dart';
 import 'features/auth/presentation/screens/onboarding_screen.dart';
@@ -11,7 +14,6 @@ import 'features/chat/presentation/screens/chat_screen.dart';
 import 'features/media/presentation/screens/secure_image_viewer_screen.dart';
 import 'features/calls/presentation/screens/call_screen.dart';
 import 'features/settings/presentation/screens/settings_screen.dart';
-import 'features/auth/presentation/screens/splash_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,17 +39,30 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
   bool _activeIsViewOnce = false;
   bool _isDarkMode = true;
 
+  final _appLinks = AppLinks();
+  StreamSubscription<Uri>? _linkSubscription;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _wakeUpServer();
     _checkStoredUser();
     _loadThemeMode();
+    _initDeepLinking();
+  }
+
+  void _wakeUpServer() async {
+    // Send a non-blocking request to the server root to wake it up if it is sleeping on Render
+    try {
+      await ApiClient.get('/');
+    } catch (_) {}
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _linkSubscription?.cancel();
     super.dispose();
   }
 
@@ -97,7 +112,6 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
     final savedImg = await SecureStorageService.read('profile_image_path');
     final appLock = await SecureStorageService.read('app_lock_enabled');
 
-    await Future.delayed(const Duration(milliseconds: 1000));
 
     if (stored != null) {
       try {
@@ -126,6 +140,176 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
     setState(() {
       _currentScreen = 'onboarding';
     });
+  }
+
+  void _initDeepLinking() async {
+    // Handle links when app is running (foreground/background)
+    _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
+      _handleDeepLink(uri);
+    }, onError: (err) {
+      debugPrint('Deep link stream error: $err');
+    });
+
+    // Handle initial link (cold start)
+    try {
+      final initialUri = await _appLinks.getInitialAppLink();
+      if (initialUri != null) {
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          _handleDeepLink(initialUri);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error getting initial deep link: $e');
+    }
+  }
+
+  void _handleDeepLink(Uri uri) {
+    debugPrint('Received Deep Link: $uri');
+    if (uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'c') {
+      final token = uri.pathSegments[1];
+      _resolveCallLink(token);
+    } else if (uri.scheme == 'ourspace' && uri.host == 'c' && uri.pathSegments.isNotEmpty) {
+      final token = uri.pathSegments[0];
+      _resolveCallLink(token);
+    }
+  }
+
+  Future<void> _resolveCallLink(String token, {String? pin}) async {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFF0066FF),
+        ),
+      ),
+    );
+
+    try {
+      final res = await ApiClient.post('/call-links/resolve/$token', {
+        if (pin != null) 'pin': pin,
+      });
+
+      if (mounted) {
+        Navigator.of(context).pop(); // Dismiss loading
+      }
+
+      if (res['valid'] == true) {
+        setState(() {
+          _activeCallType = res['callType'] ?? 'video';
+          _activeRecipient = {
+            'id': res['hostId'] ?? 'peer',
+            'username': '@host_user',
+          };
+          _currentScreen = 'call';
+        });
+      } else {
+        _showDeepLinkError('Invalid Call Link', 'This call link is no longer valid or has expired.');
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Dismiss loading
+      }
+
+      final errStr = e.toString();
+      if (errStr.contains('PIN_REQUIRED')) {
+        _promptForCallPin(token);
+      } else {
+        _showDeepLinkError('Call Link Error', errStr.replaceFirst('Exception: ', ''));
+      }
+    }
+  }
+
+  void _promptForCallPin(String token) {
+    final pinController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: _isDarkMode ? const Color(0xFF121317) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Call PIN Required',
+          style: TextStyle(color: _isDarkMode ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This secure call link is password protected.',
+              style: TextStyle(color: _isDarkMode ? Colors.grey : const Color(0xFF475569), fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: pinController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              style: TextStyle(color: _isDarkMode ? Colors.white : const Color(0xFF0F172A)),
+              decoration: InputDecoration(
+                hintText: 'Enter call PIN',
+                hintStyle: const TextStyle(color: Colors.grey),
+                filled: true,
+                fillColor: _isDarkMode ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                prefixIcon: const Icon(Icons.lock_rounded, color: Color(0xFF0066FF), size: 20),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _resolveCallLink(token, pin: pinController.text);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0066FF),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
+            child: const Text('Join Call', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeepLinkError(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: _isDarkMode ? const Color(0xFF121317) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          title,
+          style: TextStyle(color: _isDarkMode ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          message,
+          style: TextStyle(color: _isDarkMode ? Colors.grey : const Color(0xFF475569)),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0066FF),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('OK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _handleIdentityCreated(Map<String, dynamic> newUser, String recKey) {
@@ -197,7 +381,15 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
         ),
       ),
 
-      home: _buildScreen(),
+      home: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 600),
+        switchInCurve: Curves.easeIn,
+        switchOutCurve: Curves.easeOut,
+        child: KeyedSubtree(
+          key: ValueKey<String>(_currentScreen),
+          child: _buildScreen(),
+        ),
+      ),
     );
   }
 
@@ -205,12 +397,8 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
     switch (_currentScreen) {
       case 'loading':
       case 'splash':
-        return SplashScreen(
-          onContinue: () {
-            setState(() {
-              _currentScreen = (_user != null) ? 'home' : 'onboarding';
-            });
-          },
+        return Container(
+          color: _isDarkMode ? const Color(0xFF000000) : const Color(0xFFF8FAFC),
         );
       case 'onboarding':
         return OnboardingScreen(

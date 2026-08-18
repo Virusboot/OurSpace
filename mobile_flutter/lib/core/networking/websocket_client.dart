@@ -24,10 +24,8 @@ class WebSocketClient {
     String wsUrl;
     if (customWsUrl != null && customWsUrl!.isNotEmpty) {
       wsUrl = customWsUrl!;
-    } else if (kReleaseMode) {
-      wsUrl = 'wss://ourspace-backend.onrender.com/ws';
     } else {
-      wsUrl = (!kIsWeb && Platform.isAndroid) ? 'ws://10.0.2.2:4000/ws' : 'ws://localhost:4000/ws';
+      wsUrl = 'wss://ourspace-backend.onrender.com/ws';
     }
     try {
       _channel = WebSocketChannel.connect(Uri.parse(wsUrl));

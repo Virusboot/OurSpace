@@ -75,7 +75,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 children: [
                   Row(
                     children: [
-                      Image.asset('assets/images/app_logo.png', height: 28),
+                      Image.asset(
+                        'assets/images/app_logo.png',
+                        height: 28,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'OurSpace',

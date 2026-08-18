@@ -1,4 +1,5 @@
 import http from 'http';
+import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -20,6 +21,7 @@ const app = express();
 app.use(helmet());
 app.use(cors({ origin: config.corsOrigin, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
+app.use('/downloads', express.static(path.join(__dirname, '../public')));
 app.use(apiRateLimiter);
 
 // Health check endpoint

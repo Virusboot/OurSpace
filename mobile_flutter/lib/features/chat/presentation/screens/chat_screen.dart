@@ -315,6 +315,7 @@ class _ChatScreenState extends State<ChatScreen> {
               {'label': '30 Seconds', 'sec': 30},
               {'label': '1 Minute', 'sec': 60},
               {'label': '5 Minutes', 'sec': 300},
+              {'label': '1 Hour', 'sec': 3600},
               {'label': '24 Hours', 'sec': 86400},
             ].map((opt) {
               final sec = opt['sec'] as int;
