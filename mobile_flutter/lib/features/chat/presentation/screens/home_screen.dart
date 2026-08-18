@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/networking/api_client.dart';
+import '../../../../core/storage/secure_storage_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final Map<String, dynamic>? user;
@@ -28,6 +30,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _activeTab = 0; // 0: Chat, 1: Calls, 2: Status, 3: Settings
   final TextEditingController _searchCtrl = TextEditingController();
+  final List<Map<String, dynamic>> _conversations = [];
 
   @override
   void initState() {
@@ -35,6 +38,46 @@ class _HomeScreenState extends State<HomeScreen> {
     _searchCtrl.addListener(() {
       if (mounted) setState(() {});
     });
+    _loadRecentChats();
+  }
+
+  Future<void> _loadRecentChats() async {
+    final data = await SecureStorageService.read('recent_chats');
+    if (data != null && data.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(data);
+        if (decoded is List) {
+          setState(() {
+            _conversations.clear();
+            _conversations.addAll(List<Map<String, dynamic>>.from(decoded));
+          });
+        }
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _saveRecentChat(Map<String, dynamic> peer) async {
+    final data = await SecureStorageService.read('recent_chats');
+    List<Map<String, dynamic>> list = [];
+    if (data != null && data.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(data);
+        if (decoded is List) {
+          list = List<Map<String, dynamic>>.from(decoded);
+        }
+      } catch (_) {}
+    }
+    list.removeWhere((item) => item['username'] == peer['username']);
+    list.insert(0, {
+      'id': peer['id'] ?? 'peer_${DateTime.now().millisecondsSinceEpoch}',
+      'username': peer['username'],
+      'privateId': peer['privateId'] ?? '',
+      'unread': 0,
+      'lastMessage': 'Click to open secure chat',
+      'time': 'Just now',
+    });
+    await SecureStorageService.write('recent_chats', jsonEncode(list));
+    _loadRecentChats();
   }
 
   @override
@@ -42,9 +85,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _searchCtrl.dispose();
     super.dispose();
   }
-
-
-  final List<Map<String, dynamic>> _conversations = [];
 
   void _showNewActionSheet() {
     final isDark = widget.isDarkMode;
@@ -244,8 +284,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     title: Text(searchResult!['username'], style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
                     subtitle: Text(searchResult!['privateId'], style: const TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace')),
                     trailing: const Icon(Icons.chat_bubble_outline, color: Color(0xFF0066FF)),
-                    onTap: () {
+                    onTap: () async {
                       Navigator.pop(ctx);
+                      await _saveRecentChat(searchResult!);
                       widget.onOpenChat(searchResult!);
                     },
                   ),
