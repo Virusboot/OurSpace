@@ -146,7 +146,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
     final textTitle = isDark ? Colors.white : const Color(0xFF0F172A);
     final textSub = isDark ? Colors.grey : const Color(0xFF64748B);
     final cardBg = isDark ? const Color(0xFF121317) : const Color(0xFFFFFFFF);
-    final cardBorder = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+    final cardBorder = isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFE2E8F0);
     final dotUnfilledBorder = isDark ? Colors.white24 : const Color(0xFFCBD5E1);
 
     return Scaffold(
@@ -174,7 +174,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF0066FF).withOpacity(0.25),
+                        color: const Color(0xFF0066FF).withValues(alpha: 0.25),
                         blurRadius: 18,
                         offset: const Offset(0, 4),
                       ),
@@ -248,7 +248,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                       ),
                       Switch(
                         value: _biometricEnabled,
-                        activeColor: const Color(0xFF0066FF),
+                        activeThumbColor: const Color(0xFF0066FF),
                         onChanged: (val) => setState(() => _biometricEnabled = val),
                       ),
                     ],
@@ -290,7 +290,7 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
   }
 
   Widget _buildKey(String label, bool isDark) {
-    final keyBg = isDark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+    final keyBg = isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFE2E8F0);
     final keyTxt = isDark ? Colors.white : const Color(0xFF0F172A);
 
     return InkWell(

@@ -112,9 +112,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           width: 140,
                           height: 140,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0066FF).withOpacity(0.08),
+                            color: const Color(0xFF0066FF).withValues(alpha: 0.08),
                             shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.25), width: 1.5),
+                            border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.25), width: 1.5),
                           ),
                           child: Icon(
                             slide['icon'] as IconData,
@@ -128,9 +128,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0066FF).withOpacity(0.10),
+                            color: const Color(0xFF0066FF).withValues(alpha: 0.10),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.3)),
+                            border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.3)),
                           ),
                           child: Text(
                             (slide['tag'] as String).toUpperCase(),

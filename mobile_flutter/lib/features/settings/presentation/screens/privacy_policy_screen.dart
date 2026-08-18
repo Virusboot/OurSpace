@@ -16,7 +16,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
     final txtCol = isDarkMode ? Colors.white : const Color(0xFF0F172A);
     final subtxtCol = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
     final cardBg = isDarkMode ? const Color(0xFF121317) : Colors.white;
-    final cardBorderCol = isDarkMode ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+    final cardBorderCol = isDarkMode ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFE2E8F0);
 
     return Scaffold(
       backgroundColor: bgCol,
@@ -43,9 +43,9 @@ class PrivacyPolicyScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFF0066FF).withOpacity(0.12),
+                color: const Color(0xFF0066FF).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.3)),
+                border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.3)),
               ),
               child: const Row(
                 mainAxisSize: MainAxisSize.min,

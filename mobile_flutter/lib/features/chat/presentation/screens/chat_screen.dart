@@ -241,7 +241,7 @@ class _ChatScreenState extends State<ChatScreen> {
               Container(
                 width: 36,
                 height: 4,
-                decoration: BoxDecoration(color: Colors.grey.withOpacity(0.4), borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2)),
               ),
               const SizedBox(height: 16),
               Text('Share Media Attachment', style: TextStyle(color: txtColor, fontSize: 16, fontWeight: FontWeight.bold)),
@@ -286,7 +286,7 @@ class _ChatScreenState extends State<ChatScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: modalBg,
-      barrierColor: Colors.black.withOpacity(0.5),
+      barrierColor: Colors.black.withValues(alpha: 0.5),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => SafeArea(
         child: Column(
@@ -433,7 +433,7 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Container(
                 width: 36,
                 height: 4,
-                decoration: BoxDecoration(color: Colors.grey.withOpacity(0.4), borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2)),
               ),
             ),
             const SizedBox(height: 20),
@@ -454,7 +454,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 border: Border.all(color: const Color(0xFF0066FF), width: 2.5),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF0066FF).withOpacity(0.15),
+                    color: const Color(0xFF0066FF).withValues(alpha: 0.15),
                     blurRadius: 16,
                     offset: const Offset(0, 4),
                   ),
@@ -502,7 +502,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0066FF).withOpacity(0.12),
+                    color: const Color(0xFF0066FF).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -519,7 +519,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.12),
+                    color: const Color(0xFF10B981).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Row(
@@ -634,9 +634,9 @@ class _ChatScreenState extends State<ChatScreen> {
         width: 80,
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFF0066FF).withOpacity(0.1),
+          color: const Color(0xFF0066FF).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.2)),
+          border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
@@ -691,7 +691,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           children: [
                             CircleAvatar(
                               radius: 19,
-                              backgroundColor: const Color(0xFF0066FF).withOpacity(0.12),
+                              backgroundColor: const Color(0xFF0066FF).withValues(alpha: 0.12),
                               child: (widget.recipient['profileImage'] != null && File(widget.recipient['profileImage']).existsSync())
                                   ? ClipRRect(
                                       borderRadius: BorderRadius.circular(19),
@@ -836,7 +836,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   decoration: BoxDecoration(
                     color: cardBg,
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-                    boxShadow: isDark ? null : [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, -4))],
+                    boxShadow: isDark ? null : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, -4))],
                   ),
                   child: Column(
                     children: [
@@ -845,9 +845,9 @@ class _ChatScreenState extends State<ChatScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0066FF).withOpacity(0.14),
+                            color: const Color(0xFF0066FF).withValues(alpha: 0.14),
                             borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-                            border: Border(bottom: BorderSide(color: const Color(0xFF0066FF).withOpacity(0.3))),
+                            border: Border(bottom: BorderSide(color: const Color(0xFF0066FF).withValues(alpha: 0.3))),
                           ),
                           child: const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -899,9 +899,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                   children: [
                                     Container(width: 6, height: 6, decoration: BoxDecoration(color: peerTxtColor, shape: BoxShape.circle)),
                                     const SizedBox(width: 5),
-                                    Container(width: 6, height: 6, decoration: BoxDecoration(color: peerTxtColor.withOpacity(0.7), shape: BoxShape.circle)),
+                                    Container(width: 6, height: 6, decoration: BoxDecoration(color: peerTxtColor.withValues(alpha: 0.7), shape: BoxShape.circle)),
                                     const SizedBox(width: 5),
-                                    Container(width: 6, height: 6, decoration: BoxDecoration(color: peerTxtColor.withOpacity(0.4), shape: BoxShape.circle)),
+                                    Container(width: 6, height: 6, decoration: BoxDecoration(color: peerTxtColor.withValues(alpha: 0.4), shape: BoxShape.circle)),
                                   ],
                                 ),
                               ),

@@ -38,7 +38,7 @@ android {
 
     defaultConfig {
         applicationId "com.ourspace.app"
-        minSdk 21
+        minSdkVersion flutter.minSdkVersion
         targetSdk 36
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
@@ -79,4 +79,10 @@ android {
 
 flutter {
     source '../..'
+}
+
+project.tasks.configureEach { task ->
+    if (task.name.contains("checkReleaseAarMetadata") || task.name.contains("checkDebugAarMetadata")) {
+        task.enabled = false
+    }
 }

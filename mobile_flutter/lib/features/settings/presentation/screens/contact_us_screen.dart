@@ -26,7 +26,7 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
     final txtCol = widget.isDarkMode ? Colors.white : const Color(0xFF0F172A);
     final subtxtCol = widget.isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
     final cardBg = widget.isDarkMode ? const Color(0xFF121317) : Colors.white;
-    final cardBorderCol = widget.isDarkMode ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+    final cardBorderCol = widget.isDarkMode ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFE2E8F0);
 
     return Scaffold(
       backgroundColor: bgCol,
@@ -53,9 +53,9 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: widget.isDarkMode ? const Color(0xFF0066FF).withOpacity(0.12) : const Color(0xFFEFF6FF),
+                color: widget.isDarkMode ? const Color(0xFF0066FF).withValues(alpha: 0.12) : const Color(0xFFEFF6FF),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.3)),
+                border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -105,9 +105,9 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(0.12),
+                  color: const Color(0xFF10B981).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+                  border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   children: [
@@ -146,9 +146,9 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                         labelText: 'Subject',
                         hintText: 'e.g. Help with messaging',
                         labelStyle: TextStyle(color: subtxtCol, fontSize: 13),
-                        hintStyle: TextStyle(color: subtxtCol.withOpacity(0.6), fontSize: 13),
+                        hintStyle: TextStyle(color: subtxtCol.withValues(alpha: 0.6), fontSize: 13),
                         filled: true,
-                        fillColor: widget.isDarkMode ? Colors.white.withOpacity(0.04) : const Color(0xFFF8FAFC),
+                        fillColor: widget.isDarkMode ? Colors.white.withValues(alpha: 0.04) : const Color(0xFFF8FAFC),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                       ),
                     ),
@@ -161,9 +161,9 @@ class _ContactUsScreenState extends State<ContactUsScreen> {
                         labelText: 'Your Message',
                         hintText: 'Type your message or feedback here...',
                         labelStyle: TextStyle(color: subtxtCol, fontSize: 13),
-                        hintStyle: TextStyle(color: subtxtCol.withOpacity(0.6), fontSize: 13),
+                        hintStyle: TextStyle(color: subtxtCol.withValues(alpha: 0.6), fontSize: 13),
                         filled: true,
-                        fillColor: widget.isDarkMode ? Colors.white.withOpacity(0.04) : const Color(0xFFF8FAFC),
+                        fillColor: widget.isDarkMode ? Colors.white.withValues(alpha: 0.04) : const Color(0xFFF8FAFC),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                       ),
                     ),

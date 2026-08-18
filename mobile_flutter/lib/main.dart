@@ -251,7 +251,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                 hintText: 'Enter call PIN',
                 hintStyle: const TextStyle(color: Colors.grey),
                 filled: true,
-                fillColor: _isDarkMode ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03),
+                fillColor: _isDarkMode ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),

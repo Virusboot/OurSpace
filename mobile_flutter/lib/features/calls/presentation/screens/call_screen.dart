@@ -57,9 +57,9 @@ class _CallScreenState extends State<CallScreen> {
     final isDark = widget.isDarkMode;
     final bgCol = isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC);
     final txtCol = isDark ? Colors.white : const Color(0xFF0F172A);
-    final timerBg = isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05);
+    final timerBg = isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.05);
     final dockBg = isDark ? const Color(0xFF121317) : const Color(0xFFFFFFFF);
-    final dockBorderCol = isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFE2E8F0);
+    final dockBorderCol = isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0);
     final avatarBg = isDark ? const Color(0xFF121317) : const Color(0xFFFFFFFF);
 
     return SecurityOverlay(
@@ -78,8 +78,8 @@ class _CallScreenState extends State<CallScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0066FF).withOpacity(0.12),
-                        border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.3)),
+                        color: const Color(0xFF0066FF).withValues(alpha: 0.12),
+                        border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.3)),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Row(
@@ -124,7 +124,7 @@ class _CallScreenState extends State<CallScreen> {
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF0066FF).withOpacity(0.4),
+                                color: const Color(0xFF0066FF).withValues(alpha: 0.4),
                                 blurRadius: 40,
                                 spreadRadius: 4,
                               ),
@@ -169,7 +169,7 @@ class _CallScreenState extends State<CallScreen> {
                     border: Border.all(color: dockBorderCol),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(isDark ? 0.4 : 0.08),
+                        color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.08),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -182,7 +182,7 @@ class _CallScreenState extends State<CallScreen> {
                       _buildControlButton(
                         icon: _micEnabled ? Icons.mic_rounded : Icons.mic_off_rounded,
                         color: _micEnabled ? (isDark ? Colors.white : const Color(0xFF0F172A)) : const Color(0xFFF43F5E),
-                        bgColor: _micEnabled ? (isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.06)) : const Color(0xFFF43F5E).withOpacity(0.2),
+                        bgColor: _micEnabled ? (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.06)) : const Color(0xFFF43F5E).withValues(alpha: 0.2),
                         onTap: () => setState(() => _micEnabled = !_micEnabled),
                       ),
 
@@ -190,7 +190,7 @@ class _CallScreenState extends State<CallScreen> {
                       _buildControlButton(
                         icon: _speakerEnabled ? Icons.volume_up_rounded : Icons.volume_down_rounded,
                         color: _speakerEnabled ? const Color(0xFF0066FF) : (isDark ? Colors.white : const Color(0xFF0F172A)),
-                        bgColor: _speakerEnabled ? const Color(0xFF0066FF).withOpacity(0.2) : (isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.06)),
+                        bgColor: _speakerEnabled ? const Color(0xFF0066FF).withValues(alpha: 0.2) : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.06)),
                         onTap: () => setState(() => _speakerEnabled = !_speakerEnabled),
                       ),
 
@@ -199,7 +199,7 @@ class _CallScreenState extends State<CallScreen> {
                         _buildControlButton(
                           icon: _camEnabled ? Icons.videocam_rounded : Icons.videocam_off_rounded,
                           color: _camEnabled ? (isDark ? Colors.white : const Color(0xFF0F172A)) : const Color(0xFFF43F5E),
-                          bgColor: _camEnabled ? (isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.06)) : const Color(0xFFF43F5E).withOpacity(0.2),
+                          bgColor: _camEnabled ? (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.06)) : const Color(0xFFF43F5E).withValues(alpha: 0.2),
                           onTap: () => setState(() => _camEnabled = !_camEnabled),
                         ),
 
@@ -214,7 +214,7 @@ class _CallScreenState extends State<CallScreen> {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFFF43F5E).withOpacity(0.4),
+                                color: const Color(0xFFF43F5E).withValues(alpha: 0.4),
                                 blurRadius: 16,
                                 offset: const Offset(0, 4),
                               ),

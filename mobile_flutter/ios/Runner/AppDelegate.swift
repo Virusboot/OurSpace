@@ -1,7 +1,7 @@
 import UIKit
 import Flutter
 
-@UIApplicationMain
+@main
 @objc class AppDelegate: FlutterAppDelegate {
   private var blurEffectView: UIVisualEffectView?
 
@@ -57,6 +57,6 @@ import Flutter
 
   private func hidePrivacyOverlay() {
     blurEffectView?.removeFromSuperview()
-    blurEffectView = null
+    blurEffectView = nil
   }
 }

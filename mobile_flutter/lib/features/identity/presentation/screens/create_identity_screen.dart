@@ -343,9 +343,9 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
             width: 140,
             height: 140,
             decoration: BoxDecoration(
-              color: const Color(0xFF0066FF).withOpacity(0.08),
+              color: const Color(0xFF0066FF).withValues(alpha: 0.08),
               shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.2), width: 1.5),
+              border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.2), width: 1.5),
             ),
             child: const Center(
               child: Icon(Icons.shield_rounded, size: 72, color: Color(0xFF0066FF)),
@@ -406,7 +406,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
     final titleColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final subtitleColor = isDark ? Colors.grey : const Color(0xFF475569);
     final boxBg = isDark ? const Color(0xFF121317) : const Color(0xFFF1F5F9);
-    final boxBorder = isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFE2E8F0);
+    final boxBorder = isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -485,7 +485,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
     final titleColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final subtitleColor = isDark ? Colors.grey : const Color(0xFF475569);
     final inputBg = isDark ? const Color(0xFF121317) : const Color(0xFFF1F5F9);
-    final inputBorder = isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFE2E8F0);
+    final inputBorder = isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0);
     final usernameInput = _usernameController.text.trim();
     final isValid = usernameInput.length >= 3;
 
@@ -534,7 +534,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
           height: 56,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: isValid ? const Color(0xFF0066FF) : const Color(0xFF0066FF).withOpacity(0.3),
+              backgroundColor: isValid ? const Color(0xFF0066FF) : const Color(0xFF0066FF).withValues(alpha: 0.3),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
             ),
             onPressed: isValid ? () => setState(() => _currentStep = 3) : null,
@@ -553,7 +553,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
     final titleColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final subtitleColor = isDark ? Colors.grey : const Color(0xFF475569);
     final inputBg = isDark ? const Color(0xFF121317) : const Color(0xFFF1F5F9);
-    final inputBorder = isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFE2E8F0);
+    final inputBorder = isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0);
     final passInput = _passwordController.text.trim();
     final isValid = passInput.length >= 6;
 
@@ -611,7 +611,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
           height: 56,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: isValid ? const Color(0xFF0066FF) : const Color(0xFF0066FF).withOpacity(0.3),
+              backgroundColor: isValid ? const Color(0xFF0066FF) : const Color(0xFF0066FF).withValues(alpha: 0.3),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
             ),
             onPressed: isValid ? () => setState(() => _currentStep = 4) : null,
@@ -759,9 +759,9 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
             width: 150,
             height: 150,
             decoration: BoxDecoration(
-              color: const Color(0xFF0066FF).withOpacity(0.08),
+              color: const Color(0xFF0066FF).withValues(alpha: 0.08),
               shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.2), width: 1.5),
+              border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.2), width: 1.5),
             ),
             child: const Center(
               child: Icon(Icons.face_unlock_rounded, size: 68, color: Color(0xFF0066FF)),
@@ -806,7 +806,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
     final titleColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final subtitleColor = isDark ? Colors.grey : const Color(0xFF475569);
     final inputBg = isDark ? const Color(0xFF121317) : const Color(0xFFF1F5F9);
-    final inputBorder = isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFE2E8F0);
+    final inputBorder = isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -824,8 +824,8 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFF43F5E).withOpacity(0.1),
-              border: Border.all(color: const Color(0xFFF43F5E).withOpacity(0.3)),
+              color: const Color(0xFFF43F5E).withValues(alpha: 0.1),
+              border: Border.all(color: const Color(0xFFF43F5E).withValues(alpha: 0.3)),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(_errorMsg!, style: const TextStyle(color: Color(0xFFF43F5E), fontSize: 13, fontWeight: FontWeight.bold)),

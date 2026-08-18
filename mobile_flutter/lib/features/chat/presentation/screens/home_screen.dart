@@ -96,7 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: cardBg,
-      barrierColor: Colors.black.withOpacity(0.7),
+      barrierColor: Colors.black.withValues(alpha: 0.7),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) => SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(ctx).padding.bottom + 24),
@@ -158,8 +158,8 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.03),
-          border: Border.all(color: isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05)),
+          color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03),
+          border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.05)),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -168,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
+                color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(icon, color: color, size: 22),
@@ -221,7 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   hintText: 'Enter name or @username (e.g. @rahul_k)',
                   hintStyle: const TextStyle(color: Colors.grey),
                   filled: true,
-                  fillColor: isDark ? Colors.black.withOpacity(0.4) : const Color(0xFFF1F5F9),
+                  fillColor: isDark ? Colors.black.withValues(alpha: 0.4) : const Color(0xFFF1F5F9),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
                   prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
                 ),
@@ -264,7 +264,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: const Color(0xFFF43F5E).withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                  decoration: BoxDecoration(color: const Color(0xFFF43F5E).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
                   child: Text(searchError!, style: const TextStyle(color: Color(0xFFF43F5E), fontSize: 12)),
                 ),
               ],
@@ -272,13 +272,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 14),
                 Container(
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFF8FAFC),
+                    color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.3)),
+                    border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.3)),
                   ),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: const Color(0xFF0066FF).withOpacity(0.2),
+                      backgroundColor: const Color(0xFF0066FF).withValues(alpha: 0.2),
                       child: Text(searchResult!['username'].toString().substring(0, 2).toUpperCase(), style: const TextStyle(color: Color(0xFF0066FF), fontWeight: FontWeight.bold)),
                     ),
                     title: Text(searchResult!['username'], style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
@@ -331,7 +331,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
-                            color: callType == 'video' ? const Color(0xFF0066FF).withOpacity(0.2) : (isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.04)),
+                            color: callType == 'video' ? const Color(0xFF0066FF).withValues(alpha: 0.2) : (isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.04)),
                             border: Border.all(color: callType == 'video' ? const Color(0xFF0066FF) : Colors.transparent),
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -353,7 +353,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
-                            color: callType == 'audio' ? const Color(0xFF0066FF).withOpacity(0.2) : (isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.04)),
+                            color: callType == 'audio' ? const Color(0xFF0066FF).withValues(alpha: 0.2) : (isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.04)),
                             border: Border.all(color: callType == 'audio' ? const Color(0xFF0066FF) : Colors.transparent),
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -379,7 +379,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     hintText: 'Enter 4-digit passcode (e.g. 1234)',
                     hintStyle: const TextStyle(color: Colors.grey),
                     filled: true,
-                    fillColor: isDark ? Colors.black.withOpacity(0.4) : const Color(0xFFF1F5F9),
+                    fillColor: isDark ? Colors.black.withValues(alpha: 0.4) : const Color(0xFFF1F5F9),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                     prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey, size: 18),
                   ),
@@ -421,8 +421,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0066FF).withOpacity(0.1),
-                    border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.3)),
+                    color: const Color(0xFF0066FF).withValues(alpha: 0.1),
+                    border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.3)),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
@@ -496,24 +496,24 @@ class _HomeScreenState extends State<HomeScreen> {
     final avatarBg = isDark ? const Color(0xFF26282F) : const Color(0xFFE2E8F0);
     final avatarTxt = isDark ? Colors.white : const Color(0xFF0F172A);
     final dockPillBg = isDark ? const Color(0xFF1A1C24) : const Color(0xFFFFFFFF);
-    final dockBorder = isDark ? Colors.white.withOpacity(0.14) : const Color(0xFFE2E8F0);
+    final dockBorder = isDark ? Colors.white.withValues(alpha: 0.14) : const Color(0xFFE2E8F0);
     final dockShadow = isDark
         ? [
             BoxShadow(
-              color: const Color(0xFF0066FF).withOpacity(0.20),
+              color: const Color(0xFF0066FF).withValues(alpha: 0.20),
               blurRadius: 24,
               spreadRadius: 2,
               offset: const Offset(0, 8),
             ),
             BoxShadow(
-              color: Colors.black.withOpacity(0.6),
+              color: Colors.black.withValues(alpha: 0.6),
               blurRadius: 16,
               offset: const Offset(0, 4),
             ),
           ]
         : [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 20,
               offset: const Offset(0, 6),
             ),
@@ -558,7 +558,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         width: 42,
                         height: 42,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0066FF).withOpacity(0.12),
+                          color: const Color(0xFF0066FF).withValues(alpha: 0.12),
                           shape: BoxShape.circle,
                         ),
                         child: const Center(
@@ -610,7 +610,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? null
                       : [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
+                            color: Colors.black.withValues(alpha: 0.04),
                             blurRadius: 10,
                             offset: const Offset(0, -4),
                           ),
@@ -630,9 +630,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         Container(
                                           padding: const EdgeInsets.all(20),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFF0066FF).withOpacity(0.12),
+                                            color: const Color(0xFF0066FF).withValues(alpha: 0.12),
                                             shape: BoxShape.circle,
-                                            border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.3), width: 1.5),
+                                            border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.3), width: 1.5),
                                           ),
                                           child: const Icon(Icons.shield_outlined, size: 48, color: Color(0xFF0066FF)),
                                         ),
@@ -910,9 +910,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 76,
                 height: 76,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0066FF).withOpacity(0.12),
+                  color: const Color(0xFF0066FF).withValues(alpha: 0.12),
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.3)),
+                  border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.3)),
                 ),
                 child: const Icon(Icons.mic_none_rounded, color: Color(0xFF0066FF), size: 38),
               ),
@@ -931,9 +931,9 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0066FF).withOpacity(0.15),
+                  color: const Color(0xFF0066FF).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFF0066FF).withOpacity(0.4)),
+                  border: Border.all(color: const Color(0xFF0066FF).withValues(alpha: 0.4)),
                 ),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
