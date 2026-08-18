@@ -66,7 +66,7 @@ router.post('/register', authRateLimiter, async (req, res) => {
     }
 
     const cleanUsername = username || (email ? '@' + email.split('@')[0] : '@user');
-    const privateId = 'USER-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+    const privateId = req.body.privateId || (email ? email.split('@')[0].toUpperCase() : 'USER-' + Math.random().toString(36).substring(2, 8).toUpperCase());
     const userId = 'usr_' + Date.now();
 
     const userObj = {

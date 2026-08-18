@@ -14,12 +14,25 @@ class WebSocketClient {
 
   WebSocketChannel? _channel;
   final StreamController<Map<String, dynamic>> _messageController = StreamController.broadcast();
+  Timer? _reconnectTimer;
+  bool _isConnecting = false;
+  bool _isExplicitlyDisconnected = false;
 
   Stream<Map<String, dynamic>> get stream => _messageController.stream;
 
   Future<void> connect() async {
+    if (_isConnecting) return;
+    _isExplicitlyDisconnected = false;
+    _isConnecting = true;
+
     final token = await SecureStorageService.read('auth_token');
-    if (token == null) return;
+    if (token == null) {
+      _isConnecting = false;
+      return;
+    }
+
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
 
     String wsUrl;
     if (customWsUrl != null && customWsUrl!.isNotEmpty) {
@@ -28,6 +41,7 @@ class WebSocketClient {
       wsUrl = 'wss://ourspace-backend.onrender.com/ws';
     }
     try {
+      await _channel?.sink.close();
       _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
       
       // Handshake authentication
@@ -41,19 +55,25 @@ class WebSocketClient {
           } catch (_) {}
         },
         onError: (err) {
+          _isConnecting = false;
           _reconnect();
         },
         onDone: () {
+          _isConnecting = false;
           _reconnect();
         },
       );
+      _isConnecting = false;
     } catch (_) {
+      _isConnecting = false;
       _reconnect();
     }
   }
 
   void _reconnect() {
-    Timer(const Duration(seconds: 3), () {
+    if (_isExplicitlyDisconnected) return;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer(const Duration(seconds: 3), () {
       connect();
     });
   }
@@ -65,7 +85,11 @@ class WebSocketClient {
   }
 
   void disconnect() {
+    _isExplicitlyDisconnected = true;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
     _channel?.sink.close();
     _channel = null;
+    _isConnecting = false;
   }
 }

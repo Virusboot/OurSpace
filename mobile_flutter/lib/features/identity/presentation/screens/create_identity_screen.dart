@@ -154,6 +154,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
         'email': derivedEmail,
         'password': derivedPassword,
         'username': username,
+        'privateId': _privateId,
       }).timeout(const Duration(seconds: 3));
 
       if (res['user'] != null) {
