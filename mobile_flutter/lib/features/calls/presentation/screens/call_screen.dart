@@ -43,6 +43,7 @@ class _CallScreenState extends State<CallScreen> {
   StreamSubscription<Map<String, dynamic>>? _wsCallSubscription;
 
   String? _remoteParticipantId;
+  String? _remoteParticipantName;   // updated when guest joins
   bool _isConnected = false;
   bool _isInitiator = false;
   bool _hasRemoteDescription = false;
@@ -140,10 +141,15 @@ class _CallScreenState extends State<CallScreen> {
 
         case 'participant_joined':
           final newParticipant = event['participantId'];
+          final newNickname = event['nickname']?.toString();
           if (newParticipant != widget.user?['id']) {
-            _remoteParticipantId = newParticipant;
+            setState(() {
+              _remoteParticipantId = newParticipant;
+              if (newNickname != null && newNickname.isNotEmpty) {
+                _remoteParticipantName = newNickname;
+              }
+            });
             if (!_isInitiator) {
-              // The other participant joined, if we are host or first we start negotiation
               _isInitiator = true;
               await _createPeerConnection();
               await _sendOffer();
@@ -329,7 +335,10 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final name = widget.recipient?['username'] ?? '@peer';
+    // Show live name once guest joins, else placeholder
+    final rawName = _remoteParticipantName ?? widget.recipient?['username'] ?? '@peer';
+    final isWaitingForGuest = rawName == '@waiting_for_join';
+    final name = isWaitingForGuest ? 'Waiting for guest...' : rawName;
     final isDark = widget.isDarkMode;
     final bgCol = isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC);
     final txtCol = isDark ? Colors.white : const Color(0xFF0F172A);
@@ -338,7 +347,9 @@ class _CallScreenState extends State<CallScreen> {
     final dockBorderCol = isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0);
     final avatarBg = isDark ? const Color(0xFF121317) : const Color(0xFFFFFFFF);
 
-    final showVideoCall = widget.callType == 'video' && _isConnected && _remoteStream != null;
+    final showRemoteVideo = widget.callType == 'video' && _isConnected && _remoteStream != null;
+    // Show own camera as fullscreen while waiting (before guest joins)
+    final showLocalPreviewFullscreen = widget.callType == 'video' && !showRemoteVideo && _localStream != null;
 
     return SecurityOverlay(
       isSensitive: true,
@@ -347,8 +358,18 @@ class _CallScreenState extends State<CallScreen> {
         body: SafeArea(
           child: Stack(
             children: [
-              // Remote video stream covers full background if active
-              if (showVideoCall)
+              // Own camera as fullscreen background while waiting for guest
+              if (showLocalPreviewFullscreen)
+                Positioned.fill(
+                  child: RTCVideoView(
+                    _localRenderer,
+                    mirror: true,
+                    objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                  ),
+                ),
+
+              // Remote video stream covers full background once connected
+              if (showRemoteVideo)
                 Positioned.fill(
                   child: RTCVideoView(
                     _remoteRenderer,
@@ -394,64 +415,109 @@ class _CallScreenState extends State<CallScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Avatar & Connection state if audio call or not connected
-                    if (!showVideoCall)
+                    // Avatar overlay: shown for audio call OR when video not yet connected
+                    if (!showRemoteVideo)
                       Expanded(
                         child: Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Container(
-                                width: 130,
-                                height: 130,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: const LinearGradient(
-                                    colors: [Color(0xFF7B2FBE), Color(0xFF0052CC)],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
+                              // Only show avatar when NOT showing local camera fullscreen
+                              if (!showLocalPreviewFullscreen) ...[
+                                Container(
+                                  width: 130,
+                                  height: 130,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFF7B2FBE), Color(0xFF0052CC)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF7B2FBE).withValues(alpha: 0.4),
+                                        blurRadius: 40,
+                                        spreadRadius: 4,
+                                      ),
+                                    ],
                                   ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFF7B2FBE).withValues(alpha: 0.4),
-                                      blurRadius: 40,
-                                      spreadRadius: 4,
+                                  child: Center(
+                                    child: CircleAvatar(
+                                      radius: 60,
+                                      backgroundColor: avatarBg,
+                                      child: Text(
+                                        name.length > 2 ? name.substring(0, 2).toUpperCase() : '?',
+                                        style: TextStyle(color: txtCol, fontSize: 34, fontWeight: FontWeight.w800),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                              ],
+                              // Name + status pill — always shown as overlay on camera
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: showLocalPreviewFullscreen ? 0.45 : 0.0),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      name,
+                                      style: TextStyle(
+                                        color: showLocalPreviewFullscreen ? Colors.white : txtCol,
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w800,
+                                        shadows: showLocalPreviewFullscreen
+                                            ? [const Shadow(color: Colors.black54, blurRadius: 6)]
+                                            : null,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (isWaitingForGuest)
+                                          const SizedBox(
+                                            width: 10, height: 10,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 1.5,
+                                              color: Color(0xFF7B2FBE),
+                                            ),
+                                          )
+                                        else
+                                          Container(
+                                            width: 8,
+                                            height: 8,
+                                            decoration: BoxDecoration(
+                                              color: _isConnected ? Colors.green : const Color(0xFF7B2FBE),
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          _isConnected
+                                              ? 'HD Call Connected'
+                                              : isWaitingForGuest
+                                                  ? 'Share the link to invite'
+                                                  : (widget.callType == 'video' ? 'Connecting Video Call...' : 'Connecting Voice Call...'),
+                                          style: TextStyle(
+                                            color: showLocalPreviewFullscreen
+                                                ? Colors.white70
+                                                : const Color(0xFF7B2FBE),
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            shadows: showLocalPreviewFullscreen
+                                                ? [const Shadow(color: Colors.black54, blurRadius: 4)]
+                                                : null,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
-                                child: Center(
-                                  child: CircleAvatar(
-                                    radius: 60,
-                                    backgroundColor: avatarBg,
-                                    child: Text(
-                                      name.length > 2 ? name.substring(0, 2).toUpperCase() : 'PEER',
-                                      style: TextStyle(color: txtCol, fontSize: 34, fontWeight: FontWeight.w800),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              Text(name, style: TextStyle(color: txtCol, fontSize: 24, fontWeight: FontWeight.w800)),
-                              const SizedBox(height: 6),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: _isConnected ? Colors.green : const Color(0xFF7B2FBE),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    _isConnected
-                                        ? 'HD Call Connected'
-                                        : (widget.callType == 'video' ? 'Connecting Video Call...' : 'Connecting Voice Call...'),
-                                    style: const TextStyle(color: Color(0xFF7B2FBE), fontSize: 13, fontWeight: FontWeight.w600),
-                                  ),
-                                ],
                               ),
                             ],
                           ),
@@ -526,21 +592,21 @@ class _CallScreenState extends State<CallScreen> {
                 ),
               ),
 
-              // Small PIP Floating Local Video View for video calls
-              if (showVideoCall && _camEnabled)
+              // PiP local video — shown only when REMOTE is streaming (guest connected)
+              if (showRemoteVideo && _camEnabled)
                 Positioned(
-                  right: 24,
+                  right: 16,
                   top: 80,
                   width: 100,
                   height: 150,
                   child: Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white24, width: 2),
+                      border: Border.all(color: Colors.white38, width: 2),
                       boxShadow: const [
                         BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 8,
+                          color: Colors.black38,
+                          blurRadius: 10,
                         ),
                       ],
                     ),
