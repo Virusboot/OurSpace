@@ -405,6 +405,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             'Share with anyone — no account needed',
                             style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 11),
                           ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
