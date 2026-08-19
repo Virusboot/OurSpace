@@ -113,6 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'id': peer['id'] ?? 'peer_${DateTime.now().millisecondsSinceEpoch}',
       'username': peer['username'],
       'privateId': peer['privateId'] ?? '',
+      'publicKey': peer['publicKey'] ?? '',
       'unread': 0,
       'lastMessage': 'Click to open secure chat',
       'time': 'Just now',
@@ -284,7 +285,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         } catch (e) {
                           setStateDialog(() {
                             loading = false;
-                            searchError = 'Identity not found';
+                            if (e.toString().contains('404')) {
+                              searchError = 'User identity not found.';
+                            } else {
+                              searchError = 'Network error or server waking up. Try again in 8s.';
+                            }
                           });
                         }
                       },
@@ -335,12 +340,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final pinCtrl = TextEditingController();
     String? generatedUrl;
     String? generatedCallId;
+    String? searchError;
     bool loading = false;
     final isDark = widget.isDarkMode;
     final bg = isDark ? const Color(0xFF14161C) : Colors.white;
     final txtPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
     final txtSub = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
     final inputBg = isDark ? const Color(0xFF1E2028) : const Color(0xFFF1F5F9);
+
 
     showDialog(
       context: context,
@@ -465,32 +472,81 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(height: 16),
 
                         AppGradientButton(
-                          label: 'Generate Link',
+                          label: loading ? 'Generating...' : 'Generate Link',
                           onTap: loading ? null : () async {
-                            setStateDialog(() => loading = true);
+                            setStateDialog(() {
+                              loading = true;
+                              searchError = null;
+                            });
+
+                            // Helper: attempt call link creation
+                            Future<Map<String, dynamic>> _tryCreate() =>
+                                ApiClient.post('/call-links/create', {
+                                  'callType': callType,
+                                  'durationMinutes': 60,
+                                  'pin': pinCtrl.text.trim().isNotEmpty
+                                      ? pinCtrl.text.trim()
+                                      : null,
+                                });
+
                             try {
-                              final res = await ApiClient.post('/call-links/create', {
-                                'callType': callType,
-                                'durationMinutes': 60,
-                                'pin': pinCtrl.text.trim().isNotEmpty ? pinCtrl.text.trim() : null,
-                              });
+                              // First attempt
+                              final res = await _tryCreate();
                               setStateDialog(() {
                                 loading = false;
                                 generatedUrl = '${ApiClient.webBaseUrl}/c/${res['token']}';
                                 generatedCallId = res['callId'];
                               });
                             } catch (_) {
+                              // Server may be waking up (Render free tier) — wait and retry once
                               setStateDialog(() {
-                                loading = false;
-                                generatedUrl = '${ApiClient.webBaseUrl}/c/demo_${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
-                                generatedCallId = 'demo_${DateTime.now().millisecondsSinceEpoch}';
+                                searchError = 'Server is waking up... retrying in 8s ⏳';
                               });
+                              await Future.delayed(const Duration(seconds: 8));
+                              try {
+                                final res = await _tryCreate();
+                                setStateDialog(() {
+                                  loading = false;
+                                  searchError = null;
+                                  generatedUrl = '${ApiClient.webBaseUrl}/c/${res['token']}';
+                                  generatedCallId = res['callId'];
+                                });
+                              } catch (e) {
+                                setStateDialog(() {
+                                  loading = false;
+                                  searchError = 'Could not create link. Check your internet and try again.\n(${e.toString().replaceFirst('Exception: ', '')})';
+                                });
+                              }
                             }
                           },
                           isLoading: loading,
                           height: 50,
                           icon: const Icon(Icons.bolt_rounded, color: Colors.white, size: 18),
                         ),
+
+                        if (searchError != null) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF43F5E).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFF43F5E).withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.error_outline_rounded, color: Color(0xFFF43F5E), size: 18),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    searchError!,
+                                    style: const TextStyle(color: Color(0xFFF43F5E), fontSize: 12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
 
                       ] else ...[ // — LINK READY STATE —
                         // Success card
@@ -1097,45 +1153,231 @@ class _HomeScreenState extends State<HomeScreen> {
     final isDark = widget.isDarkMode;
     final itemBg = isDark ? const Color(0xFF1B1D23) : const Color(0xFFF1F5F9);
     final txtColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subTxtColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final avatarBg = isDark ? const Color(0xFF26282F) : const Color(0xFFE2E8F0);
+    final avatarTxt = isDark ? Colors.white : const Color(0xFF0F172A);
 
     if (_activeTab == 1) {
-      return Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            InkWell(
-              onTap: _showCreateCallLinkModal,
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                padding: const EdgeInsets.all(18),
+      // Calls tab — online users + recent contacts + create link button
+      final filteredOnline = _onlineUsers
+          .where((u) => u['id'] != widget.user?['id'] && u['username'] != widget.user?['username'])
+          .toList();
+
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        children: [
+          // Create Call Link button at top
+          InkWell(
+            onTap: _showCreateCallLinkModal,
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF7B2FBE), Color(0xFFB5177A)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF7B2FBE).withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: Colors.white24,
+                    child: Icon(Icons.add_link_rounded, color: Colors.white),
+                  ),
+                  SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Create Guest Call Link', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                        SizedBox(height: 2),
+                        Text('Share with anyone — no account needed', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.white70),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Online users section
+          if (filteredOnline.isNotEmpty) ...[
+            Row(
+              children: [
+                Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle)),
+                const SizedBox(width: 6),
+                Text('Online Now (${filteredOnline.length})', style: TextStyle(color: subTxtColor, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ...filteredOnline.map((user) {
+              final displayName = user['username']?.toString().startsWith('@') == true
+                  ? user['username'].toString().substring(1)
+                  : user['username']?.toString() ?? 'User';
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
                   color: itemBg,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.25)),
                 ),
                 child: Row(
                   children: [
-                    const CircleAvatar(
-                      backgroundColor: Color(0xFF7B2FBE),
-                      child: Icon(Icons.link_rounded, color: Colors.white),
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 22,
+                          backgroundColor: avatarBg,
+                          child: Text(displayName.substring(0, 1).toUpperCase(), style: TextStyle(color: avatarTxt, fontWeight: FontWeight.bold, fontSize: 16)),
+                        ),
+                        Positioned(
+                          right: 0, bottom: 0,
+                          child: Container(
+                            width: 12, height: 12,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: isDark ? const Color(0xFF1B1D23) : Colors.white, width: 2),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Create Guest Call Link', style: TextStyle(color: txtColor, fontWeight: FontWeight.bold, fontSize: 15)),
-                          const SizedBox(height: 2),
-                          const Text('Share an audio/video call link with anyone', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                          Text('@$displayName', style: TextStyle(color: txtColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                          Text('Active now', style: TextStyle(color: const Color(0xFF10B981), fontSize: 11)),
                         ],
                       ),
                     ),
-                    const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF7B2FBE)),
+                    // Audio call button
+                    GestureDetector(
+                      onTap: () => widget.onStartCall('audio', user),
+                      child: Container(
+                        width: 38, height: 38,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF7B2FBE).withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.phone_rounded, color: Color(0xFF7B2FBE), size: 18),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Video call button
+                    GestureDetector(
+                      onTap: () => widget.onStartCall('video', user),
+                      child: Container(
+                        width: 38, height: 38,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE91E8C).withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.videocam_rounded, color: Color(0xFFE91E8C), size: 18),
+                      ),
+                    ),
                   ],
                 ),
+              );
+            }),
+            const SizedBox(height: 16),
+          ],
+
+          // Recent conversations with call buttons
+          if (_conversations.isNotEmpty) ...[
+            Text('Recent Contacts', style: TextStyle(color: subTxtColor, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+            const SizedBox(height: 10),
+            ..._conversations.map((item) {
+              final displayName = item['username']?.toString().startsWith('@') == true
+                  ? item['username'].toString().substring(1)
+                  : item['username']?.toString() ?? 'User';
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: itemBg,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: avatarBg,
+                      child: Text(displayName.substring(0, 1).toUpperCase(), style: TextStyle(color: avatarTxt, fontWeight: FontWeight.bold, fontSize: 16)),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('@$displayName', style: TextStyle(color: txtColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                          Text(item['lastMessage'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: subTxtColor, fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                    // Audio call
+                    GestureDetector(
+                      onTap: () => widget.onStartCall('audio', item),
+                      child: Container(
+                        width: 38, height: 38,
+                        decoration: BoxDecoration(color: const Color(0xFF7B2FBE).withValues(alpha: 0.12), shape: BoxShape.circle),
+                        child: const Icon(Icons.phone_rounded, color: Color(0xFF7B2FBE), size: 18),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Video call
+                    GestureDetector(
+                      onTap: () => widget.onStartCall('video', item),
+                      child: Container(
+                        width: 38, height: 38,
+                        decoration: BoxDecoration(color: const Color(0xFFE91E8C).withValues(alpha: 0.12), shape: BoxShape.circle),
+                        child: const Icon(Icons.videocam_rounded, color: Color(0xFFE91E8C), size: 18),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+
+          // Empty state if no users at all
+          if (filteredOnline.isEmpty && _conversations.isEmpty) ...[
+            const SizedBox(height: 32),
+            Center(
+              child: Column(
+                children: [
+                  Container(
+                    width: 72, height: 72,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7B2FBE).withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.3)),
+                    ),
+                    child: const Icon(Icons.people_outline_rounded, color: Color(0xFF7B2FBE), size: 36),
+                  ),
+                  const SizedBox(height: 16),
+                  Text('No contacts yet', style: TextStyle(color: txtColor, fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  Text('Search for someone from Chat tab\nor create a guest call link above.', textAlign: TextAlign.center, style: TextStyle(color: subTxtColor, fontSize: 12, height: 1.5)),
+                ],
               ),
             ),
           ],
-        ),
+        ],
       );
     } else {
       return Center(

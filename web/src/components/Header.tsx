@@ -107,8 +107,10 @@ export const Header: React.FC = () => {
           </div>
 
           {/* Primary Gradient Action Button */}
-          <button
-            onClick={() => alert('OurSpace Mobile App (v1.0.0) is available on Google Play Store.')}
+          <a
+            href="https://play.google.com/store/apps/details?id=com.ourspace.app"
+            target="_blank"
+            rel="noopener noreferrer"
             style={{
               fontSize: '14px',
               fontWeight: 700,
@@ -123,19 +125,20 @@ export const Header: React.FC = () => {
               alignItems: 'center',
               gap: '8px',
               transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              textDecoration: 'none',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(192, 38, 211, 0.4)';
+              (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-1px)';
+              (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 6px 20px rgba(192, 38, 211, 0.4)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 14px rgba(192, 38, 211, 0.3)';
+              (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(0)';
+              (e.currentTarget as HTMLAnchorElement).style.boxShadow = '0 4px 14px rgba(192, 38, 211, 0.3)';
             }}
           >
             <Download style={{ width: '16px', height: '16px' }} />
             <span>Get Mobile App</span>
-          </button>
+          </a>
         </div>
       </div>
     </header>

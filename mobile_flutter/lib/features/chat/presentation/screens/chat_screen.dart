@@ -142,7 +142,15 @@ class _ChatScreenState extends State<ChatScreen> {
         final decryptedList = <Map<String, dynamic>>[];
         for (final msg in rawMsgs) {
           final text = E2EECryptoService.decryptPayload(msg['encryptedPayload'], widget.recipient['publicKey'] ?? '');
-          decryptedList.add({...msg, 'decryptedText': text, 'time': '5:22'});
+          
+          String timeStr = 'Just now';
+          if (msg['createdAt'] != null) {
+            try {
+              final dt = DateTime.parse(msg['createdAt']).toLocal();
+              timeStr = '${dt.hour > 12 ? dt.hour - 12 : dt.hour == 0 ? 12 : dt.hour}:${dt.minute.toString().padLeft(2, '0')} ${dt.hour >= 12 ? 'PM' : 'AM'}';
+            } catch (_) {}
+          }
+          decryptedList.add({...msg, 'decryptedText': text, 'time': timeStr});
         }
         setState(() {
           _messages.clear();
@@ -165,7 +173,7 @@ class _ChatScreenState extends State<ChatScreen> {
       'encryptedPayload': encrypted,
       'decryptedText': text,
       'messageType': 'text',
-      'time': '5:22',
+      'time': '${DateTime.now().hour > 12 ? DateTime.now().hour - 12 : DateTime.now().hour == 0 ? 12 : DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')} ${DateTime.now().hour >= 12 ? 'PM' : 'AM'}',
       'isTyping': false,
       'createdAt': DateTime.now().toIso8601String(),
     };
@@ -408,7 +416,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _showRecipientProfileModal() {
     final rawName = widget.recipient['username'] ?? 'User';
-    final displayName = rawName.startsWith('@') ? 'Salina Gomez' : rawName;
+    final displayName = rawName;
     final username = rawName.startsWith('@') ? rawName : '@${rawName.toLowerCase().replaceAll(' ', '')}';
     final privateId = widget.recipient['privateId'] ?? 'USER-${widget.recipient['id'] ?? '891240'}';
     final profileImgPath = widget.recipient['profileImage'];
@@ -651,8 +659,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final rawName = widget.recipient['username'] ?? 'Salina Gomez';
-    final displayName = rawName.startsWith('@') ? 'Salina Gomez' : rawName;
+    final rawName = widget.recipient['username'] ?? 'User';
+    final displayName = rawName;
     final isDark = widget.isDarkMode;
     final scaffoldBg = isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC);
     final headerTxt = isDark ? Colors.white : const Color(0xFF0F172A);
