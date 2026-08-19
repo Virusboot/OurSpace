@@ -66,6 +66,7 @@ export class WebRTCService {
   }
 
   public async joinCallRoom(callId: string, nickname: string) {
+    this.callId = callId;
     this.initPeerConnection(callId);
     this.sendSignal({
       type: 'call_join',
@@ -106,6 +107,7 @@ export class WebRTCService {
           type: 'ice_candidate',
           callId,
           senderId: this.guestId,
+          targetId: this.remoteParticipantId ?? undefined,
           candidate: event.candidate.toJSON()
         });
       }
@@ -118,49 +120,83 @@ export class WebRTCService {
     };
   }
 
+  private callId: string = '';
+  private hasRemoteDescription: boolean = false;
+  private queuedCandidates: RTCIceCandidateInit[] = [];
+  private remoteParticipantId: string | null = null;
+
   private async handleSignalMessage(msg: SignalingMessage) {
     switch (msg.type) {
-      case 'participant_joined':
-        // As guest, when host or participant joins, create SDP offer
-        if (this.peerConnection) {
+
+      case 'call_joined_ack': {
+        // We (guest) just joined. If host is already in room → we answer (host will send offer)
+        // If room was empty → we wait for host/participant_joined event
+        const existing = (msg as any).existingParticipants as string[] | undefined;
+        if (existing && existing.length > 0) {
+          // Host is already waiting → they will send us an offer. Nothing to do here.
+          this.remoteParticipantId = existing[0];
+          console.log('[WebRTC] Host already in room, waiting for their offer...');
+        }
+        break;
+      }
+
+      case 'participant_joined': {
+        // Someone joined AFTER us. As the one already in the room, we create the offer.
+        this.remoteParticipantId = msg.participantId ?? null;
+        if (this.peerConnection && this.remoteParticipantId) {
+          console.log('[WebRTC] New participant joined, creating offer...');
           const offer = await this.peerConnection.createOffer();
           await this.peerConnection.setLocalDescription(offer);
           this.sendSignal({
             type: 'call_offer',
-            callId: msg.callId,
+            callId: this.callId,
             senderId: this.guestId,
-            targetId: msg.participantId,
+            targetId: this.remoteParticipantId,
             sdp: offer
           });
         }
         break;
+      }
 
-      case 'call_offer':
+      case 'call_offer': {
         if (this.peerConnection && msg.sdp) {
+          this.remoteParticipantId = msg.senderId ?? null;
           await this.peerConnection.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+          this.hasRemoteDescription = true;
           const answer = await this.peerConnection.createAnswer();
           await this.peerConnection.setLocalDescription(answer);
           this.sendSignal({
             type: 'call_answer',
-            callId: msg.callId,
+            callId: this.callId,
             senderId: this.guestId,
             targetId: msg.senderId,
             sdp: answer
           });
+          // Flush queued ICE candidates
+          await this.flushQueuedCandidates();
         }
         break;
+      }
 
-      case 'call_answer':
+      case 'call_answer': {
         if (this.peerConnection && msg.sdp) {
           await this.peerConnection.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+          this.hasRemoteDescription = true;
+          await this.flushQueuedCandidates();
         }
         break;
+      }
 
-      case 'ice_candidate':
-        if (this.peerConnection && msg.candidate) {
-          await this.peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate));
+      case 'ice_candidate': {
+        if (msg.candidate) {
+          if (this.peerConnection && this.hasRemoteDescription) {
+            await this.peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate));
+          } else {
+            this.queuedCandidates.push(msg.candidate);
+          }
         }
         break;
+      }
 
       case 'call_ended':
         this.leaveCall();
@@ -172,6 +208,15 @@ export class WebRTCService {
         break;
     }
   }
+
+  private async flushQueuedCandidates() {
+    if (!this.peerConnection) return;
+    for (const c of this.queuedCandidates) {
+      await this.peerConnection.addIceCandidate(new RTCIceCandidate(c));
+    }
+    this.queuedCandidates = [];
+  }
+
 
   public toggleAudio(enabled: boolean) {
     if (this.localStream) {
