@@ -405,21 +405,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             'Share with anyone — no account needed',
                             style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 11),
                           ),
-                        ],
-                      ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () => Navigator.pop(ctx),
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
-                        ),
-                      ),
                     ],
                   ),
                 ),
