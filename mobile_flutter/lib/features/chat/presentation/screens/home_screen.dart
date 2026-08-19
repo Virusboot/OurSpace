@@ -337,180 +337,385 @@ class _HomeScreenState extends State<HomeScreen> {
     String? generatedCallId;
     bool loading = false;
     final isDark = widget.isDarkMode;
+    final bg = isDark ? const Color(0xFF14161C) : Colors.white;
+    final txtPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
+    final txtSub = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final inputBg = isDark ? const Color(0xFF1E2028) : const Color(0xFFF1F5F9);
 
     showDialog(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.6),
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setStateDialog) => AlertDialog(
-          backgroundColor: isDark ? const Color(0xFF14161C) : Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: Row(
-            children: [
-              const Icon(Icons.add_link_rounded, color: Color(0xFF7B2FBE), size: 24),
-              const SizedBox(width: 10),
-              Text('Create Guest Call Link', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (generatedUrl == null) ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setStateDialog(() => callType = 'video'),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: callType == 'video' ? const Color(0xFF7B2FBE).withValues(alpha: 0.2) : (isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.04)),
-                            border: Border.all(color: callType == 'video' ? const Color(0xFF7B2FBE) : Colors.transparent),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.videocam, size: 18, color: isDark ? Colors.white : const Color(0xFF0F172A)),
-                              const SizedBox(width: 6),
-                              Text('Video', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 13)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setStateDialog(() => callType = 'audio'),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: callType == 'audio' ? const Color(0xFF7B2FBE).withValues(alpha: 0.2) : (isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.04)),
-                            border: Border.all(color: callType == 'audio' ? const Color(0xFF7B2FBE) : Colors.transparent),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.mic, size: 18, color: isDark ? Colors.white : const Color(0xFF0F172A)),
-                              const SizedBox(width: 6),
-                              Text('Audio', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 13)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+        builder: (ctx, setStateDialog) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+          child: Container(
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF7B2FBE).withValues(alpha: 0.18),
+                  blurRadius: 40,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 12),
                 ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: pinCtrl,
-                  keyboardType: TextInputType.number,
-                  style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13),
-                  decoration: InputDecoration(
-                    hintText: 'Enter 4-digit passcode (e.g. 1234)',
-                    hintStyle: const TextStyle(color: Colors.grey),
-                    filled: true,
-                    fillColor: isDark ? Colors.black.withValues(alpha: 0.4) : const Color(0xFFF1F5F9),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                    prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey, size: 18),
-                  ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 6),
                 ),
-                const SizedBox(height: 16),
-                AppGradientButton(
-                  label: loading ? 'Generating...' : 'Generate Encrypted Link',
-                  onTap: loading
-                      ? null
-                      : () async {
-                          setStateDialog(() => loading = true);
-                          try {
-                            final res = await ApiClient.post('/call-links/create', {
-                              'callType': callType,
-                              'durationMinutes': 60,
-                              'pin': pinCtrl.text.trim().isNotEmpty ? pinCtrl.text.trim() : null,
-                            });
-                            setStateDialog(() {
-                              loading = false;
-                              generatedUrl = '${ApiClient.webBaseUrl}/c/${res['token']}';
-                              generatedCallId = res['callId'];
-                            });
-                          } catch (_) {
-                            setStateDialog(() {
-                              loading = false;
-                              generatedUrl = '${ApiClient.webBaseUrl}/c/demo_${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
-                              generatedCallId = 'demo_${DateTime.now().millisecondsSinceEpoch}';
-                            });
-                          }
-                        },
-                  isLoading: loading,
-                  height: 46,
-                ),
-              ] else ...[
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── GRADIENT HEADER ──
                 Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF7B2FBE).withValues(alpha: 0.1),
-                    border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.3)),
-                    borderRadius: BorderRadius.circular(16),
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF7B2FBE), Color(0xFFB5177A)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
                   ),
-                  child: Column(
+                  child: Row(
                     children: [
-                      const Icon(Icons.check_circle_outline, color: Color(0xFF7B2FBE), size: 36),
-                      const SizedBox(height: 8),
-                      Text('Call Link Ready!', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 15)),
-                      const SizedBox(height: 10),
-                      SelectableText(
-                        generatedUrl!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Color(0xFF7B2FBE), fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 14),
-                      AppGradientButton(
+                      Container(
+                        width: 42,
                         height: 42,
-                        borderRadius: 10,
-                        icon: const Icon(Icons.copy_rounded, size: 16, color: Colors.white),
-                        label: 'Copy Call Link',
-                        onTap: () {
-                          Clipboard.setData(ClipboardData(text: generatedUrl!));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Call link copied to clipboard! Share it anywhere.'),
-                              duration: Duration(seconds: 2),
-                              backgroundColor: Color(0xFF7B2FBE),
-                            ),
-                          );
-                        },
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.add_link_rounded, color: Colors.white, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Create Call Link',
+                            style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: -0.3),
+                          ),
+                          Text(
+                            'Share with anyone — no account needed',
+                            style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 11),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(ctx),
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Close', style: TextStyle(color: Colors.grey)),
-            ),
-            if (generatedUrl != null)
-              SizedBox(
-                width: 175,
-                child: AppGradientButton(
-                  height: 40,
-                  borderRadius: 10,
-                  icon: const Icon(Icons.call_rounded, size: 16, color: Colors.white),
-                  label: 'Start Call & Join',
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    widget.onStartCall(callType, {'id': 'guest', 'username': '@waiting_for_join'}, callId: generatedCallId);
-                  },
+
+                // ── CONTENT ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (generatedUrl == null) ...[ // — CREATION FORM —
+                        // Call type selector
+                        Row(
+                          children: [
+                            _buildCallTypeChip(
+                              icon: Icons.videocam_rounded,
+                              label: 'Video Call',
+                              selected: callType == 'video',
+                              isDark: isDark,
+                              onTap: () => setStateDialog(() => callType = 'video'),
+                            ),
+                            const SizedBox(width: 10),
+                            _buildCallTypeChip(
+                              icon: Icons.mic_rounded,
+                              label: 'Audio Call',
+                              selected: callType == 'audio',
+                              isDark: isDark,
+                              onTap: () => setStateDialog(() => callType = 'audio'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Optional PIN field
+                        Container(
+                          decoration: BoxDecoration(
+                            color: inputBg,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: TextField(
+                            controller: pinCtrl,
+                            keyboardType: TextInputType.number,
+                            maxLength: 4,
+                            style: TextStyle(color: txtPrimary, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 6),
+                            decoration: InputDecoration(
+                              counterText: '',
+                              hintText: 'Optional PIN (4 digits)',
+                              hintStyle: TextStyle(color: txtSub, fontSize: 13, letterSpacing: 0, fontWeight: FontWeight.normal),
+                              filled: false,
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              prefixIcon: Icon(Icons.lock_outline_rounded, color: const Color(0xFF7B2FBE), size: 18),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        AppGradientButton(
+                          label: 'Generate Link',
+                          onTap: loading ? null : () async {
+                            setStateDialog(() => loading = true);
+                            try {
+                              final res = await ApiClient.post('/call-links/create', {
+                                'callType': callType,
+                                'durationMinutes': 60,
+                                'pin': pinCtrl.text.trim().isNotEmpty ? pinCtrl.text.trim() : null,
+                              });
+                              setStateDialog(() {
+                                loading = false;
+                                generatedUrl = '${ApiClient.webBaseUrl}/c/${res['token']}';
+                                generatedCallId = res['callId'];
+                              });
+                            } catch (_) {
+                              setStateDialog(() {
+                                loading = false;
+                                generatedUrl = '${ApiClient.webBaseUrl}/c/demo_${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+                                generatedCallId = 'demo_${DateTime.now().millisecondsSinceEpoch}';
+                              });
+                            }
+                          },
+                          isLoading: loading,
+                          height: 50,
+                          icon: const Icon(Icons.bolt_rounded, color: Colors.white, size: 18),
+                        ),
+
+                      ] else ...[ // — LINK READY STATE —
+                        // Success card
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFF7B2FBE).withValues(alpha: 0.08),
+                                const Color(0xFFE91E8C).withValues(alpha: 0.06),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.2)),
+                          ),
+                          child: Column(
+                            children: [
+                              // Success icon
+                              Container(
+                                width: 52,
+                                height: 52,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFF7B2FBE), Color(0xFFE91E8C)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF7B2FBE).withValues(alpha: 0.35),
+                                      blurRadius: 14,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(Icons.check_rounded, color: Colors.white, size: 26),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                'Link is Ready to Share!',
+                                style: TextStyle(color: txtPrimary, fontWeight: FontWeight.bold, fontSize: 15),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Valid for 60 minutes',
+                                style: TextStyle(color: txtSub, fontSize: 11),
+                              ),
+                              const SizedBox(height: 14),
+
+                              // URL box
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF0F1117) : Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.25)),
+                                ),
+                                child: SelectableText(
+                                  generatedUrl!,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: const Color(0xFF7B2FBE),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    height: 1.5,
+                                    fontFamily: 'monospace',
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+
+                              // Copy button
+                              AppGradientButton(
+                                height: 44,
+                                borderRadius: 12,
+                                icon: const Icon(Icons.copy_rounded, size: 16, color: Colors.white),
+                                label: 'Copy Link',
+                                onTap: () {
+                                  Clipboard.setData(ClipboardData(text: generatedUrl!));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: const Row(
+                                        children: [
+                                          Icon(Icons.check_circle_rounded, color: Colors.white, size: 16),
+                                          SizedBox(width: 8),
+                                          Text('Link copied! Share it anywhere.'),
+                                        ],
+                                      ),
+                                      duration: const Duration(seconds: 2),
+                                      backgroundColor: const Color(0xFF7B2FBE),
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      margin: const EdgeInsets.all(16),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        if (generatedUrl != null) ...[ 
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      side: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+                                    ),
+                                  ),
+                                  child: Text('Close', style: TextStyle(color: txtSub, fontWeight: FontWeight.w600, fontSize: 13)),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                flex: 2,
+                                child: AppGradientButton(
+                                  height: 44,
+                                  borderRadius: 12,
+                                  icon: const Icon(Icons.call_rounded, size: 16, color: Colors.white),
+                                  label: 'Start & Join',
+                                  onTap: () {
+                                    Navigator.pop(ctx);
+                                    widget.onStartCall(callType, {'id': 'guest', 'username': '@waiting_for_join'}, callId: generatedCallId);
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ],
+                  ),
                 ),
-              ),
-          ],
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
+
+  Widget _buildCallTypeChip({
+    required IconData icon,
+    required String label,
+    required bool selected,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            gradient: selected
+                ? const LinearGradient(
+                    colors: [Color(0xFF7B2FBE), Color(0xFFB5177A)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: selected
+                ? null
+                : (isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFF1F5F9)),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected ? Colors.transparent : (isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
+            ),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF7B2FBE).withValues(alpha: 0.35),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 17, color: selected ? Colors.white : (isDark ? Colors.white60 : const Color(0xFF64748B))),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: selected ? Colors.white : (isDark ? Colors.white60 : const Color(0xFF64748B)),
+                  fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
