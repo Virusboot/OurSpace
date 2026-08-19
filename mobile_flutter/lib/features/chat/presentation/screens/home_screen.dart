@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/networking/api_client.dart';
+import '../../../../core/networking/websocket_client.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 import '../../../../shared/widgets/app_gradient_button.dart';
 
@@ -11,7 +13,7 @@ class HomeScreen extends StatefulWidget {
   final bool isDarkMode;
   final VoidCallback onToggleTheme;
   final Function(Map<String, dynamic> recipient) onOpenChat;
-  final Function(String type, Map<String, dynamic>? recipient) onStartCall;
+  final Function(String type, Map<String, dynamic>? recipient, {String? callId}) onStartCall;
   final VoidCallback onOpenSettings;
 
   const HomeScreen({
@@ -32,6 +34,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int _activeTab = 0; // 0: Chat, 1: Calls, 2: Status, 3: Settings
   final TextEditingController _searchCtrl = TextEditingController();
   final List<Map<String, dynamic>> _conversations = [];
+  StreamSubscription? _wsSubscription;
+  List<Map<String, dynamic>> _onlineUsers = [];
 
   @override
   void initState() {
@@ -40,6 +44,37 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) setState(() {});
     });
     _loadRecentChats();
+    _fetchOnlineUsers();
+    _wsSubscription = WebSocketClient().stream.listen((event) {
+      if (event['type'] == 'online_users_update') {
+        final usersList = event['users'] as List?;
+        if (usersList != null && mounted) {
+          setState(() {
+            _onlineUsers = List<Map<String, dynamic>>.from(
+              usersList.map((u) => Map<String, dynamic>.from(u))
+            );
+          });
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _wsSubscription?.cancel();
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchOnlineUsers() async {
+    try {
+      final res = await ApiClient.get('/users/online');
+      if (res is List && mounted) {
+        setState(() {
+          _onlineUsers = (res as List).map((u) => Map<String, dynamic>.from(u as Map)).toList();
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadRecentChats() async {
@@ -58,6 +93,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _saveRecentChat(Map<String, dynamic> peer) async {
+    // Skip saving guest users — they have no real account on the platform
+    final peerId = peer['id']?.toString() ?? '';
+    final privateId = peer['privateId']?.toString() ?? '';
+    if (peerId.startsWith('guest_') || privateId.isEmpty) return;
+
     final data = await SecureStorageService.read('recent_chats');
     List<Map<String, dynamic>> list = [];
     if (data != null && data.isNotEmpty) {
@@ -81,11 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadRecentChats();
   }
 
-  @override
-  void dispose() {
-    _searchCtrl.dispose();
-    super.dispose();
-  }
+
 
   void _showNewActionSheet() {
     final isDark = widget.isDarkMode;
@@ -298,6 +334,7 @@ class _HomeScreenState extends State<HomeScreen> {
     String callType = 'video';
     final pinCtrl = TextEditingController();
     String? generatedUrl;
+    String? generatedCallId;
     bool loading = false;
     final isDark = widget.isDarkMode;
 
@@ -395,11 +432,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             setStateDialog(() {
                               loading = false;
                               generatedUrl = '${ApiClient.webBaseUrl}/c/${res['token']}';
+                              generatedCallId = res['callId'];
                             });
                           } catch (_) {
                             setStateDialog(() {
                               loading = false;
                               generatedUrl = '${ApiClient.webBaseUrl}/c/demo_${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+                              generatedCallId = 'demo_${DateTime.now().millisecondsSinceEpoch}';
                             });
                           }
                         },
@@ -426,27 +465,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: const TextStyle(color: Color(0xFF7B2FBE), fontFamily: 'monospace', fontSize: 12, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 14),
-                      SizedBox(
-                        width: double.infinity,
+                      AppGradientButton(
                         height: 42,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF7B2FBE),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                          icon: const Icon(Icons.copy_rounded, size: 16, color: Colors.white),
-                          label: const Text('Copy Call Link', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                          onPressed: () {
-                            Clipboard.setData(ClipboardData(text: generatedUrl!));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Call link copied to clipboard! Share it anywhere.'),
-                                duration: Duration(seconds: 2),
-                                backgroundColor: Color(0xFF7B2FBE),
-                              ),
-                            );
-                          },
-                        ),
+                        borderRadius: 10,
+                        icon: const Icon(Icons.copy_rounded, size: 16, color: Colors.white),
+                        label: 'Copy Call Link',
+                        onTap: () {
+                          Clipboard.setData(ClipboardData(text: generatedUrl!));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Call link copied to clipboard! Share it anywhere.'),
+                              duration: Duration(seconds: 2),
+                              backgroundColor: Color(0xFF7B2FBE),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -455,7 +488,24 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close', style: TextStyle(color: Colors.grey))),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Close', style: TextStyle(color: Colors.grey)),
+            ),
+            if (generatedUrl != null)
+              SizedBox(
+                width: 175,
+                child: AppGradientButton(
+                  height: 40,
+                  borderRadius: 10,
+                  icon: const Icon(Icons.call_rounded, size: 16, color: Colors.white),
+                  label: 'Start Call & Join',
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    widget.onStartCall(callType, {'id': 'guest', 'username': '@waiting_for_join'}, callId: generatedCallId);
+                  },
+                ),
+              ),
           ],
         ),
       ),
@@ -609,125 +659,136 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Expanded(
                       child: _activeTab == 0
-                          ? (filteredConvs.isEmpty
-                              ? Center(
-                                  child: SingleChildScrollView(
-                                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(20),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF7B2FBE).withValues(alpha: 0.12),
-                                            shape: BoxShape.circle,
-                                            border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.3), width: 1.5),
-                                          ),
-                                          child: const Icon(Icons.shield_outlined, size: 48, color: Color(0xFF7B2FBE)),
-                                        ),
-                                        const SizedBox(height: 20),
-                                        Text(
-                                          filterQuery.isNotEmpty ? 'No chats matching "$filterQuery"' : 'No Active Conversations',
-                                          style: TextStyle(color: itemTxt, fontSize: 18, fontWeight: FontWeight.bold),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          filterQuery.isNotEmpty
-                                              ? 'Try searching with a different name, handle, or Private ID.'
-                                              : 'Your chats are zero-knowledge and end-to-end encrypted. Tap below to start a new secure chat.',
-                                          style: TextStyle(color: itemSubtxt, fontSize: 13, height: 1.5),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                        if (filterQuery.isEmpty) ...[
-                                          const SizedBox(height: 24),
-                                          AppGradientButton(
-                                            label: 'Start New Secure Chat',
-                                            onTap: _showNewActionSheet,
-                                            icon: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
-                                            height: 48,
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                )
-                              : ListView.builder(
-                                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
-                                  itemCount: filteredConvs.length,
-                                  itemBuilder: (ctx, idx) {
-                                    final item = filteredConvs[idx];
-                                    final unread = item['unread'] as int;
-                                    final isSelected = idx == 0;
-
-                                    return Container(
-                                      margin: const EdgeInsets.only(bottom: 8),
-                                      decoration: BoxDecoration(
-                                        color: isSelected ? itemSelectedBg : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: ListTile(
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                                        onTap: () => widget.onOpenChat(item),
-                                        leading: CircleAvatar(
-                                          radius: 25,
-                                          backgroundColor: avatarBg,
-                                          child: (item['profileImage'] != null && File(item['profileImage']).existsSync())
-                                              ? ClipRRect(
-                                                  borderRadius: BorderRadius.circular(25),
-                                                  child: Image.file(
-                                                    File(item['profileImage']),
-                                                    width: 50,
-                                                    height: 50,
-                                                    fit: BoxFit.cover,
+                          ? (() {
+                              final filteredOnline = _onlineUsers.where((u) => u['id'] != widget.user?['id'] && u['username'] != widget.user?['username']).toList();
+                              return Column(
+                                children: [
+                                  if (filteredOnline.isNotEmpty)
+                                    _buildOnlineUsersSection(filteredOnline),
+                                  Expanded(
+                                    child: filteredConvs.isEmpty
+                                        ? Center(
+                                            child: SingleChildScrollView(
+                                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                                              child: Column(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  Container(
+                                                    padding: const EdgeInsets.all(20),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(0xFF7B2FBE).withValues(alpha: 0.12),
+                                                      shape: BoxShape.circle,
+                                                      border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.3), width: 1.5),
+                                                    ),
+                                                    child: const Icon(Icons.shield_outlined, size: 48, color: Color(0xFF7B2FBE)),
                                                   ),
-                                                )
-                                              : Text(
-                                                  item['username'].toString().substring(0, 1).toUpperCase(),
-                                                  style: TextStyle(color: avatarTxt, fontWeight: FontWeight.bold, fontSize: 17),
-                                                ),
-                                        ),
-                                        title: Text(
-                                          item['username'],
-                                          style: TextStyle(
-                                            color: itemTxt,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 15,
-                                          ),
-                                        ),
-                                        subtitle: Padding(
-                                          padding: const EdgeInsets.only(top: 4),
-                                          child: Text(
-                                            item['lastMessage'],
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: itemSubtxt,
-                                              fontSize: 13,
+                                                  const SizedBox(height: 20),
+                                                  Text(
+                                                    filterQuery.isNotEmpty ? 'No chats matching "$filterQuery"' : 'No Active Conversations',
+                                                    style: TextStyle(color: itemTxt, fontSize: 18, fontWeight: FontWeight.bold),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  Text(
+                                                    filterQuery.isNotEmpty
+                                                        ? 'Try searching with a different name, handle, or Private ID.'
+                                                        : 'Your chats are zero-knowledge and end-to-end encrypted. Tap below to start a new secure chat.',
+                                                    style: TextStyle(color: itemSubtxt, fontSize: 13, height: 1.5),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                  if (filterQuery.isEmpty) ...[
+                                                    const SizedBox(height: 24),
+                                                    AppGradientButton(
+                                                      label: 'Start New Secure Chat',
+                                                      onTap: _showNewActionSheet,
+                                                      icon: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                                                      height: 48,
+                                                    ),
+                                                  ],
+                                                ],
+                                              ),
                                             ),
-                                          ),
-                                        ),
-                                        trailing: unread > 0
-                                            ? Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          )
+                                        : ListView.builder(
+                                            padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
+                                            itemCount: filteredConvs.length,
+                                            itemBuilder: (ctx, idx) {
+                                              final item = filteredConvs[idx];
+                                              final unread = item['unread'] as int;
+                                              final isSelected = idx == 0;
+
+                                              return Container(
+                                                margin: const EdgeInsets.only(bottom: 8),
                                                 decoration: BoxDecoration(
-                                                  color: const Color(0xFF7B2FBE),
-                                                  borderRadius: BorderRadius.circular(12),
+                                                  color: isSelected ? itemSelectedBg : Colors.transparent,
+                                                  borderRadius: BorderRadius.circular(20),
                                                 ),
-                                                child: Text(
-                                                  '$unread',
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.bold,
+                                                child: ListTile(
+                                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                                                  onTap: () => widget.onOpenChat(item),
+                                                  leading: CircleAvatar(
+                                                    radius: 25,
+                                                    backgroundColor: avatarBg,
+                                                    child: (item['profileImage'] != null && File(item['profileImage']).existsSync())
+                                                        ? ClipRRect(
+                                                            borderRadius: BorderRadius.circular(25),
+                                                            child: Image.file(
+                                                              File(item['profileImage']),
+                                                              width: 50,
+                                                              height: 50,
+                                                              fit: BoxFit.cover,
+                                                            ),
+                                                          )
+                                                        : Text(
+                                                            item['username'].toString().substring(0, 1).toUpperCase(),
+                                                            style: TextStyle(color: avatarTxt, fontWeight: FontWeight.bold, fontSize: 17),
+                                                          ),
                                                   ),
+                                                  title: Text(
+                                                    item['username'],
+                                                    style: TextStyle(
+                                                      color: itemTxt,
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 15,
+                                                    ),
+                                                  ),
+                                                  subtitle: Padding(
+                                                    padding: const EdgeInsets.only(top: 4),
+                                                    child: Text(
+                                                      item['lastMessage'],
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                        color: itemSubtxt,
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  trailing: unread > 0
+                                                      ? Container(
+                                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                          decoration: BoxDecoration(
+                                                            color: const Color(0xFF7B2FBE),
+                                                            borderRadius: BorderRadius.circular(12),
+                                                          ),
+                                                          child: Text(
+                                                            '$unread',
+                                                            style: const TextStyle(
+                                                              color: Colors.white,
+                                                              fontSize: 11,
+                                                              fontWeight: FontWeight.bold,
+                                                            ),
+                                                          ),
+                                                        )
+                                                      : null,
                                                 ),
-                                              )
-                                            : null,
-                                      ),
-                                    );
-                                  },
-                                ))
+                                              );
+                                            },
+                                          ),
+                                  ),
+                                ],
+                              );
+                            })()
                           : _buildSecondaryTabContent(),
                     ),
                   ],
@@ -934,5 +995,109 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     }
+  }
+
+  Widget _buildOnlineUsersSection(List<Map<String, dynamic>> users) {
+    final isDark = widget.isDarkMode;
+    final titleColor = isDark ? Colors.white70 : const Color(0xFF475569);
+    final avatarBg = isDark ? const Color(0xFF26282F) : const Color(0xFFE2E8F0);
+    final avatarTxt = isDark ? Colors.white : const Color(0xFF0F172A);
+    final labelColor = isDark ? Colors.white60 : const Color(0xFF0F172A);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF10B981), // active green
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Active Now (${users.length})',
+                style: TextStyle(
+                  color: titleColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 84,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: users.length,
+            itemBuilder: (ctx, idx) {
+              final user = users[idx];
+              final displayName = user['username'].toString().startsWith('@') 
+                  ? user['username'].toString().substring(1) 
+                  : user['username'].toString();
+              return GestureDetector(
+                onTap: () => widget.onOpenChat(user),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Column(
+                    children: [
+                      Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 25,
+                            backgroundColor: avatarBg,
+                            child: Text(
+                              displayName.substring(0, 1).toUpperCase(),
+                              style: TextStyle(color: avatarTxt, fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                          ),
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              width: 14,
+                              height: 14,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: isDark ? const Color(0xFF121317) : Colors.white, width: 2),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        width: 64,
+                        child: Text(
+                          '@$displayName',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: labelColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const Divider(height: 1, thickness: 1, indent: 16, endIndent: 16),
+      ],
+    );
   }
 }

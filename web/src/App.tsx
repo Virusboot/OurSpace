@@ -3,11 +3,17 @@ import { LandingJoin } from './components/LandingJoin';
 import { ActiveCall } from './components/ActiveCall';
 import { ExpiredLink, InvalidLink } from './components/ExpiredLink';
 import { WebHome } from './components/WebHome';
+import { WebLogin } from './components/WebLogin';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { TermsConditions } from './components/TermsConditions';
 import { ContactUs } from './components/ContactUs';
 import { AboutUs } from './components/AboutUs';
 import { WebRTCService } from './services/webRTCService';
+
+const BACKEND_HOST = 'ourspace-backend.onrender.com';
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? ''
+  : `https://${BACKEND_HOST}`;
 
 export const App: React.FC = () => {
   const [currentRoute, setCurrentRoute] = useState<string>('');
@@ -51,7 +57,7 @@ export const App: React.FC = () => {
 
   const resolveToken = async (tok: string, pin?: string) => {
     try {
-      const res = await fetch(`/api/call-links/resolve/${tok}`, {
+      const res = await fetch(`${API_BASE}/api/call-links/resolve/${tok}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin })
@@ -144,6 +150,10 @@ export const App: React.FC = () => {
   if (currentRoute === '/terms') return <TermsConditions />;
   if (currentRoute === '/contact') return <ContactUs />;
   if (currentRoute === '/about') return <AboutUs />;
+  if (currentRoute === '/login') {
+    const returnPath = new URLSearchParams(window.location.search).get('return') || '/';
+    return <WebLogin returnTo={returnPath} />;
+  }
 
   if (!token) return <WebHome />;
   if (errorStatus === 'expired') return <ExpiredLink />;

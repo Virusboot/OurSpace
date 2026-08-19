@@ -38,12 +38,15 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
   String _recoveryKey = 'sample-recovery-key-1234';
   Map<String, dynamic>? _activeRecipient;
   String _activeCallType = 'video';
+  String? _activeCallId;
   String _activeImageUri = '';
   bool _activeIsViewOnce = false;
   bool _isDarkMode = false;
 
   final _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
+  StreamSubscription<Map<String, dynamic>>? _wsCallSubscription;
+  BuildContext? _incomingCallDialogContext;
 
   @override
   void initState() {
@@ -53,6 +56,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
     _checkStoredUser();
     _loadThemeMode();
     _initDeepLinking();
+    _initCallSignalListener();
   }
 
   void _wakeUpServer() async {
@@ -62,10 +66,111 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
     } catch (_) {}
   }
 
+  void _initCallSignalListener() {
+    _wsCallSubscription?.cancel();
+    _wsCallSubscription = WebSocketClient().stream.listen((event) {
+      if (!mounted) return;
+      final type = event['type'];
+      if (type == 'call_offer') {
+        _handleIncomingCall(event);
+      } else if (type == 'call_ended' || type == 'call_hangup') {
+        _handleCallEndedByRemote(event);
+      }
+    });
+  }
+
+  void _handleIncomingCall(Map<String, dynamic> event) {
+    if (_currentScreen == 'call') {
+      WebSocketClient().send({
+        'type': 'call_hangup',
+        'callId': event['callId'],
+        'targetId': event['senderId'],
+      });
+      return;
+    }
+
+    final senderUsername = event['senderUsername'] ?? '@peer';
+    final callType = event['callType'] ?? 'video';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        _incomingCallDialogContext = dialogCtx;
+        return AlertDialog(
+          backgroundColor: _isDarkMode ? const Color(0xFF14161C) : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Icon(
+                callType == 'video' ? Icons.videocam_rounded : Icons.phone_rounded,
+                color: const Color(0xFF7B2FBE),
+              ),
+              const SizedBox(width: 8),
+              const Text('Incoming Call', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            ],
+          ),
+          content: Text(
+            '$senderUsername is calling you...',
+            style: TextStyle(color: _isDarkMode ? Colors.white70 : Colors.black87, fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                _incomingCallDialogContext = null;
+                Navigator.pop(dialogCtx);
+                WebSocketClient().send({
+                  'type': 'call_hangup',
+                  'callId': event['callId'],
+                  'targetId': event['senderId'],
+                });
+              },
+              child: const Text('Reject', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF7B2FBE),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () {
+                _incomingCallDialogContext = null;
+                Navigator.pop(dialogCtx);
+                setState(() {
+                  _activeCallType = callType;
+                  _activeCallId = event['callId'];
+                  _activeRecipient = {
+                    'id': event['senderId'],
+                    'username': senderUsername,
+                  };
+                  _currentScreen = 'call';
+                });
+              },
+              child: const Text('Accept', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _handleCallEndedByRemote(Map<String, dynamic> event) {
+    if (_incomingCallDialogContext != null) {
+      Navigator.of(_incomingCallDialogContext!).pop();
+      _incomingCallDialogContext = null;
+    }
+
+    if (_currentScreen == 'call' && _activeCallId == event['callId']) {
+      setState(() {
+        _currentScreen = 'home';
+      });
+    }
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _linkSubscription?.cancel();
+    _wsCallSubscription?.cancel();
     super.dispose();
   }
 
@@ -209,8 +314,13 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
       }
 
       if (res['valid'] == true) {
+        if (_user == null || _currentScreen == 'enter_pin' || _currentScreen == 'onboarding' || _currentScreen == 'create_pin') {
+          _showDeepLinkError('Authentication Required', 'Please log in or unlock your app before joining call links.');
+          return;
+        }
         setState(() {
           _activeCallType = res['callType'] ?? 'video';
+          _activeCallId = res['callId'];
           _activeRecipient = {
             'id': res['hostId'] ?? 'peer',
             'username': '@host_user',
@@ -462,9 +572,10 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
               _currentScreen = 'chat';
             });
           },
-          onStartCall: (type, recipient) {
+          onStartCall: (type, recipient, {callId}) {
             setState(() {
               _activeCallType = type;
+              _activeCallId = callId ?? 'call_${DateTime.now().millisecondsSinceEpoch}';
               _activeRecipient = recipient ?? {'username': '@alex_dev'};
               _currentScreen = 'call';
             });
@@ -477,9 +588,10 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
           recipient: _activeRecipient ?? {'id': 'u2', 'username': '@alex_dev', 'publicKey': 'PUB-12345'},
           isDarkMode: _isDarkMode,
           onBack: () => setState(() => _currentScreen = 'home'),
-          onStartCall: (type, recipient) {
+          onStartCall: (type, recipient, {callId}) {
             setState(() {
               _activeCallType = type;
+              _activeCallId = callId ?? 'call_${DateTime.now().millisecondsSinceEpoch}';
               _activeRecipient = recipient;
               _currentScreen = 'call';
             });
@@ -503,8 +615,18 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
         return CallScreen(
           callType: _activeCallType,
           recipient: _activeRecipient,
+          callId: _activeCallId,
+          user: _user,
           isDarkMode: _isDarkMode,
-          onEndCall: () => setState(() => _currentScreen = 'home'),
+          onEndCall: () {
+            if (_activeCallId != null) {
+              WebSocketClient().send({
+                'type': 'call_hangup',
+                'callId': _activeCallId,
+              });
+            }
+            setState(() => _currentScreen = 'home');
+          },
         );
       case 'settings':
         return SettingsScreen(

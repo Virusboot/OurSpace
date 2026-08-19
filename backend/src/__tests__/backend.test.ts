@@ -70,4 +70,10 @@ describe('Backend Security & Privacy Services Test Suite', () => {
     const purgeResult = await purgeExpiredData();
     expect(purgeResult.messagesPurged).toBeGreaterThanOrEqual(1);
   });
+
+  test('5. Case-insensitive username lookup', async () => {
+    const byNameMixed = await getUserByUsername('  @HARSH01  ');
+    expect(byNameMixed).not.toBeNull();
+    expect(byNameMixed?.id).toBe(createdUser.id);
+  });
 });

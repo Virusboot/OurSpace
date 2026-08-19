@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:local_auth/local_auth.dart';
 import '../../../../core/networking/api_client.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 import '../../../../shared/widgets/app_gradient_button.dart';
@@ -132,6 +133,43 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
     }
   }
 
+  Future<void> _enableBiometricsAndComplete() async {
+    try {
+      final auth = LocalAuthentication();
+      final canCheck = await auth.canCheckBiometrics || await auth.isDeviceSupported();
+      if (canCheck) {
+        final authenticated = await auth.authenticate(
+          localizedReason: 'Authenticate using Face ID or Fingerprint to enable secure lock',
+          options: const AuthenticationOptions(
+            stickyAuth: true,
+            useErrorDialogs: true,
+          ),
+        );
+        if (authenticated) {
+          await SecureStorageService.write('biometric_enabled', 'true');
+          await _completeRegistration();
+        } else {
+          setState(() {
+            _errorMsg = 'Biometric authentication failed. Please try again.';
+          });
+        }
+      } else {
+        setState(() {
+          _errorMsg = 'Biometrics not supported on this device.';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMsg = 'Biometrics setup error: ${e.toString()}';
+      });
+    }
+  }
+
+  Future<void> _skipBiometricsAndComplete() async {
+    await SecureStorageService.write('biometric_enabled', 'false');
+    await _completeRegistration();
+  }
+
   // Complete Registration (Create Account)
   Future<void> _completeRegistration() async {
     setState(() {
@@ -193,6 +231,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
     await SecureStorageService.write('auth_token', token);
     await SecureStorageService.write('user_info', jsonEncode(userObj));
     await SecureStorageService.write('app_lock_enabled', 'true');
+    await SecureStorageService.write('user_pin_hash', _enteredPin);
 
     if (mounted) {
       setState(() => _loading = false);
@@ -280,7 +319,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
 
     await SecureStorageService.write('auth_token', token);
     await SecureStorageService.write('user_info', jsonEncode(userObj));
-    await SecureStorageService.write('app_lock_enabled', 'true');
+    await SecureStorageService.write('app_lock_enabled', 'false');
 
     if (mounted) {
       setState(() => _loading = false);
@@ -636,6 +675,8 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
   }
 
   Widget _buildKeypadButton(String label, VoidCallback onTap) {
+    final isDark = widget.isDarkMode;
+    final color = isDark ? Colors.white : const Color(0xFF0F172A);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -646,7 +687,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
           alignment: Alignment.center,
           child: Text(
             label,
-            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w600, color: Colors.white),
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w600, color: color),
           ),
         ),
       ),
@@ -654,6 +695,8 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
   }
 
   Widget _buildKeypadIcon(IconData icon, VoidCallback onTap) {
+    final isDark = widget.isDarkMode;
+    final color = isDark ? Colors.white : const Color(0xFF0F172A);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -662,7 +705,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
         child: Container(
           height: 68,
           alignment: Alignment.center,
-          child: Icon(icon, color: Colors.white, size: 24),
+          child: Icon(icon, color: color, size: 24),
         ),
       ),
     );
@@ -737,18 +780,29 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 100),
+        if (_errorMsg != null) ...[
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              _errorMsg!,
+              style: const TextStyle(color: Color(0xFFF43F5E), fontSize: 13, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+        const SizedBox(height: 80),
 
         // Buttons
         AppGradientButton(
           label: _loading ? 'Completing...' : 'Enable',
-          onTap: _loading ? null : _completeRegistration,
+          onTap: _loading ? null : _enableBiometricsAndComplete,
           isLoading: _loading,
           borderRadius: 28,
         ),
         const SizedBox(height: 16),
         TextButton(
-          onPressed: _loading ? null : _completeRegistration,
+          onPressed: _loading ? null : _skipBiometricsAndComplete,
           child: const Text(
             'Skip',
             style: TextStyle(color: Colors.grey, fontSize: 15, fontWeight: FontWeight.bold),

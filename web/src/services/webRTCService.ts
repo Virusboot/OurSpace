@@ -24,14 +24,15 @@ export class WebRTCService {
   public onSecurityAlert?: (message: string) => void;
   public onCallEnded?: () => void;
 
-  constructor(private wsUrl: string = `ws://${window.location.host}/ws`) {}
+  constructor(private wsUrl?: string) {}
 
   public async connectSocket(): Promise<void> {
     return new Promise((resolve, reject) => {
       // Adjust ws url if needed
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host;
-      const url = `${protocol}//${host}/ws`;
+      const host = isLocal ? window.location.host : 'ourspace-backend.onrender.com';
+      const url = this.wsUrl || (isLocal ? `${protocol}//${host}/ws` : `wss://${host}/ws`);
 
       this.ws = new WebSocket(url);
 

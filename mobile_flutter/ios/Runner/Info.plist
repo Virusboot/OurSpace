@@ -58,6 +58,8 @@
 				</array>
 			</dict>
 		</array>
+		<key>NSFaceIDUsageDescription</key>
+		<string>OurSpace requires Face ID permission to securely unlock your chat history.</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
 	</dict>

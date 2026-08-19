@@ -15,7 +15,7 @@ class ChatScreen extends StatefulWidget {
   final Map<String, dynamic> recipient;
   final bool isDarkMode;
   final VoidCallback onBack;
-  final Function(String type, Map<String, dynamic> recipient) onStartCall;
+  final Function(String type, Map<String, dynamic> recipient, {String? callId}) onStartCall;
   final Function(String imageUri, bool isViewOnce) onOpenImageViewer;
 
   const ChatScreen({

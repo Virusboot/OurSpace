@@ -528,6 +528,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+
+
   Future<void> _handleLogout() async {
     await SecureStorageService.delete('auth_token');
     await SecureStorageService.delete('user_info');
@@ -1156,7 +1158,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+
 
             // 6. LEGAL, ABOUT & SUPPORT Section (Play Store Compliance)
             Padding(

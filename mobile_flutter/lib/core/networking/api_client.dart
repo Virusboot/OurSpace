@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../storage/secure_storage_service.dart';
 
@@ -10,12 +11,18 @@ class ApiClient {
     if (customWebUrl != null && customWebUrl!.isNotEmpty) {
       return customWebUrl!;
     }
-    return 'https://ourspace-web.onrender.com';
+    if (kDebugMode) {
+      return 'http://localhost:3000';
+    }
+    return 'https://our-space-wheat.vercel.app';
   }
 
   static String get baseUrl {
     if (customBaseUrl != null && customBaseUrl!.isNotEmpty) {
       return customBaseUrl!;
+    }
+    if (kDebugMode) {
+      return 'http://localhost:4000/api';
     }
     return 'https://ourspace-backend.onrender.com/api';
   }
@@ -33,7 +40,7 @@ class ApiClient {
       Uri.parse('$baseUrl$endpoint'),
       headers: headers,
       body: jsonEncode(body),
-    ).timeout(const Duration(seconds: 3));
+    ).timeout(const Duration(seconds: 30));
 
     final data = jsonDecode(response.body);
     if (response.statusCode >= 400) {
@@ -54,7 +61,7 @@ class ApiClient {
     final response = await http.get(
       Uri.parse('$baseUrl$endpoint'),
       headers: headers,
-    ).timeout(const Duration(seconds: 3));
+    ).timeout(const Duration(seconds: 30));
 
     final data = jsonDecode(response.body);
     if (response.statusCode >= 400) {

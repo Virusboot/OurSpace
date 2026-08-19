@@ -27,7 +27,7 @@ export async function createCallLink(params: {
   durationMinutes?: number;
   pin?: string;
   oneTime?: boolean;
-}): Promise<{ linkId: string; token: string; shareUrl: string; expiresAt: string }> {
+}): Promise<{ linkId: string; callId: string; token: string; shareUrl: string; expiresAt: string }> {
   const linkId = uuidv4();
   const callId = uuidv4();
   const token = crypto.randomBytes(16).toString('hex'); // 32 random hex chars
@@ -71,6 +71,7 @@ export async function createCallLink(params: {
 
   return {
     linkId,
+    callId,
     token,
     shareUrl: `/c/${token}`,
     expiresAt

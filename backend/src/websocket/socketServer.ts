@@ -4,8 +4,35 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config';
 import { handleChatMessage } from './chatHandler';
 import { handleSignaling, activeCallRooms } from './signalingHandler';
+import { getUserById } from '../services/identityService';
 
 export const activeConnections = new Map<string, WebSocket>(); // userId/guestId -> WebSocket
+
+export async function broadcastOnlineUsers() {
+  const onlineUsers = [];
+  const onlineUserIds = Array.from(activeConnections.keys());
+  for (const id of onlineUserIds) {
+    if (id.startsWith('usr_')) {
+      const user = await getUserById(id);
+      if (user) {
+        onlineUsers.push({
+          id: user.id,
+          username: user.username,
+          privateId: user.privateId
+        });
+      }
+    }
+  }
+  const payload = JSON.stringify({
+    type: 'online_users_update',
+    users: onlineUsers
+  });
+  activeConnections.forEach((clientWs) => {
+    if (clientWs.readyState === WebSocket.OPEN) {
+      clientWs.send(payload);
+    }
+  });
+}
 
 export function initWebSocketServer(server: HttpServer) {
   const wss = new WSServer({ server, path: '/ws' });
@@ -27,6 +54,7 @@ export function initWebSocketServer(server: HttpServer) {
               activeConnections.set(currentId, ws);
               ws.send(JSON.stringify({ type: 'auth_ack', success: true, userId: currentId }));
               console.log(`[WebSocket] User authenticated: ${currentId}`);
+              await broadcastOnlineUsers();
             }
           } catch (err) {
             ws.send(JSON.stringify({ type: 'auth_ack', success: false, error: 'Invalid auth token' }));
@@ -69,7 +97,7 @@ export function initWebSocketServer(server: HttpServer) {
       }
     });
 
-    ws.on('close', () => {
+    ws.on('close', async () => {
       if (currentId) {
         activeConnections.delete(currentId);
         // Clean up rooms
@@ -82,6 +110,7 @@ export function initWebSocketServer(server: HttpServer) {
           }
         });
         console.log(`[WebSocket] Client disconnected: ${currentId}`);
+        await broadcastOnlineUsers();
       }
     });
   });

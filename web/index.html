@@ -10,6 +10,29 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              emerald: {
+                50: '#f5f3ff',
+                100: '#ede9fe',
+                200: '#ddd6fe',
+                300: '#c084fc',
+                400: '#e91e8c',
+                500: '#7b2fbe',
+                600: '#6d28d9',
+                700: '#5b21b6',
+                800: '#4c1d95',
+                900: '#2e1065',
+                950: '#170530',
+              }
+            }
+          }
+        }
+      }
+    </script>
   </head>
   <body class="bg-black text-white antialiased overflow-x-hidden">
     <div id="root"></div>
