@@ -53,7 +53,7 @@ android {
             }
             keyAlias keystoreProperties['keyAlias']
             keyPassword keystoreProperties['keyPassword']
-            storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+            storeFile keystoreProperties['storeFile'] ? rootProject.file('app/' + keystoreProperties['storeFile']) : null
             storePassword keystoreProperties['storePassword']
         }
     }
