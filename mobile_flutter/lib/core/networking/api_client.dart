@@ -21,10 +21,8 @@ class ApiClient {
     if (customBaseUrl != null && customBaseUrl!.isNotEmpty) {
       return customBaseUrl!;
     }
-    if (kDebugMode) {
-      return 'http://localhost:4000/api';
-    }
-    return 'https://ourspace-backend.onrender.com/api';
+    // TEMP FIX: Force local app to test against live server
+    return 'https://ourspace-d81w.onrender.com/api';
   }
 
   static Future<Map<String, dynamic>> post(String endpoint, Map<String, dynamic> body) async {
