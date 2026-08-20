@@ -139,3 +139,13 @@ export async function recoverAccount(privateId: string, recoveryKey: string, new
   const token = jwt.sign({ userId: user.id, privateId: user.privateId || user.private_id, username: user.username }, config.jwtSecret, { expiresIn: '30d' });
   return { user, token };
 }
+
+export async function getUserCount(): Promise<number> {
+  if (isPgActive()) {
+    const pool = getPgPool();
+    const res = await pool?.query('SELECT COUNT(*) FROM users');
+    return parseInt(res?.rows[0].count || '0', 10);
+  } else {
+    return inMemoryDb.users.size;
+  }
+}

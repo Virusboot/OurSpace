@@ -1,9 +1,18 @@
 import { Router } from 'express';
-import { getUserByUsername, getUserByPrivateId, getUserById } from '../services/identityService';
+import { getUserByUsername, getUserByPrivateId, getUserById, getUserCount } from '../services/identityService';
 import { authenticateToken, AuthRequest } from '../middleware/authMiddleware';
 import { activeConnections } from '../websocket/socketServer';
 
 const router = Router();
+
+router.get('/count', async (req, res) => {
+  try {
+    const count = await getUserCount();
+    return res.json({ totalAccounts: count });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
 
 router.get('/online', authenticateToken, async (req, res) => {
   try {
