@@ -25,7 +25,9 @@ export async function initDb() {
     const pool = new Pool({
       connectionString: config.databaseUrl,
       connectionTimeoutMillis: 5000,
-      statement_timeout: 10000, // 10s timeout for any query to prevent infinite hanging
+      query_timeout: 5000, // 5s client-side timeout to prevent hanging on PgBouncer issues
+      statement_timeout: 10000, // 10s server-side timeout
+      idleTimeoutMillis: 10000,
       ssl: config.databaseUrl?.includes('localhost') ? false : { rejectUnauthorized: false }
     });
     const client = await pool.connect();
