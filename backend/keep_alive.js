@@ -1,6 +1,6 @@
 const https = require('https');
 
-const url = 'https://ourspace-backend.onrender.com/health';
+const url = 'https://ourspace-d81w.onrender.com/health';
 
 console.log(`[Keep-Alive] Starting ping loop to ${url} every 10 minutes...`);
 
