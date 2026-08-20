@@ -655,36 +655,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         if (generatedUrl != null) ...[ 
                           const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextButton(
-                                  onPressed: () => Navigator.pop(ctx),
-                                  style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      side: BorderSide(color: isDark ? Colors.white12 : const Color(0xFFE2E8F0)),
-                                    ),
-                                  ),
-                                  child: Text('Close', style: TextStyle(color: txtSub, fontWeight: FontWeight.w600, fontSize: 13)),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                flex: 2,
-                                child: AppGradientButton(
-                                  height: 44,
-                                  borderRadius: 12,
-                                  icon: const Icon(Icons.call_rounded, size: 16, color: Colors.white),
-                                  label: 'Start & Join',
-                                  onTap: () {
-                                    Navigator.pop(ctx);
-                                    widget.onStartCall(callType, {'id': 'guest', 'username': '@waiting_for_join'}, callId: generatedCallId);
-                                  },
-                                ),
-                              ),
-                            ],
+                          SizedBox(
+                            width: double.infinity,
+                            child: AppGradientButton(
+                              height: 44,
+                              borderRadius: 12,
+                              icon: const Icon(Icons.call_rounded, size: 16, color: Colors.white),
+                              label: 'Start & Join',
+                              onTap: () {
+                                Navigator.pop(ctx);
+                                widget.onStartCall(callType, {'id': 'guest', 'username': '@waiting_for_join'}, callId: generatedCallId);
+                              },
+                            ),
                           ),
                         ],
                       ],
