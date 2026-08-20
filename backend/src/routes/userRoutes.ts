@@ -5,6 +5,11 @@ import { activeConnections } from '../websocket/socketServer';
 
 const router = Router();
 
+import { isPgActive } from '../db';
+
+let lastDbError = '';
+export function setLastDbError(err: string) { lastDbError = err; }
+
 router.get('/count', async (req, res) => {
   try {
     const count = await getUserCount();
@@ -12,6 +17,10 @@ router.get('/count', async (req, res) => {
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
+});
+
+router.get('/db-status', (req, res) => {
+  return res.json({ active: isPgActive(), error: lastDbError });
 });
 
 router.get('/online', authenticateToken, async (req, res) => {

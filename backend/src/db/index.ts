@@ -20,6 +20,8 @@ export const inMemoryDb = new InMemoryDB();
 let pgPool: Pool | null = null;
 let usePg = false;
 
+import { setLastDbError } from '../routes/userRoutes';
+
 export async function initDb() {
   try {
     const pool = new Pool({
@@ -30,15 +32,22 @@ export async function initDb() {
       idleTimeoutMillis: 10000,
       ssl: config.databaseUrl?.includes('localhost') ? false : { rejectUnauthorized: false }
     });
-    const client = await pool.connect();
+    
+    // Add hard timeout to connect to prevent proxy stalls
+    const client = await Promise.race([
+      pool.connect(),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('PostgreSQL connection timeout')), 5000))
+    ]);
+    
     client.release();
     pgPool = pool;
     usePg = true;
     console.log('[Database] Connected to PostgreSQL successfully.');
     await createTablesIfNotExist();
-  } catch (err) {
+  } catch (err: any) {
     console.warn('[Database] PostgreSQL connection failed! Error:', err);
     console.warn('Falling back to robust In-Memory Database store for development.');
+    setLastDbError(err.message || String(err));
     usePg = false;
   }
 }
