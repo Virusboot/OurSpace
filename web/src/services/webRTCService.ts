@@ -31,7 +31,7 @@ export class WebRTCService {
       // Adjust ws url if needed
       const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = isLocal ? window.location.host : 'ourspace-backend.onrender.com';
+      const host = isLocal ? window.location.host : 'ourspace-d81w.onrender.com';
       const url = this.wsUrl || (isLocal ? `${protocol}//${host}/ws` : `wss://${host}/ws`);
 
       this.ws = new WebSocket(url);

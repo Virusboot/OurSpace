@@ -388,8 +388,9 @@ class _CallScreenState extends State<CallScreen> {
                 ),
 
               // UI Overlay
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              Positioned.fill(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
                 child: Column(
                   children: [
                     // Header Bar
@@ -601,6 +602,7 @@ class _CallScreenState extends State<CallScreen> {
                   ],
                 ),
               ),
+            ),
 
               // PiP local video — shown only when REMOTE is streaming (guest connected)
               if (showRemoteVideo && _camEnabled)
