@@ -39,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
   
   Map<String, dynamic>? _globalSearchResult;
   bool _isSearchingGlobal = false;
+  bool _searchNotFound = false;
   Timer? _searchDebounce;
 
   @override
@@ -78,19 +79,31 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _globalSearchResult = null;
         _isSearchingGlobal = false;
+        _searchNotFound = false;
+      });
+      return;
+    }
+
+    if (query.length < 2) {
+      setState(() {
+        _globalSearchResult = null;
+        _searchNotFound = false;
+        _isSearchingGlobal = false;
       });
       return;
     }
 
     if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 500), () async {
-      setState(() => _isSearchingGlobal = true);
+    _searchDebounce = Timer(const Duration(milliseconds: 400), () async {
+      if (!mounted) return;
+      setState(() { _isSearchingGlobal = true; _searchNotFound = false; });
       try {
         final res = await ApiClient.get('/users/lookup?query=${Uri.encodeComponent(query)}');
         if (mounted) {
           setState(() {
             _globalSearchResult = res;
             _isSearchingGlobal = false;
+            _searchNotFound = false;
           });
         }
       } catch (e) {
@@ -98,6 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _globalSearchResult = null;
             _isSearchingGlobal = false;
+            _searchNotFound = true;
           });
         }
       }
@@ -943,15 +957,46 @@ class _HomeScreenState extends State<HomeScreen> {
                                       child: ListTile(
                                         leading: CircleAvatar(
                                           backgroundColor: const Color(0xFF7B2FBE).withValues(alpha: 0.2),
-                                          child: Text(_globalSearchResult!['username'].toString().substring(0, 2).toUpperCase(), style: const TextStyle(color: Color(0xFF7B2FBE), fontWeight: FontWeight.bold)),
+                                          child: Text(
+                                            (_globalSearchResult!['username']?.toString() ?? '?').length >= 2
+                                              ? (_globalSearchResult!['username']?.toString() ?? '?').substring(0, 2).toUpperCase()
+                                              : (_globalSearchResult!['username']?.toString() ?? '?').toUpperCase(),
+                                            style: const TextStyle(color: Color(0xFF7B2FBE), fontWeight: FontWeight.bold),
+                                          ),
                                         ),
-                                        title: Text(_globalSearchResult!['username'], style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
-                                        subtitle: const Text('Global Search Result', style: TextStyle(color: Colors.grey, fontSize: 11)),
-                                        trailing: const Icon(Icons.person_add_alt_1_rounded, color: Color(0xFF7B2FBE)),
+                                        title: Text(
+                                          _globalSearchResult!['username']?.toString() ?? '',
+                                          style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold),
+                                        ),
+                                        subtitle: const Text('Tap to start chat', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                                        trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF7B2FBE), size: 16),
                                         onTap: () async {
                                           await _saveRecentChat(_globalSearchResult!);
                                           widget.onOpenChat(_globalSearchResult!);
+                                          _searchCtrl.clear();
                                         },
+                                      ),
+                                    ),
+                                  if (_searchNotFound && !_isSearchingGlobal && _searchCtrl.text.trim().isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                        decoration: BoxDecoration(
+                                          color: isDark ? Colors.white.withValues(alpha: 0.04) : const Color(0xFFF8FAFC),
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.search_off_rounded, color: Colors.grey.withValues(alpha: 0.6), size: 20),
+                                            const SizedBox(width: 10),
+                                            Text(
+                                              'No user found for "${_searchCtrl.text.trim()}"',
+                                              style: TextStyle(color: Colors.grey.withValues(alpha: 0.8), fontSize: 13),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   Expanded(
