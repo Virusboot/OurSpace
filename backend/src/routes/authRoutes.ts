@@ -5,7 +5,10 @@ import { inMemoryDb } from '../db';
 
 const router = Router();
 
-// Store registered users by email in memory for backend auth
+import { isPgActive, getPgPool } from '../db';
+import bcrypt from 'bcryptjs';
+
+// Store registered users by email in memory for backend auth (fallback only)
 const usersByEmail = new Map<string, any>();
 
 router.post('/login', authRateLimiter, async (req, res) => {
@@ -17,36 +20,62 @@ router.post('/login', authRateLimiter, async (req, res) => {
     }
 
     let existing = null;
-    if (loginIdentifier.includes('@') && loginIdentifier.includes('.')) {
-      // Email format login
-      existing = usersByEmail.get(loginIdentifier);
+    let existingHash = '';
+
+    if (isPgActive()) {
+      const pool = getPgPool();
+      let query = 'SELECT * FROM users WHERE LOWER(username) = $1 OR LOWER(private_id) = $1';
+      let resDb = await pool?.query(query, [loginIdentifier]);
+      
+      // If email format, try extracting private ID
+      if (!resDb || resDb.rows.length === 0) {
+        if (loginIdentifier.includes('@ourspace.local')) {
+           const extractedId = loginIdentifier.split('@')[0];
+           resDb = await pool?.query(query, [extractedId]);
+        }
+      }
+
+      if (resDb && resDb.rows.length > 0) {
+        const row = resDb.rows[0];
+        existing = {
+          id: row.id,
+          name: row.username.replace('@', ''),
+          email: `${row.private_id.toLowerCase()}@ourspace.local`,
+          username: row.username,
+          privateId: row.private_id,
+        };
+        existingHash = row.recovery_hash;
+      }
     } else {
-      // Username or Private ID format login
-      const formattedUsername = loginIdentifier.startsWith('@') ? loginIdentifier : `@${loginIdentifier}`;
-      let dbRecord = inMemoryDb.usersByUsername.get(formattedUsername);
-      if (!dbRecord) {
-        dbRecord = inMemoryDb.usersByPrivateId.get(loginIdentifier.toUpperCase());
+      // Fallback in-memory logic
+      if (loginIdentifier.includes('@') && loginIdentifier.includes('.')) {
+        existing = usersByEmail.get(loginIdentifier);
+      } else {
+        const formattedUsername = loginIdentifier.startsWith('@') ? loginIdentifier : `@${loginIdentifier}`;
+        let dbRecord = inMemoryDb.usersByUsername.get(formattedUsername);
+        if (!dbRecord) {
+          dbRecord = inMemoryDb.usersByPrivateId.get(loginIdentifier.toUpperCase());
+        }
+        if (dbRecord) {
+          const derivedEmail = `${dbRecord.privateId.toLowerCase()}@ourspace.local`;
+          existing = usersByEmail.get(derivedEmail);
+        }
       }
-      if (dbRecord) {
-        const derivedEmail = `${dbRecord.privateId.toLowerCase()}@ourspace.local`;
-        existing = usersByEmail.get(derivedEmail);
-      }
+      if (existing) existingHash = existing.password;
     }
 
     if (!existing) {
       return res.status(400).json({ error: 'No account found. Please register first.' });
     }
-    if (existing.password !== password) {
+
+    // Compare passwords
+    const isValid = isPgActive() ? await bcrypt.compare(password, existingHash) : existingHash === password;
+    if (!isValid) {
       return res.status(400).json({ error: 'Incorrect password' });
     }
+
     return res.json({
-      user: {
-        id: existing.id,
-        name: existing.name,
-        email: existing.email,
-        username: existing.username,
-        privateId: existing.privateId,
-      },
+      user: existing,
       token: 'jwt_token_' + Date.now(),
     });
   } catch (err: any) {
@@ -61,47 +90,64 @@ router.post('/register', authRateLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
     const cleanEmail = email.trim().toLowerCase();
-    if (usersByEmail.has(cleanEmail)) {
-      return res.status(400).json({ error: 'An account with this email already exists' });
-    }
-
     const cleanUsername = username || (email ? '@' + email.split('@')[0] : '@user');
     const privateId = req.body.privateId || (email ? email.split('@')[0].toUpperCase() : 'USER-' + Math.random().toString(36).substring(2, 8).toUpperCase());
     const userId = 'usr_' + Date.now();
+    const now = new Date().toISOString();
 
-    const userObj = {
-      id: userId,
-      name: name || 'User',
-      email: cleanEmail,
-      password,
-      username: cleanUsername,
-      privateId,
-      createdAt: new Date().toISOString(),
-    };
+    if (isPgActive()) {
+      const pool = getPgPool();
+      // Check if exists
+      const existing = await pool?.query('SELECT id FROM users WHERE LOWER(username) = $1 OR UPPER(private_id) = $2', [cleanUsername.toLowerCase(), privateId.toUpperCase()]);
+      if (existing && existing.rows.length > 0) {
+        return res.status(400).json({ error: 'Username or Private ID already exists' });
+      }
 
-    usersByEmail.set(cleanEmail, userObj);
+      // Hash password using bcrypt
+      const hashedPass = await bcrypt.hash(password, 10);
 
-    // Save to inMemoryDb maps so they are searchable by other users via lookup
-    const lookupRecord = {
-      id: userId,
-      privateId,
-      username: cleanUsername,
-      publicKey: 'mock_public_key',
-      recoveryHash: password,
-      createdAt: userObj.createdAt,
-      updatedAt: userObj.createdAt,
-    };
-    inMemoryDb.users.set(userId, lookupRecord);
-    inMemoryDb.usersByPrivateId.set(privateId.toUpperCase(), lookupRecord);
-    inMemoryDb.usersByUsername.set(cleanUsername.toLowerCase(), lookupRecord);
+      // Insert into PostgreSQL
+      await pool?.query(
+        `INSERT INTO users (id, private_id, username, public_key, recovery_hash, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [userId, privateId, cleanUsername, 'mock_public_key', hashedPass, now, now]
+      );
+    } else {
+      if (usersByEmail.has(cleanEmail)) {
+        return res.status(400).json({ error: 'An account with this email already exists' });
+      }
+      const userObj = {
+        id: userId,
+        name: name || 'User',
+        email: cleanEmail,
+        password, // stored plaintext in memory only
+        username: cleanUsername,
+        privateId,
+        createdAt: now,
+      };
+      usersByEmail.set(cleanEmail, userObj);
+
+      const lookupRecord = {
+        id: userId,
+        privateId,
+        username: cleanUsername,
+        publicKey: 'mock_public_key',
+        recoveryHash: password,
+        createdAt: now,
+        updatedAt: now,
+      };
+      inMemoryDb.users.set(userId, lookupRecord);
+      inMemoryDb.usersByPrivateId.set(privateId.toUpperCase(), lookupRecord);
+      inMemoryDb.usersByUsername.set(cleanUsername.toLowerCase(), lookupRecord);
+    }
 
     return res.json({
       user: {
-        id: userObj.id,
-        name: userObj.name,
-        email: userObj.email,
-        username: userObj.username,
-        privateId: userObj.privateId,
+        id: userId,
+        name: name || cleanUsername.replace('@', ''),
+        email: cleanEmail,
+        username: cleanUsername,
+        privateId: privateId,
       },
       token: 'jwt_token_' + Date.now(),
     });
