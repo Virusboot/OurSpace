@@ -22,7 +22,7 @@ class ApiClient {
       return customBaseUrl!;
     }
     // TEMP FIX: Force local app to test against live server
-    return 'https://ourspace-backend.onrender.com/api';
+    return 'https://ourspace-d81w.onrender.com/api';
   }
 
   static Future<Map<String, dynamic>> post(String endpoint, Map<String, dynamic> body) async {

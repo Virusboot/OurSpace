@@ -39,7 +39,7 @@ class WebSocketClient {
     } else if (kDebugMode) {
       wsUrl = 'ws://localhost:4000/ws';
     } else {
-      wsUrl = 'wss://ourspace-backend.onrender.com/ws';
+      wsUrl = 'wss://ourspace-d81w.onrender.com/ws';
     }
     try {
       await _channel?.sink.close();
