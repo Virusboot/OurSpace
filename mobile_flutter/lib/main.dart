@@ -72,7 +72,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
     _wsCallSubscription = WebSocketClient().stream.listen((event) {
       if (!mounted) return;
       final type = event['type'];
-      if (type == 'call_offer') {
+      if (type == 'call_offer' || type == 'call_invite') {
         _handleIncomingCall(event);
       } else if (type == 'call_ended' || type == 'call_hangup') {
         _handleCallEndedByRemote(event);
@@ -619,13 +619,56 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
               _currentScreen = 'chat';
             });
           },
-          onStartCall: (type, recipient, {callId}) {
-            setState(() {
-              _activeCallType = type;
-              _activeCallId = callId ?? 'call_${DateTime.now().millisecondsSinceEpoch}';
-              _activeRecipient = recipient ?? {'username': '@alex_dev'};
-              _currentScreen = 'call';
-            });
+          onStartCall: (type, recipient, {callId}) async {
+            // If a callId was given directly (incoming call), use it
+            if (callId != null) {
+              setState(() {
+                _activeCallType = type;
+                _activeCallId = callId;
+                _activeRecipient = recipient ?? {'username': '@user'};
+                _currentScreen = 'call';
+              });
+              return;
+            }
+            // Generate a real call link/room via API
+            try {
+              final res = await ApiClient.post('/call-links/create', {
+                'callType': type,
+                'durationMinutes': 60,
+              });
+              final token = res['token'] ?? res['callId'];
+              final generatedCallId = res['callId'] ?? 'call_${DateTime.now().millisecondsSinceEpoch}';
+              if (mounted) {
+                setState(() {
+                  _activeCallType = type;
+                  _activeCallId = generatedCallId;
+                  _activeRecipient = recipient ?? {'username': '@user'};
+                  _currentScreen = 'call';
+                });
+                // Send the call link to the recipient via WebSocket
+                if (recipient != null && recipient['id'] != null) {
+                  WebSocketClient().send({
+                    'type': 'call_invite',
+                    'callId': generatedCallId,
+                    'callType': type,
+                    'token': token,
+                    'targetUserId': recipient['id'],
+                    'callerUsername': _user?['username'] ?? '@user',
+                  });
+                }
+              }
+            } catch (e) {
+              // Fallback: use a local room ID
+              final fallbackId = 'call_${DateTime.now().millisecondsSinceEpoch}';
+              if (mounted) {
+                setState(() {
+                  _activeCallType = type;
+                  _activeCallId = fallbackId;
+                  _activeRecipient = recipient ?? {'username': '@user'};
+                  _currentScreen = 'call';
+                });
+              }
+            }
           },
           onOpenSettings: () => setState(() => _currentScreen = 'settings'),
         );
@@ -635,13 +678,52 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
           recipient: _activeRecipient ?? {'id': 'u2', 'username': '@alex_dev', 'publicKey': 'PUB-12345'},
           isDarkMode: _isDarkMode,
           onBack: () => setState(() => _currentScreen = 'home'),
-          onStartCall: (type, recipient, {callId}) {
-            setState(() {
-              _activeCallType = type;
-              _activeCallId = callId ?? 'call_${DateTime.now().millisecondsSinceEpoch}';
-              _activeRecipient = recipient;
-              _currentScreen = 'call';
-            });
+          onStartCall: (type, recipient, {callId}) async {
+            if (callId != null) {
+              setState(() {
+                _activeCallType = type;
+                _activeCallId = callId;
+                _activeRecipient = recipient;
+                _currentScreen = 'call';
+              });
+              return;
+            }
+            try {
+              final res = await ApiClient.post('/call-links/create', {
+                'callType': type,
+                'durationMinutes': 60,
+              });
+              final token = res['token'] ?? res['callId'];
+              final generatedCallId = res['callId'] ?? 'call_${DateTime.now().millisecondsSinceEpoch}';
+              if (mounted) {
+                setState(() {
+                  _activeCallType = type;
+                  _activeCallId = generatedCallId;
+                  _activeRecipient = recipient;
+                  _currentScreen = 'call';
+                });
+                if (recipient != null && recipient['id'] != null) {
+                  WebSocketClient().send({
+                    'type': 'call_invite',
+                    'callId': generatedCallId,
+                    'callType': type,
+                    'token': token,
+                    'targetUserId': recipient['id'],
+                    'callerUsername': _user?['username'] ?? '@user',
+                  });
+                }
+              }
+            } catch (e) {
+              final fallbackId = 'call_${DateTime.now().millisecondsSinceEpoch}';
+              if (mounted) {
+                setState(() {
+                  _activeCallType = type;
+                  _activeCallId = fallbackId;
+                  _activeRecipient = recipient;
+                  _currentScreen = 'call';
+                });
+              }
+            }
           },
           onOpenImageViewer: (imageUri, isViewOnce) {
             setState(() {

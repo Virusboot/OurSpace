@@ -40,6 +40,18 @@ export function handleSignaling(
       existingParticipants: Array.from(room.keys()).filter(id => id !== participantId)
     }));
 
+  } else if (type === 'call_invite') {
+    const targetWs = activeConnections.get(payload.targetUserId);
+    if (targetWs && targetWs.readyState === WebSocket.OPEN) {
+      targetWs.send(JSON.stringify({
+        type: 'call_invite',
+        callId: payload.callId,
+        callType: payload.callType,
+        token: payload.token,
+        senderId: payload.senderId,
+        senderUsername: payload.callerUsername || '@peer',
+      }));
+    }
   } else if (type === 'call_offer' || type === 'call_answer' || type === 'ice_candidate' || type === 'media_toggle') {
     // Direct signaling route to target participant or broadcast to room
     if (targetId) {
