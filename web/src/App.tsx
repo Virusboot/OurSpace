@@ -122,6 +122,7 @@ export const App: React.FC = () => {
         setInCall(false);
         setLocalStream(null);
         setRemoteStream(null);
+        setErrorStatus('expired');
       };
 
       await rtcService.joinCallRoom(linkDetails.callId, guestNickname);

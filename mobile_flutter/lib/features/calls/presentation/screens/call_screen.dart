@@ -12,6 +12,8 @@ class CallScreen extends StatefulWidget {
   final Map<String, dynamic>? user;
   final bool isDarkMode;
   final VoidCallback onEndCall;
+  final bool isPipMode;
+  final VoidCallback? onMinimize;
 
   const CallScreen({
     Key? key,
@@ -21,6 +23,8 @@ class CallScreen extends StatefulWidget {
     required this.user,
     this.isDarkMode = false,
     required this.onEndCall,
+    this.isPipMode = false,
+    this.onMinimize,
   }) : super(key: key);
 
   @override
@@ -361,9 +365,59 @@ class _CallScreenState extends State<CallScreen> {
     // Show own camera as fullscreen while waiting (before guest joins)
     final showLocalPreviewFullscreen = widget.callType == 'video' && !showRemoteVideo && _localStream != null;
 
-    return SecurityOverlay(
-      isSensitive: true,
-      child: Scaffold(
+    if (widget.isPipMode) {
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF7B2FBE), width: 2),
+        ),
+        child: Stack(
+          children: [
+            if (showRemoteVideo)
+              Positioned.fill(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: RTCVideoView(_remoteRenderer, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
+                ),
+              )
+            else if (showLocalPreviewFullscreen)
+              Positioned.fill(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: RTCVideoView(_localRenderer, mirror: true, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
+                ),
+              )
+            else
+              Center(child: Icon(widget.callType == 'video' ? Icons.videocam : Icons.phone, color: Colors.white)),
+            Positioned(
+              bottom: 8, left: 0, right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
+                  child: Text(_formatTimer(_secondsElapsed), style: const TextStyle(color: Colors.white, fontSize: 10)),
+                )
+              )
+            ),
+          ]
+        )
+      );
+    }
+
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        if (widget.onMinimize != null) {
+          widget.onMinimize!();
+        } else {
+          widget.onEndCall();
+        }
+      },
+      child: SecurityOverlay(
+        isSensitive: true,
+        child: Scaffold(
         backgroundColor: bgCol,
         body: SafeArea(
           child: Stack(
@@ -633,6 +687,7 @@ class _CallScreenState extends State<CallScreen> {
                   ),
                 ),
             ],
+          ),
           ),
         ),
       ),

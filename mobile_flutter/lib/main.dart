@@ -43,6 +43,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
   bool _activeIsViewOnce = false;
   bool _isDarkMode = false;
 
+  final GlobalKey _callScreenKey = GlobalKey();
   final _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
   StreamSubscription<Map<String, dynamic>>? _wsCallSubscription;
@@ -516,20 +517,62 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
         ),
       ),
 
-      home: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 500),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        transitionBuilder: (child, animation) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
-        },
-        child: KeyedSubtree(
-          key: ValueKey<String>(_currentScreen),
-          child: _buildScreen(),
-        ),
+      home: Stack(
+        children: [
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            transitionBuilder: (Widget child, Animation<double> animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: child,
+              );
+            },
+            child: KeyedSubtree(
+              key: ValueKey<String>(_currentScreen == 'call' ? 'home' : _currentScreen),
+              child: _currentScreen == 'call' ? const SizedBox() : _buildScreen(),
+            ),
+          ),
+          if (_activeCallId != null && _currentScreen == 'call')
+            Positioned.fill(
+              child: CallScreen(
+                key: _callScreenKey,
+                callType: _activeCallType,
+                recipient: _activeRecipient,
+                callId: _activeCallId,
+                user: _user,
+                isDarkMode: _isDarkMode,
+                isPipMode: false,
+                onMinimize: () => setState(() => _currentScreen = 'home'),
+                onEndCall: () {
+                  WebSocketClient().send({'type': 'call_hangup', 'callId': _activeCallId});
+                  setState(() { _activeCallId = null; _currentScreen = 'home'; });
+                },
+              ),
+            ),
+          if (_activeCallId != null && _currentScreen != 'call' && _currentScreen != 'enter_pin' && _currentScreen != 'create_pin')
+            Positioned(
+              right: 20,
+              bottom: 100,
+              width: 120,
+              height: 180,
+              child: GestureDetector(
+                onTap: () => setState(() => _currentScreen = 'call'),
+                child: CallScreen(
+                  key: _callScreenKey,
+                  callType: _activeCallType,
+                  recipient: _activeRecipient,
+                  callId: _activeCallId,
+                  user: _user,
+                  isDarkMode: _isDarkMode,
+                  isPipMode: true,
+                  onEndCall: () {
+                    WebSocketClient().send({'type': 'call_hangup', 'callId': _activeCallId});
+                    setState(() => _activeCallId = null);
+                  },
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -612,22 +655,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
           onClose: () => setState(() => _currentScreen = 'chat'),
         );
       case 'call':
-        return CallScreen(
-          callType: _activeCallType,
-          recipient: _activeRecipient,
-          callId: _activeCallId,
-          user: _user,
-          isDarkMode: _isDarkMode,
-          onEndCall: () {
-            if (_activeCallId != null) {
-              WebSocketClient().send({
-                'type': 'call_hangup',
-                'callId': _activeCallId,
-              });
-            }
-            setState(() => _currentScreen = 'home');
-          },
-        );
+        return const SizedBox();
       case 'settings':
         return SettingsScreen(
           user: _user,
