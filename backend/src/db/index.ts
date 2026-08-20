@@ -25,6 +25,7 @@ export async function initDb() {
     const pool = new Pool({
       connectionString: config.databaseUrl,
       connectionTimeoutMillis: 5000,
+      statement_timeout: 10000, // 10s timeout for any query to prevent infinite hanging
       ssl: config.databaseUrl?.includes('localhost') ? false : { rejectUnauthorized: false }
     });
     const client = await pool.connect();
@@ -119,7 +120,15 @@ async function createTablesIfNotExist() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `;
-  await pgPool.query(query);
+  
+  const statements = query.split(';').map(s => s.trim()).filter(s => s.length > 0);
+  for (const stmt of statements) {
+    try {
+      await pgPool.query(stmt);
+    } catch (e) {
+      console.error('[Database] Failed to initialize table:', e);
+    }
+  }
   console.log('[Database] Database tables initialized.');
 }
 
