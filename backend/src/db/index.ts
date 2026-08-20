@@ -24,8 +24,7 @@ export async function initDb() {
   try {
     const pool = new Pool({
       connectionString: config.databaseUrl,
-      connectionTimeoutMillis: 5000,
-      ssl: config.databaseUrl?.includes('localhost') ? false : { rejectUnauthorized: false }
+      connectionTimeoutMillis: 5000
     });
     const client = await pool.connect();
     client.release();

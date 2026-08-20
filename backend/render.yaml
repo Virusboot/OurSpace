@@ -15,4 +15,11 @@ services:
       - key: CORS_ORIGIN
         value: "*"
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: ourspace-db
+          property: connectionString
+
+databases:
+  - name: ourspace-db
+    plan: free
+    region: singapore
