@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { Shield, Eye, EyeOff, User, Mail, Lock, LogIn, UserPlus, ArrowLeft } from 'lucide-react';
 
-const BACKEND_HOST = 'ourspace-d81w.onrender.com';
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? ''
-  : `https://${BACKEND_HOST}`;
+// API via Vercel proxy → Render backend
+const API_BASE = '';
+
 
 interface WebLoginProps {
   onLoginSuccess?: (user: any, token: string) => void;
