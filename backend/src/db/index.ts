@@ -24,7 +24,8 @@ export async function initDb() {
   try {
     const pool = new Pool({
       connectionString: config.databaseUrl,
-      connectionTimeoutMillis: 2000
+      connectionTimeoutMillis: 5000,
+      ssl: config.databaseUrl?.includes('localhost') ? false : { rejectUnauthorized: false }
     });
     const client = await pool.connect();
     client.release();
@@ -33,7 +34,8 @@ export async function initDb() {
     console.log('[Database] Connected to PostgreSQL successfully.');
     await createTablesIfNotExist();
   } catch (err) {
-    console.warn('[Database] PostgreSQL connection failed/not found. Falling back to robust In-Memory Database store for development.');
+    console.warn('[Database] PostgreSQL connection failed! Error:', err);
+    console.warn('Falling back to robust In-Memory Database store for development.');
     usePg = false;
   }
 }
