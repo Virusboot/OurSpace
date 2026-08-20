@@ -46,10 +46,13 @@ export async function initRedis() {
       retryStrategy: () => null // Disable looping reconnects if Redis server isn't present
     });
     
-    await new Promise((resolve, reject) => {
-      client.on('connect', () => resolve(true));
-      client.on('error', (err) => reject(err));
-    });
+    await Promise.race([
+      new Promise((resolve, reject) => {
+        client.on('ready', () => resolve(true));
+        client.on('error', (err) => reject(err));
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Redis connection timeout')), 3000))
+    ]);
 
     redisClient = client;
     useRedis = true;
