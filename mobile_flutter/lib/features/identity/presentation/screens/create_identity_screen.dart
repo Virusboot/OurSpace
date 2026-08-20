@@ -25,8 +25,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
   int _currentStep = 0; // 0: Welcome, 1: Private ID, 2: Choose Username, 3: Recovery Key, 4: Set PIN, 5: Enable Biometrics, 6: Import
 
   // Onboarding user state
-  late String _privateId;
-  final TextEditingController _privateIdController = TextEditingController();
+  // Removed Private ID variables
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
@@ -63,9 +62,6 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
   void _generateOnboardingData() {
     // Generate private ID - easy 4-digit code
     final rand = Random();
-    _privateId = 'USER-${1000 + rand.nextInt(9000)}';
-    _privateIdController.text = _privateId;
-
     // Generate recovery key (9 words)
     final words = <String>[];
     final copyList = List<String>.from(_wordList);
@@ -78,7 +74,6 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
 
   @override
   void dispose() {
-    _privateIdController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
     _importIdController.dispose();
@@ -177,10 +172,9 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
       _errorMsg = null;
     });
 
-    _privateId = _privateIdController.text.trim().toUpperCase();
     final customUser = _usernameController.text.trim();
     final username = customUser.startsWith('@') ? customUser : '@$customUser';
-    final derivedEmail = '${_privateId.toLowerCase()}@ourspace.local';
+    final derivedEmail = '${customUser.toLowerCase()}@ourspace.local';
     final derivedPassword = _passwordController.text.trim();
 
     Map<String, dynamic> userObj;
@@ -193,13 +187,11 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
         'email': derivedEmail,
         'password': derivedPassword,
         'username': username,
-        'privateId': _privateId,
       }).timeout(const Duration(seconds: 3));
 
       if (res['user'] != null) {
         userObj = Map<String, dynamic>.from(res['user']);
         userObj['password'] = derivedPassword;
-        userObj['privateId'] = _privateId;
         token = res['token'] ?? 'token_${DateTime.now().millisecondsSinceEpoch}';
       } else {
         throw Exception(res['error'] ?? 'Registration failed');
@@ -211,7 +203,6 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
         'name': username.replaceFirst('@', ''),
         'email': derivedEmail,
         'username': username,
-        'privateId': _privateId,
         'password': derivedPassword,
         'createdAt': DateTime.now().toIso8601String(),
       };
@@ -267,7 +258,6 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
       if (res['user'] != null) {
         userObj = Map<String, dynamic>.from(res['user']);
         userObj['password'] = passwordInput;
-        userObj['privateId'] = res['user']['privateId'] ?? privateIdInput;
         token = res['token'] ?? 'token_${DateTime.now().millisecondsSinceEpoch}';
       } else {
         throw Exception(res['error'] ?? 'Login failed');
@@ -287,9 +277,8 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
       for (final val in accountsMap.values) {
         if (val is Map) {
           final uName = (val['username'] ?? '').toString().toLowerCase();
-          final pId = (val['privateId'] ?? '').toString().toLowerCase();
           final input = privateIdInput.toLowerCase();
-          if ((uName == input || uName == '@$input' || pId == input) && val['password'] == passwordInput) {
+          if ((uName == input || uName == '@$input') && val['password'] == passwordInput) {
             matchingUser = Map<String, dynamic>.from(val);
             break;
           }
@@ -307,7 +296,6 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
           'name': privateIdInput,
           'email': '${privateIdInput.toLowerCase()}@ourspace.local',
           'username': cleanUsername,
-          'privateId': privateIdInput.toUpperCase(),
           'password': passwordInput,
           'createdAt': DateTime.now().toIso8601String(),
         };
@@ -409,7 +397,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
         // Action Buttons
         AppGradientButton(
           label: 'Create New Identity',
-          onTap: () => setState(() => _currentStep = 1),
+          onTap: () => setState(() => _currentStep = 2),
           borderRadius: 28,
         ),
         const SizedBox(height: 16),
@@ -449,44 +437,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
         ),
         const SizedBox(height: 48),
 
-        // Private ID Box - Editable text field
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          decoration: BoxDecoration(
-            color: boxBg,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: boxBorder),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _privateIdController,
-                  style: TextStyle(
-                    color: titleColor,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'monospace',
-                    letterSpacing: 1.5,
-                  ),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.copy_rounded, color: Color(0xFF7B2FBE), size: 24),
-                onPressed: () {
-                  _privateId = _privateIdController.text.trim().toUpperCase();
-                  _copyToClipboard(_privateId, 'Private ID');
-                },
-              ),
-            ],
-          ),
-        ),
+        // Removed Private ID Box
         const SizedBox(height: 120),
 
         // Continue Button
@@ -847,8 +798,8 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
           const SizedBox(height: 20),
         ],
 
-        // Private ID / Username Field
-        Text('Username or Private ID', style: TextStyle(color: titleColor, fontSize: 13, fontWeight: FontWeight.bold)),
+        // Username Field
+        Text('Username', style: TextStyle(color: titleColor, fontSize: 13, fontWeight: FontWeight.bold)),
         const SizedBox(height: 6),
         TextField(
           controller: _importIdController,

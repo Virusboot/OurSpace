@@ -36,12 +36,17 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Map<String, dynamic>> _conversations = [];
   StreamSubscription? _wsSubscription;
   List<Map<String, dynamic>> _onlineUsers = [];
+  
+  Map<String, dynamic>? _globalSearchResult;
+  bool _isSearchingGlobal = false;
+  Timer? _searchDebounce;
 
   @override
   void initState() {
     super.initState();
     _searchCtrl.addListener(() {
       if (mounted) setState(() {});
+      _onSearchChanged();
     });
     _loadRecentChats();
     _fetchOnlineUsers();
@@ -61,9 +66,42 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _wsSubscription?.cancel();
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged() {
+    final query = _searchCtrl.text.trim();
+    if (query.isEmpty) {
+      setState(() {
+        _globalSearchResult = null;
+        _isSearchingGlobal = false;
+      });
+      return;
+    }
+
+    if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 500), () async {
+      setState(() => _isSearchingGlobal = true);
+      try {
+        final res = await ApiClient.get('/users/lookup?query=${Uri.encodeComponent(query)}');
+        if (mounted) {
+          setState(() {
+            _globalSearchResult = res;
+            _isSearchingGlobal = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _globalSearchResult = null;
+            _isSearchingGlobal = false;
+          });
+        }
+      }
+    });
   }
 
   Future<void> _fetchOnlineUsers() async {
@@ -95,8 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _saveRecentChat(Map<String, dynamic> peer) async {
     // Skip saving guest users — they have no real account on the platform
     final peerId = peer['id']?.toString() ?? '';
-    final privateId = peer['privateId']?.toString() ?? '';
-    if (peerId.startsWith('guest_') || privateId.isEmpty) return;
+    if (peerId.startsWith('guest_')) return;
 
     final data = await SecureStorageService.read('recent_chats');
     List<Map<String, dynamic>> list = [];
@@ -318,7 +355,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Text(searchResult!['username'].toString().substring(0, 2).toUpperCase(), style: const TextStyle(color: Color(0xFF7B2FBE), fontWeight: FontWeight.bold)),
                     ),
                     title: Text(searchResult!['username'], style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
-                    subtitle: Text(searchResult!['privateId'], style: const TextStyle(color: Colors.grey, fontSize: 11, fontFamily: 'monospace')),
                     trailing: const Icon(Icons.chat_bubble_outline, color: Color(0xFF7B2FBE)),
                     onTap: () async {
                       Navigator.pop(ctx);
@@ -749,8 +785,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final filteredConvs = _conversations.where((c) {
       final name = c['username'].toString().toLowerCase();
       final handle = (c['handle'] ?? '').toString().toLowerCase();
-      final pid = (c['privateId'] ?? '').toString().toLowerCase();
-      return name.contains(filterQuery) || handle.contains(filterQuery) || pid.contains(filterQuery);
+      return name.contains(filterQuery) || handle.contains(filterQuery);
     }).toList();
 
     final scaffoldBg = isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC);
@@ -895,6 +930,30 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: [
                                   if (filteredOnline.isNotEmpty)
                                     _buildOnlineUsersSection(filteredOnline),
+                                  if (_isSearchingGlobal)
+                                    const Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(color: Color(0xFF7B2FBE))),
+                                  if (_globalSearchResult != null && !_isSearchingGlobal)
+                                    Container(
+                                      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.3)),
+                                      ),
+                                      child: ListTile(
+                                        leading: CircleAvatar(
+                                          backgroundColor: const Color(0xFF7B2FBE).withValues(alpha: 0.2),
+                                          child: Text(_globalSearchResult!['username'].toString().substring(0, 2).toUpperCase(), style: const TextStyle(color: Color(0xFF7B2FBE), fontWeight: FontWeight.bold)),
+                                        ),
+                                        title: Text(_globalSearchResult!['username'], style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold)),
+                                        subtitle: const Text('Global Search Result', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                                        trailing: const Icon(Icons.person_add_alt_1_rounded, color: Color(0xFF7B2FBE)),
+                                        onTap: () async {
+                                          await _saveRecentChat(_globalSearchResult!);
+                                          widget.onOpenChat(_globalSearchResult!);
+                                        },
+                                      ),
+                                    ),
                                   Expanded(
                                     child: filteredConvs.isEmpty
                                         ? Center(

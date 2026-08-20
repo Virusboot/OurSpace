@@ -240,10 +240,14 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
         _user = parsed;
 
         if (appLock == 'true') {
-          setState(() {
-            _currentScreen = 'enter_pin';
-          });
-          return;
+          // Only lock if a PIN was actually set
+          final storedPin = await SecureStorageService.read('user_pin_hash');
+          if (storedPin != null && storedPin.isNotEmpty) {
+            setState(() {
+              _currentScreen = 'enter_pin';
+            });
+            return;
+          }
         }
 
         setState(() {

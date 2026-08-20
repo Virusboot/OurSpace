@@ -339,7 +339,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   );
   }
 
-  void _showQrCodeModal(String username, String privateId) {
+  void _showQrCodeModal(String username) {
     final isDark = widget.isDarkMode;
     final cardBg = isDark ? const Color(0xFF14161C) : Colors.white;
     final txtColor = isDark ? Colors.white : const Color(0xFF0F172A);
@@ -409,23 +409,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     username,
                     style: TextStyle(color: txtColor, fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF7B2FBE).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      privateId,
-                      style: const TextStyle(
-                        color: Color(0xFF7B2FBE),
-                        fontSize: 12,
-                        fontFamily: 'monospace',
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -444,7 +427,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: const Icon(Icons.copy_rounded, color: Color(0xFF7B2FBE), size: 18),
                     label: const Text('Copy ID', style: TextStyle(color: Color(0xFF7B2FBE), fontWeight: FontWeight.bold)),
                     onPressed: () async {
-                      await Clipboard.setData(ClipboardData(text: '$username\nPrivate ID: $privateId'));
+                      await Clipboard.setData(ClipboardData(text: username));
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).hideCurrentSnackBar();
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -454,7 +437,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
                               const SizedBox(width: 10),
                               Expanded(
-                                child: Text('Copied: $username ($privateId)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                child: Text('Copied: $username', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                               ),
                             ],
                           ),
@@ -471,7 +454,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Expanded(
                   child: GestureDetector(
                     onTap: () async {
-                      await Clipboard.setData(ClipboardData(text: 'Connect with me on OurSpace Privacy Chat!\nUsername: $username\nPrivate ID: $privateId'));
+                      await Clipboard.setData(ClipboardData(text: 'Connect with me on OurSpace Privacy Chat!\nUsername: $username'));
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).hideCurrentSnackBar();
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -481,7 +464,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               const Icon(Icons.share_rounded, color: Colors.white, size: 20),
                               const SizedBox(width: 10),
                               Expanded(
-                                child: Text('Share text copied to clipboard!\n$username | $privateId', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                child: Text('Share text copied to clipboard!\n$username', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                               ),
                             ],
                           ),
@@ -783,45 +766,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               style: const TextStyle(color: Color(0xFF7B2FBE), fontSize: 13, fontWeight: FontWeight.w600),
                             ),
                             const SizedBox(height: 6),
-                            GestureDetector(
-                              onTap: () async {
-                                await Clipboard.setData(ClipboardData(text: privateId));
-                                if (!mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Copied Private ID: $privateId'),
-                                    backgroundColor: const Color(0xFF10B981),
-                                    behavior: SnackBarBehavior.floating,
-                                    duration: const Duration(seconds: 2),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  ),
-                                );
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF7B2FBE).withValues(alpha: 0.10),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.2)),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      privateId,
-                                      style: const TextStyle(
-                                        color: Color(0xFF7B2FBE),
-                                        fontSize: 11,
-                                        fontFamily: 'monospace',
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    const Icon(Icons.copy_rounded, color: Color(0xFF7B2FBE), size: 11),
-                                  ],
-                                ),
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -858,7 +802,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: GestureDetector(
-                          onTap: () => _showQrCodeModal(username, privateId),
+                          onTap: () => _showQrCodeModal(username),
                           child: Container(
                             height: 40,
                             decoration: BoxDecoration(

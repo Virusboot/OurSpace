@@ -465,20 +465,39 @@ class _CallScreenState extends State<CallScreen> {
                             ],
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: timerBg,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            _formatTimer(_secondsElapsed),
-                            style: TextStyle(color: txtCol, fontFamily: 'monospace', fontSize: 13, fontWeight: FontWeight.bold),
-                          ),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: timerBg,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                _formatTimer(_secondsElapsed),
+                                style: TextStyle(color: txtCol, fontFamily: 'monospace', fontSize: 13, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            if (widget.onMinimize != null) ...[
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: widget.onMinimize,
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.06),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(Icons.picture_in_picture_alt_rounded, size: 18, color: txtCol),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
+
 
                     // Avatar overlay: shown for audio call OR when video not yet connected
                     if (!showRemoteVideo)
