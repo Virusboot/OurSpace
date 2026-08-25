@@ -86,12 +86,20 @@ export async function verifyAndGetCallLink(token: string, pin?: string): Promise
     const pool = getPgPool();
     const res = await pool?.query(
       `SELECT id, call_id as "callId", token_hash as "tokenHash", pin_hash as "pinHash", expires_at as "expiresAt", revoked, one_time as "oneTime", host_id as "hostId", call_type as "callType", created_at as "createdAt"
-       FROM call_links WHERE token_hash = $1`,
-      [tokenHash]
+       FROM call_links WHERE token_hash = $1 OR call_id = $2 OR id = $2`,
+      [tokenHash, token]
     );
     record = res?.rows[0] || null;
   } else {
     record = inMemoryDb.callLinks.get(tokenHash) || null;
+    if (!record) {
+      for (const r of inMemoryDb.callLinks.values()) {
+        if (r.tokenHash === token || r.callId === token || r.id === token || r.randomToken === token) {
+          record = r;
+          break;
+        }
+      }
+    }
   }
 
   if (!record) {
