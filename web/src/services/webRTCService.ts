@@ -63,19 +63,28 @@ export class WebRTCService {
         autoGainControl: true,
       },
       video: callType === 'video' ? {
-        width: { ideal: 1920, min: 1280 },
-        height: { ideal: 1080, min: 720 },
-        frameRate: { ideal: 30 }
+        width: { ideal: 1920, max: 3840 },
+        height: { ideal: 1080, max: 2160 },
+        frameRate: { ideal: 30, min: 24 },
+        facingMode: 'user'
       } : false
     };
 
     try {
       this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
     } catch (_) {
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: callType === 'video' ? true : false
-      });
+      try {
+        const fallback720p = {
+          audio: true,
+          video: callType === 'video' ? { width: { ideal: 1280 }, height: { ideal: 720 } } : false
+        };
+        this.localStream = await navigator.mediaDevices.getUserMedia(fallback720p);
+      } catch (e2) {
+        this.localStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: callType === 'video' ? true : false
+        });
+      }
     }
     return this.localStream;
   }
@@ -128,7 +137,18 @@ export class WebRTCService {
 
     if (this.localStream) {
       this.localStream.getTracks().forEach((track) => {
-        this.peerConnection?.addTrack(track, this.localStream!);
+        const sender = this.peerConnection?.addTrack(track, this.localStream!);
+        if (track.kind === 'video' && sender && sender.setParameters) {
+          try {
+            const params = sender.getParameters();
+            if (!params.encodings || params.encodings.length === 0) {
+              params.encodings = [{}];
+            }
+            params.encodings[0].maxBitrate = 2500000; // 2.5 Mbps Full HD 1080p
+            params.encodings[0].maxFramerate = 30;
+            sender.setParameters(params).catch(() => {});
+          } catch (_) {}
+        }
       });
     }
 
