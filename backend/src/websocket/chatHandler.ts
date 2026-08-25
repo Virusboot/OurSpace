@@ -19,9 +19,17 @@ export async function handleChatMessage(
     });
 
     // 2. Transmit to recipient if currently online
-    const recipientWs = activeConnections.get(recipientId);
-    if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
-      recipientWs.send(JSON.stringify({
+    let recipientWs = activeConnections.get(recipientId);
+    if (!recipientWs && payload.recipientUsername) {
+      recipientWs = activeConnections.get(payload.recipientUsername.toLowerCase());
+    }
+    if (!recipientWs && payload.recipientPrivateId) {
+      recipientWs = activeConnections.get(payload.recipientPrivateId.toUpperCase());
+    }
+
+    const isDelivered = !!(recipientWs && recipientWs.readyState === WebSocket.OPEN);
+    if (isDelivered) {
+      recipientWs!.send(JSON.stringify({
         type: 'chat_receive',
         message: msg
       }));
@@ -32,6 +40,7 @@ export async function handleChatMessage(
       type: 'chat_ack',
       messageId: msg.id,
       conversationId: msg.conversationId,
+      deliveredToRecipient: isDelivered,
       createdAt: msg.createdAt,
       expiresAt: msg.expiresAt
     }));

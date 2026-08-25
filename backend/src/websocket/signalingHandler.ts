@@ -41,7 +41,13 @@ export function handleSignaling(
     }));
 
   } else if (type === 'call_invite') {
-    const targetWs = activeConnections.get(payload.targetUserId);
+    let targetWs = activeConnections.get(payload.targetUserId);
+    if (!targetWs && payload.targetUsername) {
+      targetWs = activeConnections.get(payload.targetUsername.toLowerCase());
+    }
+    if (!targetWs && payload.targetPrivateId) {
+      targetWs = activeConnections.get(payload.targetPrivateId.toUpperCase());
+    }
     if (targetWs && targetWs.readyState === WebSocket.OPEN) {
       targetWs.send(JSON.stringify({
         type: 'call_invite',

@@ -202,6 +202,8 @@ class _ChatScreenState extends State<ChatScreen> {
         'conversationId': _conversationId,
         'senderId': widget.user['id'] ?? 'u1',
         'recipientId': widget.recipient['id'] ?? 'u2',
+        'recipientUsername': widget.recipient['username'],
+        'recipientPrivateId': widget.recipient['privateId'],
         'encryptedPayload': encrypted,
         'messageType': 'text',
         'ttlSeconds': _ttlSeconds,

@@ -109,13 +109,17 @@ export function initWebSocketServer(server: HttpServer) {
 
     ws.on('close', async () => {
       if (currentId) {
-        activeConnections.delete(currentId);
-        // Clean up rooms
+        if (activeConnections.get(currentId) === ws) {
+          activeConnections.delete(currentId);
+        }
         activeCallRooms.forEach((room, callId) => {
           if (room.has(currentId!)) {
-            room.delete(currentId!);
-            if (room.size === 0) {
-              activeCallRooms.delete(callId);
+            const p = room.get(currentId!);
+            if (p && p.ws === ws) {
+              room.delete(currentId!);
+              if (room.size === 0) {
+                activeCallRooms.delete(callId);
+              }
             }
           }
         });

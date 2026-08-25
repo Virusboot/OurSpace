@@ -653,6 +653,8 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                     'callType': type,
                     'token': token,
                     'targetUserId': recipient['id'],
+                    'targetUsername': recipient['username'],
+                    'targetPrivateId': recipient['privateId'],
                     'callerUsername': _user?['username'] ?? '@user',
                   });
                 }
@@ -709,6 +711,8 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                     'callType': type,
                     'token': token,
                     'targetUserId': recipient['id'],
+                    'targetUsername': recipient['username'],
+                    'targetPrivateId': recipient['privateId'],
                     'callerUsername': _user?['username'] ?? '@user',
                   });
                 }
