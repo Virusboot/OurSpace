@@ -481,7 +481,7 @@ class _CallScreenState extends State<CallScreen> {
                 ),
 
               // Floating Local Camera PiP Window when remote video is connected
-              if (widget.callType == 'video' && _isConnected && _remoteRenderer.srcObject != null && _cameraEnabled)
+              if (widget.callType == 'video' && _isConnected && _remoteRenderer.srcObject != null && _camEnabled)
                 Positioned(
                   right: 16,
                   bottom: 110,
