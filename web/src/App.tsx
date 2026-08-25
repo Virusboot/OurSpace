@@ -90,18 +90,20 @@ export const App: React.FC = () => {
 
   const handleJoin = async (guestNickname: string, pin?: string) => {
     setJoinError(undefined);
-    if (pinRequired && pin) {
-      const details = await resolveToken(token!, pin);
-      if (!details) {
-        setJoinError('Invalid call PIN');
-        return;
-      }
+    let details = linkDetails;
+    if (!details) {
+      details = await resolveToken(token!, pin);
+    }
+
+    if (!details || !details.callId) {
+      setJoinError('Invalid or expired call link credentials.');
+      return;
     }
 
     try {
       setNickname(guestNickname);
       await rtcService.connectSocket();
-      const stream = await rtcService.startLocalStream(linkDetails?.callType || 'video');
+      const stream = await rtcService.startLocalStream(details.callType || 'video');
       setLocalStream(stream);
 
       rtcService.onRemoteStream = (rStream) => {
@@ -124,7 +126,7 @@ export const App: React.FC = () => {
         setErrorStatus('expired');
       };
 
-      await rtcService.joinCallRoom(linkDetails.callId, guestNickname);
+      await rtcService.joinCallRoom(details.callId, guestNickname);
       setInCall(true);
     } catch (err: any) {
       setJoinError(err.message || 'Failed to access camera/microphone');
