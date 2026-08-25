@@ -186,10 +186,13 @@ class _CallScreenState extends State<CallScreen> {
           break;
 
         case 'call_offer':
-          _remoteParticipantId = event['senderId'];
+          if (event['senderId'] != null) {
+            _remoteParticipantId = event['senderId']?.toString();
+          }
           await _createPeerConnection();
           
-          final offerSdp = event['sdp']['sdp'] ?? event['sdp'];
+          final offerMap = event['sdp'];
+          final String offerSdp = (offerMap is Map ? offerMap['sdp'] : offerMap)?.toString() ?? '';
           await _peerConnection!.setRemoteDescription(
             RTCSessionDescription(offerSdp, 'offer'),
           );
@@ -201,7 +204,11 @@ class _CallScreenState extends State<CallScreen> {
 
         case 'call_answer':
           if (_peerConnection != null) {
-            final answerSdp = event['sdp']['sdp'] ?? event['sdp'];
+            if (event['senderId'] != null) {
+              _remoteParticipantId = event['senderId']?.toString();
+            }
+            final answerMap = event['sdp'];
+            final String answerSdp = (answerMap is Map ? answerMap['sdp'] : answerMap)?.toString() ?? '';
             await _peerConnection!.setRemoteDescription(
               RTCSessionDescription(answerSdp, 'answer'),
             );
@@ -243,6 +250,7 @@ class _CallScreenState extends State<CallScreen> {
         WebSocketClient().send({
           'type': 'ice_candidate',
           'callId': widget.callId,
+          'senderId': widget.user?['id'] ?? 'user_host',
           'targetId': _remoteParticipantId,
           'candidate': {
             'candidate': candidate.candidate,
@@ -299,6 +307,7 @@ class _CallScreenState extends State<CallScreen> {
     WebSocketClient().send({
       'type': 'call_offer',
       'callId': widget.callId,
+      'senderId': widget.user?['id'] ?? 'user_host',
       'targetId': _remoteParticipantId,
       'senderUsername': widget.user?['username'] ?? '@anonymous',
       'callType': widget.callType,
@@ -314,6 +323,7 @@ class _CallScreenState extends State<CallScreen> {
     WebSocketClient().send({
       'type': 'call_answer',
       'callId': widget.callId,
+      'senderId': widget.user?['id'] ?? 'user_host',
       'targetId': _remoteParticipantId,
       'sdp': {'sdp': answer.sdp, 'type': answer.type},
     });

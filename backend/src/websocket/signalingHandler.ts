@@ -53,26 +53,29 @@ export function handleSignaling(
       }));
     }
   } else if (type === 'call_offer' || type === 'call_answer' || type === 'ice_candidate' || type === 'media_toggle') {
-    // Direct signaling route to target participant or broadcast to room
+    let routed = false;
     if (targetId) {
       const targetWs = activeConnections.get(targetId);
       if (targetWs && targetWs.readyState === WebSocket.OPEN) {
         targetWs.send(JSON.stringify(payload));
-        return;
-      }
-      // Check room map
-      const room = activeCallRooms.get(callId);
-      if (room && room.has(targetId)) {
-        const targetObj = room.get(targetId)!;
-        if (targetObj.ws.readyState === WebSocket.OPEN) {
-          targetObj.ws.send(JSON.stringify(payload));
+        routed = true;
+      } else {
+        const room = activeCallRooms.get(callId);
+        if (room && room.has(targetId)) {
+          const targetObj = room.get(targetId)!;
+          if (targetObj.ws.readyState === WebSocket.OPEN) {
+            targetObj.ws.send(JSON.stringify(payload));
+            routed = true;
+          }
         }
       }
-    } else {
+    }
+    
+    if (!routed) {
       // Broadcast to room members except sender
       const room = activeCallRooms.get(callId);
       if (room) {
-        room.forEach((participant, pid) => {
+        room.forEach((participant) => {
           if (participant.ws !== ws && participant.ws.readyState === WebSocket.OPEN) {
             participant.ws.send(JSON.stringify(payload));
           }
