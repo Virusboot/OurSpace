@@ -702,7 +702,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                   _activeRecipient = recipient;
                   _currentScreen = 'call';
                 });
-                if (recipient != null && recipient['id'] != null) {
+                if (recipient['id'] != null) {
                   WebSocketClient().send({
                     'type': 'call_invite',
                     'callId': generatedCallId,

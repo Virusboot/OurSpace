@@ -57,11 +57,26 @@ export class WebRTCService {
 
   public async startLocalStream(callType: 'audio' | 'video'): Promise<MediaStream> {
     const constraints: MediaStreamConstraints = {
-      audio: true,
-      video: callType === 'video' ? { width: { ideal: 1280 }, height: { ideal: 720 } } : false
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+      video: callType === 'video' ? {
+        width: { ideal: 1920, min: 1280 },
+        height: { ideal: 1080, min: 720 },
+        frameRate: { ideal: 30 }
+      } : false
     };
 
-    this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
+    try {
+      this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (_) {
+      this.localStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: callType === 'video' ? true : false
+      });
+    }
     return this.localStream;
   }
 
@@ -152,6 +167,9 @@ export class WebRTCService {
       case 'participant_joined': {
         // Someone joined AFTER us. As the one already in the room, we create the offer.
         this.remoteParticipantId = msg.participantId ?? null;
+        if (!this.peerConnection) {
+          this.initPeerConnection(this.callId);
+        }
         if (this.peerConnection && this.remoteParticipantId) {
           console.log('[WebRTC] New participant joined, creating offer...');
           const offer = await this.peerConnection.createOffer();
@@ -168,6 +186,10 @@ export class WebRTCService {
       }
 
       case 'call_offer': {
+        this.remoteParticipantId = msg.senderId ?? null;
+        if (!this.peerConnection) {
+          this.initPeerConnection(this.callId);
+        }
         if (this.peerConnection && msg.sdp) {
           this.remoteParticipantId = msg.senderId ?? null;
           await this.peerConnection.setRemoteDescription(new RTCSessionDescription(msg.sdp));

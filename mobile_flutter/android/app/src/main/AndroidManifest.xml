@@ -38,6 +38,7 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="https" android:host="localhost" android:pathPrefix="/c/"/>
+                <data android:scheme="https" android:host="ourspace-wheat.vercel.app" android:pathPrefix="/c/"/>
                 <data android:scheme="https" android:host="our-space-wheat.vercel.app" android:pathPrefix="/c/"/>
                 <data android:scheme="http" android:host="localhost" android:pathPrefix="/c/"/>
             </intent-filter>

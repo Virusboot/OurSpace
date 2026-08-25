@@ -24,32 +24,58 @@ import { setLastDbError } from '../routes/userRoutes';
 
 export async function initDb() {
   try {
+    if (pgPool) {
+      try { await pgPool.end(); } catch (_) {}
+    }
+
     const pool = new Pool({
       connectionString: config.databaseUrl,
-      connectionTimeoutMillis: 5000,
-      query_timeout: 5000, // 5s client-side timeout to prevent hanging on PgBouncer issues
-      statement_timeout: 10000, // 10s server-side timeout
-      idleTimeoutMillis: 10000,
+      connectionTimeoutMillis: 8000,
+      query_timeout: 10000, // 10s client-side timeout
+      statement_timeout: 15000, // 15s server-side timeout
+      idleTimeoutMillis: 30000,
+      max: 10,
       ssl: config.databaseUrl?.includes('localhost') ? false : { rejectUnauthorized: false }
     });
     
-    // Add hard timeout to connect to prevent proxy stalls
+    pool.on('error', (err) => {
+      console.error('[Database Pool Error] PostgreSQL client error:', err.message);
+      setLastDbError(err.message);
+      // Attempt background reconnect
+      scheduleDbReconnect();
+    });
+
+    // Add hard timeout to connect
     const client = await Promise.race([
       pool.connect(),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('PostgreSQL connection timeout')), 5000))
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('PostgreSQL connection timeout (8s)')), 8000))
     ]);
     
     client.release();
     pgPool = pool;
     usePg = true;
-    console.log('[Database] Connected to PostgreSQL successfully.');
+    setLastDbError('');
+    console.log('[Database] Connected to Supabase PostgreSQL successfully.');
     await createTablesIfNotExist();
   } catch (err: any) {
-    console.warn('[Database] PostgreSQL connection failed! Error:', err);
-    console.warn('Falling back to robust In-Memory Database store for development.');
+    console.warn('[Database] PostgreSQL connection failed! Error:', err.message || String(err));
+    console.warn('Falling back to In-Memory Database store. Will retry connecting to PostgreSQL in 30s...');
     setLastDbError(err.message || String(err));
     usePg = false;
+    scheduleDbReconnect();
   }
+}
+
+let dbReconnectTimer: NodeJS.Timeout | null = null;
+function scheduleDbReconnect() {
+  if (dbReconnectTimer) return;
+  dbReconnectTimer = setTimeout(async () => {
+    dbReconnectTimer = null;
+    if (!usePg) {
+      console.log('[Database] Attempting to reconnect to PostgreSQL/Supabase...');
+      await initDb();
+    }
+  }, 30000);
 }
 
 async function createTablesIfNotExist() {

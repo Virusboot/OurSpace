@@ -38,7 +38,7 @@ class ApiClient {
       Uri.parse('$baseUrl$endpoint'),
       headers: headers,
       body: jsonEncode(body),
-    ).timeout(const Duration(seconds: 30));
+    ).timeout(const Duration(seconds: 60));
 
     final data = jsonDecode(response.body);
     if (response.statusCode >= 400) {
@@ -59,7 +59,7 @@ class ApiClient {
     final response = await http.get(
       Uri.parse('$baseUrl$endpoint'),
       headers: headers,
-    ).timeout(const Duration(seconds: 30));
+    ).timeout(const Duration(seconds: 60));
 
     final data = jsonDecode(response.body);
     if (response.statusCode >= 400) {

@@ -1,7 +1,7 @@
 name: ourspace_flutter
 description: Production-ready OurSpace Privacy-Focused Mobile Application
 publish_to: 'none'
-version: 1.1.5+11
+version: 1.1.8+14
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -20,6 +20,8 @@ dependencies:
   cupertino_icons: ^1.0.6
   shared_preferences: ^2.2.2
   image_picker: ^1.1.0
+  url_launcher: ^6.3.0
+  share_plus: ^10.0.0
   flutter_native_splash: ^2.4.6
 
 dev_dependencies:

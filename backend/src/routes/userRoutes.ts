@@ -64,29 +64,35 @@ router.get('/lookup', authenticateToken, async (req, res) => {
     }
 
     const cleanQuery = query.trim().toLowerCase();
-    const usernameSearch = cleanQuery.startsWith('@') ? cleanQuery : `@${cleanQuery}`;
-    const partialSearch = usernameSearch.replace('@', '');
+    const withoutAt = cleanQuery.replace(/^@/, '');
+    const withAt = `@${withoutAt}`;
+    const upperQuery = cleanQuery.toUpperCase();
 
     if (isPgActive()) {
       const pool = getPgPool();
       const result = await pool?.query(
         `SELECT id, private_id as "privateId", username, public_key as "publicKey"
          FROM users
-         WHERE LOWER(username) LIKE $1
-            OR UPPER(private_id) = $2
-         ORDER BY CASE WHEN LOWER(username) = $3 THEN 0 ELSE 1 END
+         WHERE LOWER(username) LIKE $1 
+            OR LOWER(username) LIKE $2 
+            OR UPPER(private_id) LIKE $3
+         ORDER BY CASE 
+           WHEN LOWER(username) = $4 OR LOWER(username) = $5 OR UPPER(private_id) = $6 THEN 0 
+           ELSE 1 
+         END
          LIMIT 10`,
-        [`%${partialSearch}%`, cleanQuery.toUpperCase(), usernameSearch]
+        [`%${withoutAt}%`, `%${withAt}%`, `%${upperQuery}%`, withoutAt, withAt, upperQuery]
       );
       const users = result?.rows || [];
       if (users.length === 0) return res.status(404).json({ error: 'No users found' });
       return res.json(users[0]);
     } else {
-      const allUsers = Array.from((inMemoryDb as any).usersByUsername.values()) as any[];
-      const matches = allUsers.filter((u: any) =>
-        u.username.toLowerCase().includes(partialSearch) ||
-        u.privateId.toUpperCase() === cleanQuery.toUpperCase()
-      );
+      const allUsers = Array.from((inMemoryDb as any).users.values()) as any[];
+      const matches = allUsers.filter((u: any) => {
+        const uname = (u.username || '').toLowerCase();
+        const pid = (u.privateId || '').toUpperCase();
+        return uname.includes(withoutAt) || uname.includes(withAt) || pid.includes(upperQuery);
+      });
       if (matches.length === 0) return res.status(404).json({ error: 'No users found' });
       const u = matches[0];
       return res.json({ id: u.id, privateId: u.privateId, username: u.username, publicKey: u.publicKey });

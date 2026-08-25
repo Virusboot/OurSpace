@@ -49,7 +49,6 @@ class _CallScreenState extends State<CallScreen> {
   String? _remoteParticipantId;
   String? _remoteParticipantName;   // updated when guest joins
   bool _isConnected = false;
-  bool _isInitiator = false;
   bool _hasRemoteDescription = false;
   final List<RTCIceCandidate> _queuedRemoteCandidates = [];
 
@@ -100,12 +99,16 @@ class _CallScreenState extends State<CallScreen> {
   Future<void> _setupLocalMedia() async {
     try {
       final mediaConstraints = <String, dynamic>{
-        'audio': true,
+        'audio': {
+          'echoCancellation': true,
+          'noiseSuppression': true,
+          'autoGainControl': true,
+        },
         'video': widget.callType == 'video'
             ? {
                 'mandatory': {
-                  'minWidth': '640',
-                  'minHeight': '480',
+                  'minWidth': '1280',
+                  'minHeight': '720',
                   'minFrameRate': '30',
                 },
                 'facingMode': 'user',
@@ -113,8 +116,17 @@ class _CallScreenState extends State<CallScreen> {
               }
             : false,
       };
-      
-      _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+
+      try {
+        _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+      } catch (_) {
+        final fallbackConstraints = <String, dynamic>{
+          'audio': true,
+          'video': widget.callType == 'video' ? {'facingMode': 'user'} : false,
+        };
+        _localStream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+      }
+
       _localRenderer.srcObject = _localStream;
       if (mounted) setState(() {});
     } catch (e) {
@@ -145,11 +157,8 @@ class _CallScreenState extends State<CallScreen> {
         case 'call_joined_ack':
           final existing = event['existingParticipants'] as List<dynamic>?;
           if (existing != null && existing.isNotEmpty) {
-            // There is someone already in the room, so we initiate the offer
-            _isInitiator = true;
+            // Room host is already waiting. Store host ID and wait for their offer.
             _remoteParticipantId = existing.first.toString();
-            await _createPeerConnection();
-            await _sendOffer();
           }
           break;
 
@@ -163,17 +172,14 @@ class _CallScreenState extends State<CallScreen> {
                 _remoteParticipantName = newNickname;
               }
             });
-            if (!_isInitiator) {
-              _isInitiator = true;
-              await _createPeerConnection();
-              await _sendOffer();
-            }
+            // We are the host in the room. Initiate peer connection and send offer.
+            await _createPeerConnection();
+            await _sendOffer();
           }
           break;
 
         case 'call_offer':
           _remoteParticipantId = event['senderId'];
-          _isInitiator = false;
           await _createPeerConnection();
           
           final offerSdp = event['sdp']['sdp'] ?? event['sdp'];
@@ -236,6 +242,16 @@ class _CallScreenState extends State<CallScreen> {
             'sdpMid': candidate.sdpMid,
             'sdpMLineIndex': candidate.sdpMLineIndex,
           },
+        });
+      }
+    };
+
+    _peerConnection!.onTrack = (event) {
+      if (event.streams.isNotEmpty) {
+        setState(() {
+          _remoteStream = event.streams[0];
+          _remoteRenderer.srcObject = event.streams[0];
+          _isConnected = true;
         });
       }
     };

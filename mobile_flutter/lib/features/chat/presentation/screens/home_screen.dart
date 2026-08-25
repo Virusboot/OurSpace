@@ -3,6 +3,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../../core/networking/api_client.dart';
 import '../../../../core/networking/websocket_client.dart';
 import '../../../../core/storage/secure_storage_service.dart';
@@ -71,6 +73,229 @@ class _HomeScreenState extends State<HomeScreen> {
     _wsSubscription?.cancel();
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _shareToTelegram(String url) async {
+    final msg = Uri.encodeComponent('Join my secure encrypted call on OurSpace: $url');
+    final tgUri = Uri.parse('https://t.me/share/url?url=${Uri.encodeComponent(url)}&text=$msg');
+    try {
+      if (await canLaunchUrl(tgUri)) {
+        await launchUrl(tgUri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(tgUri, mode: LaunchMode.externalNonBrowserApplication);
+      }
+    } catch (_) {
+      Share.share('Join my secure encrypted call on OurSpace:\n$url');
+    }
+  }
+
+  Future<void> _shareToWhatsApp(String url) async {
+    final msg = Uri.encodeComponent('Join my secure encrypted call on OurSpace:\n$url');
+    final waUri = Uri.parse('whatsapp://send?text=$msg');
+    final waWebUri = Uri.parse('https://api.whatsapp.com/send?text=$msg');
+    try {
+      if (await canLaunchUrl(waUri)) {
+        await launchUrl(waUri, mode: LaunchMode.externalApplication);
+      } else if (await canLaunchUrl(waWebUri)) {
+        await launchUrl(waWebUri, mode: LaunchMode.externalApplication);
+      } else {
+        Share.share('Join my secure encrypted call on OurSpace:\n$url');
+      }
+    } catch (_) {
+      Share.share('Join my secure encrypted call on OurSpace:\n$url');
+    }
+  }
+
+  void _shareViaNative(String url) {
+    Share.share(
+      'Join my secure encrypted call on OurSpace:\n$url',
+      subject: 'OurSpace Call Invitation',
+    );
+  }
+
+  void _showShareOptionsModal(BuildContext context, String url) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF161822) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7B2FBE).withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.share_rounded, color: Color(0xFF7B2FBE), size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Share Call Link',
+                      style: TextStyle(
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                IconButton(
+                  icon: Icon(Icons.close_rounded, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _shareToTelegram(url);
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF229ED9).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFF229ED9).withValues(alpha: 0.3)),
+                      ),
+                      child: const Column(
+                        children: [
+                          Icon(Icons.send_rounded, color: Color(0xFF229ED9), size: 26),
+                          SizedBox(height: 6),
+                          Text(
+                            'Telegram',
+                            style: TextStyle(color: Color(0xFF229ED9), fontWeight: FontWeight.bold, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _shareToWhatsApp(url);
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF25D366).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFF25D366).withValues(alpha: 0.3)),
+                      ),
+                      child: const Column(
+                        children: [
+                          Icon(Icons.chat_rounded, color: Color(0xFF25D366), size: 26),
+                          SizedBox(height: 6),
+                          Text(
+                            'WhatsApp',
+                            style: TextStyle(color: Color(0xFF25D366), fontWeight: FontWeight.bold, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _shareViaNative(url);
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7B2FBE).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.3)),
+                      ),
+                      child: const Column(
+                        children: [
+                          Icon(Icons.grid_view_rounded, color: Color(0xFF7B2FBE), size: 26),
+                          SizedBox(height: 6),
+                          Text(
+                            'All Apps',
+                            style: TextStyle(color: Color(0xFF7B2FBE), fontWeight: FontWeight.bold, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              tileColor: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
+              leading: const Icon(Icons.copy_rounded, color: Color(0xFF7B2FBE)),
+              title: const Text('Copy Link to Clipboard', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
+              onTap: () {
+                Navigator.pop(ctx);
+                Clipboard.setData(ClipboardData(text: url));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Row(
+                      children: [
+                        Icon(Icons.check_circle_rounded, color: Colors.white, size: 16),
+                        SizedBox(width: 8),
+                        Text('Link copied to clipboard!'),
+                      ],
+                    ),
+                    duration: const Duration(seconds: 2),
+                    backgroundColor: const Color(0xFF7B2FBE),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    margin: const EdgeInsets.all(16),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
   }
 
   void _onSearchChanged() {
@@ -210,7 +435,7 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icons.chat_bubble_outline_rounded,
               color: const Color(0xFF7B2FBE),
               title: 'New Encrypted Chat',
-              subtitle: 'Connect with a user via unique Username or Private ID',
+              subtitle: 'Connect with a user via unique Username',
               onTap: () {
                 Navigator.pop(ctx);
                 _showSearchUserModal();
@@ -673,31 +898,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(height: 14),
 
-                              // Copy button
+                              // Single Unified Professional Share Button
                               AppGradientButton(
                                 height: 44,
                                 borderRadius: 12,
-                                icon: const Icon(Icons.copy_rounded, size: 16, color: Colors.white),
-                                label: 'Copy Link',
-                                onTap: () {
-                                  Clipboard.setData(ClipboardData(text: generatedUrl!));
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: const Row(
-                                        children: [
-                                          Icon(Icons.check_circle_rounded, color: Colors.white, size: 16),
-                                          SizedBox(width: 8),
-                                          Text('Link copied! Share it anywhere.'),
-                                        ],
-                                      ),
-                                      duration: const Duration(seconds: 2),
-                                      backgroundColor: const Color(0xFF7B2FBE),
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                      margin: const EdgeInsets.all(16),
-                                    ),
-                                  );
-                                },
+                                icon: const Icon(Icons.share_rounded, size: 16, color: Colors.white),
+                                label: 'Share Call Link',
+                                onTap: () => _showShareOptionsModal(context, generatedUrl!),
                               ),
                             ],
                           ),
@@ -968,7 +1175,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                           _globalSearchResult!['username']?.toString() ?? '',
                                           style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold),
                                         ),
-                                        subtitle: const Text('Tap to start chat', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                                        subtitle: Text(
+                                          _globalSearchResult!['privateId'] != null
+                                              ? '${_globalSearchResult!['privateId']} • Tap to start chat'
+                                              : 'Tap to start chat',
+                                          style: const TextStyle(color: Colors.grey, fontSize: 11),
+                                        ),
                                         trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF7B2FBE), size: 16),
                                         onTap: () async {
                                           await _saveRecentChat(_globalSearchResult!);
@@ -1025,7 +1237,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   const SizedBox(height: 8),
                                                   Text(
                                                     filterQuery.isNotEmpty
-                                                        ? 'Try searching with a different name, handle, or Private ID.'
+                                                        ? 'Try searching with a different username.'
                                                         : 'Your chats are zero-knowledge and end-to-end encrypted. Tap below to start a new secure chat.',
                                                     style: TextStyle(color: itemSubtxt, fontSize: 13, height: 1.5),
                                                     textAlign: TextAlign.center,
@@ -1330,6 +1542,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         Positioned(
                           right: 0, bottom: 0,
+                          // Single Unified Professional Share Button
                           child: Container(
                             width: 12, height: 12,
                             decoration: BoxDecoration(

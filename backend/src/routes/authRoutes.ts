@@ -7,6 +7,8 @@ const router = Router();
 
 import { isPgActive, getPgPool } from '../db';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { config } from '../config';
 
 // Store registered users by email in memory for backend auth (fallback only)
 const usersByEmail = new Map<string, any>();
@@ -24,8 +26,10 @@ router.post('/login', authRateLimiter, async (req, res) => {
 
     if (isPgActive()) {
       const pool = getPgPool();
-      let query = 'SELECT * FROM users WHERE LOWER(username) = $1 OR LOWER(private_id) = $1';
-      let resDb = await pool?.query(query, [loginIdentifier]);
+      const withoutAt = loginIdentifier.replace(/^@/, '');
+      const withAt = `@${withoutAt}`;
+      let query = 'SELECT * FROM users WHERE LOWER(username) = $1 OR LOWER(username) = $2 OR LOWER(private_id) = $1 OR LOWER(private_id) = $3';
+      let resDb = await pool?.query(query, [loginIdentifier, withAt, withoutAt]);
       
       // If email format, try extracting private ID
       if (!resDb || resDb.rows.length === 0) {
@@ -74,9 +78,15 @@ router.post('/login', authRateLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Incorrect password' });
     }
 
+    const token = jwt.sign(
+      { userId: existing.id, privateId: existing.privateId, username: existing.username },
+      config.jwtSecret,
+      { expiresIn: '30d' }
+    );
+
     return res.json({
       user: existing,
-      token: 'jwt_token_' + Date.now(),
+      token,
     });
   } catch (err: any) {
     return res.status(400).json({ error: err.message || 'Login failed' });
@@ -127,19 +137,25 @@ router.post('/register', authRateLimiter, async (req, res) => {
       };
       usersByEmail.set(cleanEmail, userObj);
 
-      const lookupRecord = {
-        id: userId,
-        privateId,
-        username: cleanUsername,
-        publicKey: 'mock_public_key',
-        recoveryHash: password,
-        createdAt: now,
-        updatedAt: now,
-      };
-      inMemoryDb.users.set(userId, lookupRecord);
-      inMemoryDb.usersByPrivateId.set(privateId.toUpperCase(), lookupRecord);
-      inMemoryDb.usersByUsername.set(cleanUsername.toLowerCase(), lookupRecord);
+    const lookupRecord = {
+      id: userId,
+      privateId,
+      username: cleanUsername,
+      publicKey: 'mock_public_key',
+      recoveryHash: password,
+      createdAt: now,
+      updatedAt: now,
+    };
+    inMemoryDb.users.set(userId, lookupRecord);
+    inMemoryDb.usersByPrivateId.set(privateId.toUpperCase(), lookupRecord);
+    inMemoryDb.usersByUsername.set(cleanUsername.toLowerCase(), lookupRecord);
     }
+
+    const token = jwt.sign(
+      { userId: userId, privateId: privateId, username: cleanUsername },
+      config.jwtSecret,
+      { expiresIn: '30d' }
+    );
 
     return res.json({
       user: {
@@ -149,7 +165,7 @@ router.post('/register', authRateLimiter, async (req, res) => {
         username: cleanUsername,
         privateId: privateId,
       },
-      token: 'jwt_token_' + Date.now(),
+      token,
     });
   } catch (err: any) {
     return res.status(400).json({ error: err.message || 'Registration failed' });

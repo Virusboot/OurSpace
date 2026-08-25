@@ -187,7 +187,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
         'email': derivedEmail,
         'password': derivedPassword,
         'username': username,
-      }).timeout(const Duration(seconds: 3));
+      });
 
       if (res['user'] != null) {
         userObj = Map<String, dynamic>.from(res['user']);
@@ -253,7 +253,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
       final res = await ApiClient.post('/auth/login', {
         'username': privateIdInput,
         'password': passwordInput,
-      }).timeout(const Duration(seconds: 3));
+      });
 
       if (res['user'] != null) {
         userObj = Map<String, dynamic>.from(res['user']);
