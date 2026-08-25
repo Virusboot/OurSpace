@@ -10,9 +10,9 @@ import { ContactUs } from './components/ContactUs';
 import { AboutUs } from './components/AboutUs';
 import { WebRTCService } from './services/webRTCService';
 
-// API goes via Vercel proxy (/api/* → https://ourspace-d81w.onrender.com/api/*)
-// On localhost, direct to empty string (local backend on port 4000 via vite proxy)
-const API_BASE = '';
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+  ? '' 
+  : 'https://ourspace-d81w.onrender.com';
 
 export const App: React.FC = () => {
   const [currentRoute, setCurrentRoute] = useState<string>('');
