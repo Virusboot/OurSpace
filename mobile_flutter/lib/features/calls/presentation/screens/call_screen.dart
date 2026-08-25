@@ -261,11 +261,19 @@ class _CallScreenState extends State<CallScreen> {
       }
     };
 
-    _peerConnection!.onTrack = (event) {
+    _peerConnection!.onTrack = (event) async {
       if (event.streams.isNotEmpty) {
         setState(() {
           _remoteStream = event.streams[0];
           _remoteRenderer.srcObject = event.streams[0];
+          _isConnected = true;
+        });
+      } else if (event.track != null) {
+        final stream = await createLocalMediaStream('remote_stream_${DateTime.now().millisecondsSinceEpoch}');
+        stream.addTrack(event.track);
+        setState(() {
+          _remoteStream = stream;
+          _remoteRenderer.srcObject = stream;
           _isConnected = true;
         });
       }
@@ -455,8 +463,15 @@ class _CallScreenState extends State<CallScreen> {
         body: SafeArea(
           child: Stack(
             children: [
-              // Own camera as fullscreen background while waiting for guest
-              if (showLocalPreviewFullscreen)
+              // Remote video stream covers full background once connected
+              if (widget.callType == 'video' && _isConnected && _remoteRenderer.srcObject != null)
+                Positioned.fill(
+                  child: RTCVideoView(
+                    _remoteRenderer,
+                    objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                  ),
+                )
+              else if (widget.callType == 'video')
                 Positioned.fill(
                   child: RTCVideoView(
                     _localRenderer,
@@ -465,12 +480,33 @@ class _CallScreenState extends State<CallScreen> {
                   ),
                 ),
 
-              // Remote video stream covers full background once connected
-              if (showRemoteVideo)
-                Positioned.fill(
-                  child: RTCVideoView(
-                    _remoteRenderer,
-                    objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+              // Floating Local Camera PiP Window when remote video is connected
+              if (widget.callType == 'video' && _isConnected && _remoteRenderer.srcObject != null && _cameraEnabled)
+                Positioned(
+                  right: 16,
+                  bottom: 110,
+                  width: 115,
+                  height: 165,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.4),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: RTCVideoView(
+                        _localRenderer,
+                        mirror: true,
+                        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                      ),
+                    ),
                   ),
                 ),
 
