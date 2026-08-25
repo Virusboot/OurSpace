@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../storage/secure_storage_service.dart';
 
@@ -36,8 +35,6 @@ class WebSocketClient {
     String wsUrl;
     if (customWsUrl != null && customWsUrl!.isNotEmpty) {
       wsUrl = customWsUrl!;
-    } else if (kDebugMode) {
-      wsUrl = 'ws://localhost:4000/ws';
     } else {
       wsUrl = 'wss://ourspace-d81w.onrender.com/ws';
     }
