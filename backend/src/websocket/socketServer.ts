@@ -52,6 +52,12 @@ export function initWebSocketServer(server: HttpServer) {
             currentId = decoded.userId;
             if (currentId) {
               activeConnections.set(currentId, ws);
+              if (decoded.username) {
+                activeConnections.set(decoded.username.toLowerCase(), ws);
+              }
+              if (decoded.privateId) {
+                activeConnections.set(decoded.privateId.toUpperCase(), ws);
+              }
               ws.send(JSON.stringify({ type: 'auth_ack', success: true, userId: currentId }));
               console.log(`[WebSocket] User authenticated: ${currentId}`);
               await broadcastOnlineUsers();
