@@ -164,6 +164,15 @@ export class WebRTCService {
         this.onConnectionStateChange(this.peerConnection.connectionState);
       }
     };
+
+    this.peerConnection.oniceconnectionstatechange = () => {
+      if (this.peerConnection && this.onConnectionStateChange) {
+        const state = this.peerConnection.iceConnectionState;
+        if (state === 'connected' || state === 'completed') {
+          this.onConnectionStateChange('connected');
+        }
+      }
+    };
   }
 
   private callId: string = '';

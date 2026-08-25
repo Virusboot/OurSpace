@@ -303,6 +303,13 @@ class _CallScreenState extends State<CallScreen> {
       }
     };
 
+    _peerConnection!.onIceConnectionState = (state) {
+      if (state == RTCIceConnectionState.RTCIceConnectionStateConnected ||
+          state == RTCIceConnectionState.RTCIceConnectionStateCompleted) {
+        setState(() => _isConnected = true);
+      }
+    };
+
     if (_localStream != null) {
       _localStream!.getTracks().forEach((track) {
         _peerConnection!.addTrack(track, _localStream!);
