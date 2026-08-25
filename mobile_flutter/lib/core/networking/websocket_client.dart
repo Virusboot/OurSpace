@@ -12,6 +12,7 @@ class WebSocketClient {
 
   WebSocketChannel? _channel;
   final StreamController<Map<String, dynamic>> _messageController = StreamController.broadcast();
+  final List<Map<String, dynamic>> _pendingQueue = [];
   Timer? _reconnectTimer;
   bool _isConnecting = false;
   bool _isExplicitlyDisconnected = false;
@@ -20,14 +21,10 @@ class WebSocketClient {
 
   Future<void> connect() async {
     if (_isConnecting) return;
+    if (_channel != null && !_isExplicitlyDisconnected) return;
+
     _isExplicitlyDisconnected = false;
     _isConnecting = true;
-
-    final token = await SecureStorageService.read('auth_token');
-    if (token == null) {
-      _isConnecting = false;
-      return;
-    }
 
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
@@ -38,12 +35,15 @@ class WebSocketClient {
     } else {
       wsUrl = 'wss://ourspace-d81w.onrender.com/ws';
     }
+
     try {
       await _channel?.sink.close();
       _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
-      
-      // Handshake authentication
-      send({'type': 'auth', 'token': token});
+
+      final token = await SecureStorageService.read('auth_token');
+      if (token != null && token.isNotEmpty) {
+        send({'type': 'auth', 'token': token});
+      }
 
       _channel!.stream.listen(
         (data) {
@@ -54,16 +54,21 @@ class WebSocketClient {
         },
         onError: (err) {
           _isConnecting = false;
+          _channel = null;
           _reconnect();
         },
         onDone: () {
           _isConnecting = false;
+          _channel = null;
           _reconnect();
         },
       );
+
       _isConnecting = false;
+      _flushQueue();
     } catch (_) {
       _isConnecting = false;
+      _channel = null;
       _reconnect();
     }
   }
@@ -71,14 +76,33 @@ class WebSocketClient {
   void _reconnect() {
     if (_isExplicitlyDisconnected) return;
     _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(const Duration(seconds: 3), () {
+    _reconnectTimer = Timer(const Duration(seconds: 2), () {
       connect();
     });
   }
 
   void send(Map<String, dynamic> payload) {
     if (_channel != null) {
-      _channel!.sink.add(jsonEncode(payload));
+      try {
+        _channel!.sink.add(jsonEncode(payload));
+      } catch (e) {
+        _pendingQueue.add(payload);
+        connect();
+      }
+    } else {
+      _pendingQueue.add(payload);
+      connect();
+    }
+  }
+
+  void _flushQueue() {
+    if (_channel == null || _pendingQueue.isEmpty) return;
+    final copy = List<Map<String, dynamic>>.from(_pendingQueue);
+    _pendingQueue.clear();
+    for (final payload in copy) {
+      try {
+        _channel!.sink.add(jsonEncode(payload));
+      } catch (_) {}
     }
   }
 
