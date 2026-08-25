@@ -11,8 +11,8 @@ export const Header: React.FC = () => {
         <div className="header-inner">
           {/* Logo */}
           <div className="header-logo">
-            <a href="/" aria-label="OurSpace Home">
-              <img src={logoImg} alt="OurSpace" />
+            <a href="/" aria-label="OurSpace Home" className="flex items-center">
+              <img src={logoImg} alt="OurSpace" style={{ height: '42px', width: 'auto', objectFit: 'contain' }} />
             </a>
           </div>
 
