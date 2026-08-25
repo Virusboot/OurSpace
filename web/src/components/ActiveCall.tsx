@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, ShieldAlert, Volume2 } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, ShieldAlert, Volume2, ShieldCheck, Lock } from 'lucide-react';
 
 interface ActiveCallProps {
   callType: 'audio' | 'video';
@@ -11,6 +11,7 @@ interface ActiveCallProps {
   onToggleMic: (enabled: boolean) => void;
   onToggleCam: (enabled: boolean) => void;
   onLeaveCall: () => void;
+  onSecurityEvent?: (event: string) => void;
 }
 
 export const ActiveCall: React.FC<ActiveCallProps> = ({
@@ -22,13 +23,16 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
   securityAlert,
   onToggleMic,
   onToggleCam,
-  onLeaveCall
+  onLeaveCall,
+  onSecurityEvent
 }) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const [micEnabled, setMicEnabled] = useState(true);
   const [camEnabled, setCamEnabled] = useState(callType === 'video');
   const [secondsElapsed, setSecondsElapsed] = useState(0);
+  const [privacyShieldActive, setPrivacyShieldActive] = useState(false);
+  const [privacyNotice, setPrivacyNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (localVideoRef.current && localStream) {
@@ -49,6 +53,60 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
     return () => clearInterval(timer);
   }, []);
 
+  // 🛡️ Web Anti-Screenshot & Screen Recording Privacy Protection Listeners
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Detect PrintScreen, Cmd+Shift+3/4/5 (macOS screenshot), Ctrl+Shift+S (Snipping tool), F12, Ctrl+P
+      const key = e.key.toLowerCase();
+      const isMacScreenshot = (e.metaKey || e.ctrlKey) && e.shiftKey && (key === '3' || key === '4' || key === '5' || key === 's');
+      const isPrintScreen = key === 'printscreen' || key === 'prtscr' || key === 'sysreq';
+      const isCtrlP = (e.ctrlKey || e.metaKey) && key === 'p';
+
+      if (isPrintScreen || isMacScreenshot || isCtrlP) {
+        e.preventDefault();
+        triggerPrivacyShield('Screenshot / Screen Capture shortcut blocked');
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        triggerPrivacyShield('Tab switched / backgrounded (Screen capture prevention)');
+      } else {
+        // Auto-restore when returning to tab
+        setTimeout(() => setPrivacyShieldActive(false), 1500);
+      }
+    };
+
+    const handleWindowBlur = () => {
+      triggerPrivacyShield('Window focus lost (Overlay / Recorder active)');
+    };
+
+    const handleWindowFocus = () => {
+      setTimeout(() => setPrivacyShieldActive(false), 1500);
+    };
+
+    const triggerPrivacyShield = (reason: string) => {
+      setPrivacyShieldActive(true);
+      setPrivacyNotice(reason);
+      if (onSecurityEvent) {
+        onSecurityEvent(reason);
+      }
+      setTimeout(() => setPrivacyNotice(null), 5000);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleWindowBlur);
+    window.addEventListener('focus', handleWindowFocus);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('focus', handleWindowFocus);
+    };
+  }, [onSecurityEvent]);
+
   const formatTimer = (sec: number) => {
     const m = Math.floor(sec / 60);
     const s = sec % 60;
@@ -68,7 +126,7 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black text-white flex flex-col justify-between p-4 sm:p-6 overflow-hidden">
+    <div className="fixed inset-0 bg-black text-white flex flex-col justify-between p-4 sm:p-6 overflow-hidden select-none">
       {/* Top Bar */}
       <div className="flex items-center justify-between z-20">
         <div className="flex items-center space-x-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
@@ -77,23 +135,46 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
           <span className="text-xs font-mono text-gray-400 border-l border-white/20 pl-3">{formatTimer(secondsElapsed)}</span>
         </div>
 
-        <div className="text-xs font-medium text-gray-400 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
-          Guest: <span className="text-white font-semibold">{nickname}</span>
+        <div className="flex items-center space-x-2">
+          <div className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Anti-Capture Active</span>
+          </div>
+          <div className="text-xs font-medium text-gray-400 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
+            Guest: <span className="text-white font-semibold">{nickname}</span>
+          </div>
         </div>
       </div>
 
-      {/* Security Notification Banner */}
-      {securityAlert && (
+      {/* Security Notification Banners */}
+      {(securityAlert || privacyNotice) && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 max-w-md w-full px-4 animate-fade-in">
-          <div className="p-3 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs flex items-center space-x-2 backdrop-blur-md shadow-2xl">
+          <div className="p-3.5 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs flex items-center space-x-3 backdrop-blur-xl shadow-2xl">
             <ShieldAlert className="w-5 h-5 flex-shrink-0 text-amber-400" />
-            <span>{securityAlert}</span>
+            <div>
+              <p className="font-bold text-amber-200">Privacy Protection Triggered</p>
+              <p className="text-[11px] text-amber-300/90">{securityAlert || privacyNotice}</p>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Main Video/Audio Center Stage */}
+      {/* Main Video/Audio Center Stage with Privacy Shield Overlay */}
       <div className="relative flex-1 my-4 rounded-2xl overflow-hidden bg-neutral-900 border border-white/10 flex items-center justify-center">
+        
+        {/* Anti-Screenshot / Privacy Shield Overlay */}
+        {privacyShieldActive && (
+          <div className="absolute inset-0 z-40 bg-black/95 backdrop-blur-3xl flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+            <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center mb-4 shadow-2xl">
+              <Lock className="w-8 h-8 text-purple-400" />
+            </div>
+            <h3 className="text-lg font-bold text-white mb-1">Privacy Protection Active</h3>
+            <p className="text-xs text-gray-400 max-w-xs leading-relaxed">
+              Video stream obscured to prevent screenshot or screen recording capture. Return focus to window to resume.
+            </p>
+          </div>
+        )}
+
         {callType === 'video' ? (
           <>
             {/* Remote Stream */}
@@ -102,7 +183,9 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
                 ref={remoteVideoRef}
                 autoPlay
                 playsInline
-                className="w-full h-full object-cover"
+                className={`w-full h-full object-cover transition-all duration-300 ${
+                  privacyShieldActive ? 'blur-3xl brightness-0' : ''
+                }`}
               />
             ) : (
               <div className="flex flex-col items-center justify-center text-center p-6">
@@ -121,7 +204,9 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
                   autoPlay
                   muted
                   playsInline
-                  className="w-full h-full object-cover transform -scale-x-100"
+                  className={`w-full h-full object-cover transform -scale-x-100 transition-all duration-300 ${
+                    privacyShieldActive ? 'blur-3xl brightness-0' : ''
+                  }`}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-neutral-800">
@@ -177,3 +262,4 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
     </div>
   );
 };
+export default ActiveCall;

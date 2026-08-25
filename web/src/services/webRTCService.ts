@@ -312,6 +312,15 @@ export class WebRTCService {
     }
   }
 
+  public sendSecurityAlert(event: string = 'screen_capture_detected') {
+    this.sendSignal({
+      type: 'security_event',
+      callId: this.callId,
+      senderId: this.guestId,
+      event
+    });
+  }
+
   public leaveCall() {
     if (this.localStream) {
       this.localStream.getTracks().forEach(t => t.stop());

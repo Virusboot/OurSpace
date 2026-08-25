@@ -173,6 +173,7 @@ export const App: React.FC = () => {
         onToggleMic={(enabled) => rtcService.toggleAudio(enabled)}
         onToggleCam={(enabled) => rtcService.toggleVideo(enabled)}
         onLeaveCall={handleLeaveCall}
+        onSecurityEvent={(event) => rtcService.sendSecurityAlert(event)}
       />
     );
   }
