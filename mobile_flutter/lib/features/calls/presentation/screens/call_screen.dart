@@ -243,6 +243,12 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> _createPeerConnection() async {
+    if (_peerConnection != null) return;
+
+    if (_localStream == null) {
+      await _setupLocalMedia();
+    }
+
     _peerConnection = await createPeerConnection(_iceConfig);
 
     _peerConnection!.onIceCandidate = (candidate) {
@@ -268,7 +274,7 @@ class _CallScreenState extends State<CallScreen> {
           _remoteRenderer.srcObject = event.streams[0];
           _isConnected = true;
         });
-      } else if (event.track != null) {
+      } else {
         final stream = await createLocalMediaStream('remote_stream_${DateTime.now().millisecondsSinceEpoch}');
         stream.addTrack(event.track);
         setState(() {

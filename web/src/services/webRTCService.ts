@@ -82,7 +82,7 @@ export class WebRTCService {
 
   public async joinCallRoom(callId: string, nickname: string) {
     this.callId = callId;
-    this.initPeerConnection(callId);
+    await this.initPeerConnection(callId);
     this.sendSignal({
       type: 'call_join',
       callId,
@@ -91,7 +91,15 @@ export class WebRTCService {
     });
   }
 
-  private initPeerConnection(callId: string) {
+  private async initPeerConnection(callId: string) {
+    if (this.peerConnection) return;
+
+    if (!this.localStream) {
+      try {
+        await this.startLocalStream('video');
+      } catch (_) {}
+    }
+
     const configuration: RTCConfiguration = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -127,6 +135,12 @@ export class WebRTCService {
     this.peerConnection.ontrack = (event) => {
       if (event.streams && event.streams[0]) {
         this.remoteStream = event.streams[0];
+        if (this.onRemoteStream) {
+          this.onRemoteStream(this.remoteStream);
+        }
+      } else if (event.track) {
+        const stream = new MediaStream([event.track]);
+        this.remoteStream = stream;
         if (this.onRemoteStream) {
           this.onRemoteStream(this.remoteStream);
         }
@@ -176,7 +190,7 @@ export class WebRTCService {
         // Someone joined AFTER us. As the one already in the room, we create the offer.
         this.remoteParticipantId = msg.participantId ?? null;
         if (!this.peerConnection) {
-          this.initPeerConnection(this.callId);
+          await this.initPeerConnection(this.callId);
         }
         if (this.peerConnection && this.remoteParticipantId) {
           console.log('[WebRTC] New participant joined, creating offer...');
@@ -196,7 +210,7 @@ export class WebRTCService {
       case 'call_offer': {
         this.remoteParticipantId = msg.senderId ?? null;
         if (!this.peerConnection) {
-          this.initPeerConnection(this.callId);
+          await this.initPeerConnection(this.callId);
         }
         if (this.peerConnection && msg.sdp) {
           this.remoteParticipantId = msg.senderId ?? null;
