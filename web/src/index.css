@@ -143,10 +143,11 @@ button {
 }
 
 .header-badge {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 12px;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 14px;
   border-radius: 9999px;
   background: #ecfdf5;
   border: 1px solid rgba(16,185,129,0.25);
@@ -154,7 +155,7 @@ button {
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
-  height: 32px;
+  line-height: 1;
 }
 
 .header-cta {
@@ -162,8 +163,7 @@ button {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  padding: 0 18px;
-  height: 38px;
+  padding: 9px 18px;
   border-radius: var(--radius-md);
   background: linear-gradient(135deg, #c026d3 0%, #7c3aed 100%);
   color: #fff;
@@ -172,6 +172,7 @@ button {
   border: none;
   cursor: pointer;
   white-space: nowrap;
+  line-height: 1;
   box-shadow: 0 4px 14px rgba(192,38,211,0.3);
   transition: transform 0.2s, box-shadow 0.2s;
   text-decoration: none;
