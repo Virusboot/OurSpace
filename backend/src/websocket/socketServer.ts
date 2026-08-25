@@ -72,7 +72,18 @@ export function initWebSocketServer(server: HttpServer) {
           return;
         }
 
-        // Enforce Authentication for non-auth/non-guest messages
+        // Handle WebRTC Signaling (Allow public call join & signaling)
+        if (type.startsWith('call_') || type === 'ice_candidate' || type === 'media_toggle' || type === 'security_event') {
+          if (!currentId) {
+            currentId = payload.senderId || payload.guestId || `usr_${Date.now()}`;
+            activeConnections.set(currentId, ws);
+          }
+          payload.senderId = currentId; // Force identity
+          handleSignaling(ws, payload, activeConnections);
+          return;
+        }
+
+        // Enforce Authentication for chat messages
         if (!currentId) {
           ws.send(JSON.stringify({ type: 'error', error: 'UNAUTHORIZED: WebSocket handshake required' }));
           return;
@@ -82,13 +93,6 @@ export function initWebSocketServer(server: HttpServer) {
         if (type.startsWith('chat_')) {
           payload.senderId = currentId; // Force authenticated identity
           await handleChatMessage(ws, payload, activeConnections);
-          return;
-        }
-
-        // Handle WebRTC Signaling
-        if (type.startsWith('call_') || type === 'ice_candidate' || type === 'media_toggle' || type === 'security_event') {
-          payload.senderId = currentId; // Force authenticated identity
-          handleSignaling(ws, payload, activeConnections);
           return;
         }
 
