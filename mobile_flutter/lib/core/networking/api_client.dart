@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../storage/secure_storage_service.dart';
 
@@ -10,9 +9,6 @@ class ApiClient {
   static String get webBaseUrl {
     if (customWebUrl != null && customWebUrl!.isNotEmpty) {
       return customWebUrl!;
-    }
-    if (kDebugMode) {
-      return 'http://localhost:3000';
     }
     return 'https://our-space-wheat.vercel.app';
   }
