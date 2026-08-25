@@ -56,7 +56,7 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
-router.get('/lookup', authenticateToken, async (req, res) => {
+router.get('/lookup', async (req, res) => {
   try {
     const { query } = req.query;
     if (!query || typeof query !== 'string' || query.trim().length < 2) {

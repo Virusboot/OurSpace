@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import '../../../../core/networking/api_client.dart';
+import '../../../../core/networking/websocket_client.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 import '../../../../shared/widgets/app_gradient_button.dart';
 
