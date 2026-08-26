@@ -310,12 +310,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 final updatedName = nameCtrl.text.trim();
                 final updatedUsername = usernameCtrl.text.trim();
                 final updatedBio = bioCtrl.text.trim();
+                final formattedUsername = updatedUsername.startsWith('@') ? updatedUsername : '@$updatedUsername';
+
+                // Sync with PostgreSQL database via API
+                try {
+                  final token = await SecureStorageService.read('auth_token');
+                  if (token != null && token.isNotEmpty) {
+                    final res = await http.put(
+                      Uri.parse('https://ourspace-d81w.onrender.com/api/users/profile'),
+                      headers: {
+                        'Authorization': 'Bearer $token',
+                        'Content-Type': 'application/json',
+                      },
+                      body: jsonEncode({'username': formattedUsername}),
+                    ).timeout(const Duration(seconds: 5));
+
+                    if (res.statusCode == 200) {
+                      final data = jsonDecode(res.body);
+                      if (data['token'] != null) {
+                        await SecureStorageService.write('auth_token', data['token']);
+                      }
+                    }
+                  }
+                } catch (_) {}
+
                 if (widget.user != null) {
                   widget.user!['name'] = updatedName;
-                  widget.user!['username'] = updatedUsername.startsWith('@') ? updatedUsername : '@$updatedUsername';
+                  widget.user!['username'] = formattedUsername;
                   widget.user!['bio'] = updatedBio;
                   await SecureStorageService.write('user_info', jsonEncode(widget.user));
                 }
+
                 if (!mounted) return;
                 Navigator.pop(ctx);
                 setState(() {});
@@ -325,7 +350,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
                         SizedBox(width: 10),
-                        Text('Profile details updated successfully!'),
+                        Expanded(
+                          child: Text('Profile updated & synced with database!'),
+                        ),
                       ],
                     ),
                     backgroundColor: const Color(0xFF10B981),

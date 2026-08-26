@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getUserByUsername, getUserByPrivateId, getUserById, getUserCount, deleteUserAccount } from '../services/identityService';
+import { getUserByUsername, getUserByPrivateId, getUserById, getUserCount, deleteUserAccount, updateUserUsername } from '../services/identityService';
 import { authenticateToken, AuthRequest } from '../middleware/authMiddleware';
 import { activeConnections } from '../websocket/socketServer';
 
@@ -53,6 +53,34 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
     return res.json({ id: user.id, privateId: user.privateId, username: user.username, publicKey: user.publicKey });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/profile', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.userId;
+    const { username } = req.body;
+    if (!username || typeof username !== 'string') {
+      return res.status(400).json({ error: 'Username string is required' });
+    }
+    const result = await updateUserUsername(userId, username);
+
+    // Update active WebSocket connection mappings
+    const ws = activeConnections.get(userId);
+    if (ws) {
+      const cleanUname = result.user.username.toLowerCase().replace(/^@/, '');
+      activeConnections.set(cleanUname, ws);
+      activeConnections.set(`@${cleanUname}`, ws);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Username updated successfully in database',
+      user: result.user,
+      token: result.token
+    });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message || 'Failed to update username' });
   }
 });
 

@@ -170,3 +170,60 @@ export async function deleteUserAccount(userId: string): Promise<boolean> {
   }
   return true;
 }
+
+export async function updateUserUsername(userId: string, newUsername: string): Promise<{ user: UserRecord; token: string }> {
+  const cleanUsername = newUsername.trim().toLowerCase();
+  const formattedUsername = cleanUsername.startsWith('@') ? cleanUsername : `@${cleanUsername}`;
+
+  if (formattedUsername.length < 3) {
+    throw new Error('Username must be at least 3 characters long');
+  }
+
+  // Check if username taken by another user
+  if (isPgActive()) {
+    const pool = getPgPool();
+    const existing = await pool?.query(
+      'SELECT id FROM users WHERE LOWER(username) = $1 AND id != $2',
+      [formattedUsername, userId]
+    );
+    if (existing && existing.rows.length > 0) {
+      throw new Error('Username is already taken by another user');
+    }
+  } else {
+    const existing = inMemoryDb.usersByUsername.get(formattedUsername);
+    if (existing && existing.id !== userId) {
+      throw new Error('Username is already taken by another user');
+    }
+  }
+
+  const now = new Date().toISOString();
+  let updatedUser: UserRecord;
+
+  if (isPgActive()) {
+    const pool = getPgPool();
+    const res = await pool?.query(
+      'UPDATE users SET username = $1, updated_at = $2 WHERE id = $3 RETURNING id, username, public_key as "publicKey", created_at as "createdAt", updated_at as "updatedAt"',
+      [formattedUsername, now, userId]
+    );
+    if (!res || res.rows.length === 0) {
+      throw new Error('User not found in database');
+    }
+    updatedUser = res.rows[0];
+  } else {
+    const user = inMemoryDb.users.get(userId);
+    if (!user) throw new Error('User not found');
+    inMemoryDb.usersByUsername.delete(user.username.toLowerCase());
+    user.username = formattedUsername;
+    user.updatedAt = now;
+    inMemoryDb.usersByUsername.set(formattedUsername, user);
+    updatedUser = user;
+  }
+
+  const token = jwt.sign(
+    { userId: updatedUser.id, username: updatedUser.username },
+    config.jwtSecret,
+    { expiresIn: '30d' }
+  );
+
+  return { user: updatedUser, token };
+}
