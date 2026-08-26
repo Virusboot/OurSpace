@@ -10,6 +10,8 @@ export interface SignalingMessage {
   callType?: 'audio' | 'video';
   nickname?: string;
   mediaState?: { audio: boolean; video: boolean };
+  event?: string;
+  [key: string]: any;
 }
 
 export class WebRTCService {
