@@ -85,6 +85,9 @@ async function createTablesIfNotExist() {
     CREATE TABLE IF NOT EXISTS users (
       id VARCHAR(64) PRIMARY KEY,
       username VARCHAR(64) UNIQUE NOT NULL,
+      display_name VARCHAR(128) DEFAULT '',
+      bio TEXT DEFAULT '',
+      profile_image TEXT DEFAULT '',
       public_key TEXT NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -157,6 +160,10 @@ async function createTablesIfNotExist() {
 
     ALTER TABLE public.users DROP COLUMN IF EXISTS recovery_hash;
     ALTER TABLE public.users DROP COLUMN IF EXISTS private_id;
+
+    ALTER TABLE public.users ADD COLUMN IF NOT EXISTS display_name VARCHAR(128) DEFAULT '';
+    ALTER TABLE public.users ADD COLUMN IF NOT EXISTS bio TEXT DEFAULT '';
+    ALTER TABLE public.users ADD COLUMN IF NOT EXISTS profile_image TEXT DEFAULT '';
 
     ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
     ALTER TABLE public.devices ENABLE ROW LEVEL SECURITY;

@@ -322,7 +322,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         'Authorization': 'Bearer $token',
                         'Content-Type': 'application/json',
                       },
-                      body: jsonEncode({'username': formattedUsername}),
+                      body: jsonEncode({
+                        'name': updatedName,
+                        'username': formattedUsername,
+                        'bio': updatedBio,
+                      }),
                     ).timeout(const Duration(seconds: 5));
 
                     if (res.statusCode == 200) {

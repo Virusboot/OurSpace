@@ -59,15 +59,13 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
 router.put('/profile', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.userId;
-    const { username } = req.body;
-    if (!username || typeof username !== 'string') {
-      return res.status(400).json({ error: 'Username string is required' });
-    }
-    const result = await updateUserUsername(userId, username);
+    const { username, name, bio, profileImage } = req.body;
+    
+    const result = await updateUserProfile(userId, { username, name, bio, profileImage });
 
     // Update active WebSocket connection mappings
     const ws = activeConnections.get(userId);
-    if (ws) {
+    if (ws && result.user.username) {
       const cleanUname = result.user.username.toLowerCase().replace(/^@/, '');
       activeConnections.set(cleanUname, ws);
       activeConnections.set(`@${cleanUname}`, ws);
@@ -75,12 +73,12 @@ router.put('/profile', authenticateToken, async (req: AuthRequest, res) => {
 
     return res.json({
       success: true,
-      message: 'Username updated successfully in database',
+      message: 'Profile details updated and synced successfully in database',
       user: result.user,
       token: result.token
     });
   } catch (err: any) {
-    return res.status(400).json({ error: err.message || 'Failed to update username' });
+    return res.status(400).json({ error: err.message || 'Failed to update profile' });
   }
 });
 

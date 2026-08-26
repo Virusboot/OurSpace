@@ -171,51 +171,71 @@ export async function deleteUserAccount(userId: string): Promise<boolean> {
   return true;
 }
 
-export async function updateUserUsername(userId: string, newUsername: string): Promise<{ user: UserRecord; token: string }> {
-  const cleanUsername = newUsername.trim().toLowerCase();
-  const formattedUsername = cleanUsername.startsWith('@') ? cleanUsername : `@${cleanUsername}`;
-
-  if (formattedUsername.length < 3) {
-    throw new Error('Username must be at least 3 characters long');
-  }
-
-  // Check if username taken by another user
-  if (isPgActive()) {
-    const pool = getPgPool();
-    const existing = await pool?.query(
-      'SELECT id FROM users WHERE LOWER(username) = $1 AND id != $2',
-      [formattedUsername, userId]
-    );
-    if (existing && existing.rows.length > 0) {
-      throw new Error('Username is already taken by another user');
+export async function updateUserProfile(
+  userId: string,
+  params: { username?: string; name?: string; bio?: string; profileImage?: string }
+): Promise<{ user: any; token: string }> {
+  let formattedUsername: string | undefined;
+  if (params.username && params.username.trim().length > 0) {
+    const cleanUsername = params.username.trim().toLowerCase();
+    formattedUsername = cleanUsername.startsWith('@') ? cleanUsername : `@${cleanUsername}`;
+    if (formattedUsername.length < 3) {
+      throw new Error('Username must be at least 3 characters long');
     }
-  } else {
-    const existing = inMemoryDb.usersByUsername.get(formattedUsername);
-    if (existing && existing.id !== userId) {
-      throw new Error('Username is already taken by another user');
+
+    if (isPgActive()) {
+      const pool = getPgPool();
+      const existing = await pool?.query(
+        'SELECT id FROM users WHERE LOWER(username) = $1 AND id != $2',
+        [formattedUsername, userId]
+      );
+      if (existing && existing.rows.length > 0) {
+        throw new Error('Username is already taken by another user');
+      }
+    } else {
+      const existing = inMemoryDb.usersByUsername.get(formattedUsername);
+      if (existing && existing.id !== userId) {
+        throw new Error('Username is already taken by another user');
+      }
     }
   }
 
   const now = new Date().toISOString();
-  let updatedUser: UserRecord;
+  let updatedUser: any;
 
   if (isPgActive()) {
     const pool = getPgPool();
-    const res = await pool?.query(
-      'UPDATE users SET username = $1, updated_at = $2 WHERE id = $3 RETURNING id, username, public_key as "publicKey", created_at as "createdAt", updated_at as "updatedAt"',
-      [formattedUsername, now, userId]
-    );
-    if (!res || res.rows.length === 0) {
+    const currentUserRes = await pool?.query('SELECT * FROM users WHERE id = $1', [userId]);
+    if (!currentUserRes || currentUserRes.rows.length === 0) {
       throw new Error('User not found in database');
     }
-    updatedUser = res.rows[0];
+    const current = currentUserRes.rows[0];
+
+    const finalUsername = formattedUsername || current.username;
+    const finalDisplayName = params.name !== undefined ? params.name : (current.display_name || '');
+    const finalBio = params.bio !== undefined ? params.bio : (current.bio || '');
+    const finalProfileImage = params.profileImage !== undefined ? params.profileImage : (current.profile_image || '');
+
+    const res = await pool?.query(
+      `UPDATE users 
+       SET username = $1, display_name = $2, bio = $3, profile_image = $4, updated_at = $5 
+       WHERE id = $6 
+       RETURNING id, username, display_name as "name", bio, profile_image as "profileImage", public_key as "publicKey", created_at as "createdAt", updated_at as "updatedAt"`,
+      [finalUsername, finalDisplayName, finalBio, finalProfileImage, now, userId]
+    );
+    updatedUser = res!.rows[0];
   } else {
     const user = inMemoryDb.users.get(userId);
     if (!user) throw new Error('User not found');
-    inMemoryDb.usersByUsername.delete(user.username.toLowerCase());
-    user.username = formattedUsername;
+    if (formattedUsername) {
+      inMemoryDb.usersByUsername.delete(user.username.toLowerCase());
+      user.username = formattedUsername;
+      inMemoryDb.usersByUsername.set(formattedUsername, user);
+    }
+    if (params.name !== undefined) user.name = params.name;
+    if (params.bio !== undefined) user.bio = params.bio;
+    if (params.profileImage !== undefined) user.profileImage = params.profileImage;
     user.updatedAt = now;
-    inMemoryDb.usersByUsername.set(formattedUsername, user);
     updatedUser = user;
   }
 
