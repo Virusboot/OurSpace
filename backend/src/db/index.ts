@@ -156,6 +156,15 @@ async function createTablesIfNotExist() {
       event_type VARCHAR(64) NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+    ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE public.devices ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE public.media ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE public.calls ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE public.call_links ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE public.security_events ENABLE ROW LEVEL SECURITY;
   `;
   
   const statements = query.split(';').map(s => s.trim()).filter(s => s.length > 0);
