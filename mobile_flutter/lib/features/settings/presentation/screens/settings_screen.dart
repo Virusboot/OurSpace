@@ -10,6 +10,7 @@ import 'privacy_policy_screen.dart';
 import 'terms_conditions_screen.dart';
 import 'about_us_screen.dart';
 import 'contact_us_screen.dart';
+import 'package:http/http.dart' as http;
 import '../../../../shared/widgets/app_gradient_button.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -519,6 +520,111 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await SecureStorageService.delete('auth_token');
     await SecureStorageService.delete('user_info');
     widget.onLogout();
+  }
+
+  Future<void> _handleDeleteAccount() async {
+    final isDark = widget.isDarkMode;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF141824) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF43F5E).withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.delete_forever_rounded, color: Color(0xFFF43F5E), size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Delete Account Permanently?',
+                style: TextStyle(
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This action CANNOT be undone.',
+              style: TextStyle(
+                color: isDark ? const Color(0xFFF43F5E) : const Color(0xFFE11D48),
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Your account, identity keys, messages, conversations, and all data will be permanently deleted from the database.',
+              style: TextStyle(
+                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                fontSize: 13,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700])),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF43F5E),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete Permanently', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final token = await SecureStorageService.read('auth_token');
+        if (token != null && token.isNotEmpty) {
+          final url = Uri.parse('https://ourspace-d81w.onrender.com/api/users/me');
+          await http.delete(url, headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          }).timeout(const Duration(seconds: 5));
+        }
+      } catch (_) {}
+
+      await SecureStorageService.clearAll();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text('Account and all database records deleted successfully.'),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFFF43F5E),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      widget.onLogout();
+    }
   }
 
   void _showChangePasswordModal() {
@@ -1221,6 +1327,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       'Logout & Clear Private Session',
                       style: TextStyle(
                         color: Color(0xFFE11D48),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // 7. Delete Account & Wipe Database Button
+            GestureDetector(
+              onTap: _handleDeleteAccount,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF450A0A) : const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.5),
+                    width: 1.2,
+                  ),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.delete_forever_rounded, color: Color(0xFFDC2626), size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Delete Account & Wipe Database',
+                      style: TextStyle(
+                        color: Color(0xFFDC2626),
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                       ),

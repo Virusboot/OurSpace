@@ -149,3 +149,24 @@ export async function getUserCount(): Promise<number> {
     return inMemoryDb.users.size;
   }
 }
+
+export async function deleteUserAccount(userId: string): Promise<boolean> {
+  if (isPgActive()) {
+    const pool = getPgPool();
+    // Cascade delete associated records and user account
+    await pool?.query('DELETE FROM users WHERE id = $1', [userId]);
+    await pool?.query('DELETE FROM devices WHERE user_id = $1', [userId]);
+    await pool?.query('DELETE FROM conversations WHERE user_a_id = $1 OR user_b_id = $1', [userId]);
+    await pool?.query('DELETE FROM calls WHERE host_id = $1', [userId]);
+    await pool?.query('DELETE FROM call_links WHERE host_id = $1', [userId]);
+    await pool?.query('DELETE FROM security_events WHERE user_id = $1', [userId]);
+  } else {
+    const user = inMemoryDb.users.get(userId);
+    if (user) {
+      inMemoryDb.users.delete(userId);
+      if (user.privateId) inMemoryDb.usersByPrivateId.delete(user.privateId.toUpperCase());
+      if (user.username) inMemoryDb.usersByUsername.delete(user.username.toLowerCase());
+    }
+  }
+  return true;
+}

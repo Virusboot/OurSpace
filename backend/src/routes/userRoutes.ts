@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getUserByUsername, getUserByPrivateId, getUserById, getUserCount } from '../services/identityService';
+import { getUserByUsername, getUserByPrivateId, getUserById, getUserCount, deleteUserAccount } from '../services/identityService';
 import { authenticateToken, AuthRequest } from '../middleware/authMiddleware';
 import { activeConnections } from '../websocket/socketServer';
 
@@ -51,6 +51,27 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
     const user = await getUserById(req.user!.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
     return res.json({ id: user.id, privateId: user.privateId, username: user.username, publicKey: user.publicKey });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/me', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.userId;
+    await deleteUserAccount(userId);
+
+    // Disconnect active socket if connected
+    const ws = activeConnections.get(userId);
+    if (ws) {
+      try {
+        ws.send(JSON.stringify({ type: 'account_deleted', message: 'Your account has been deleted permanently' }));
+        ws.close();
+      } catch (_) {}
+      activeConnections.delete(userId);
+    }
+
+    return res.json({ success: true, message: 'Account and all identity data deleted successfully from database' });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
