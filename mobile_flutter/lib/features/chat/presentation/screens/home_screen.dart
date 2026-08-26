@@ -347,29 +347,39 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onSearchChanged() {
-    final query = _searchCtrl.text.trim();
-    if (query.isEmpty) {
+    _performGlobalSearch(_searchCtrl.text);
+  }
+
+  void _performGlobalSearch(String query) {
+    if (query.trim().isEmpty) {
       setState(() {
         _globalSearchResult = null;
-        _isSearchingGlobal = false;
         _searchNotFound = false;
+        _isSearchingGlobal = false;
       });
       return;
     }
 
-    if (query.length < 2) {
+    final clean = query.trim().toLowerCase().replaceAll('@', '');
+    // Instant local match for 0ms UI feedback
+    final localMatch = _onlineUsers.firstWhere(
+      (u) => (u['username']?.toString().toLowerCase().contains(clean) ?? false),
+      orElse: () => {},
+    );
+    if (localMatch.isNotEmpty) {
       setState(() {
-        _globalSearchResult = null;
+        _globalSearchResult = localMatch;
         _searchNotFound = false;
-        _isSearchingGlobal = false;
       });
-      return;
     }
 
     if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 400), () async {
+    _searchDebounce = Timer(const Duration(milliseconds: 150), () async {
       if (!mounted) return;
-      setState(() { _isSearchingGlobal = true; _searchNotFound = false; });
+      setState(() {
+        if (_globalSearchResult == null) _isSearchingGlobal = true;
+        _searchNotFound = false;
+      });
       try {
         final res = await ApiClient.get('/users/lookup?query=${Uri.encodeComponent(query)}');
         if (mounted) {
@@ -382,9 +392,8 @@ class _HomeScreenState extends State<HomeScreen> {
       } catch (e) {
         if (mounted) {
           setState(() {
-            _globalSearchResult = null;
+            if (_globalSearchResult == null) _searchNotFound = true;
             _isSearchingGlobal = false;
-            _searchNotFound = true;
           });
         }
       }

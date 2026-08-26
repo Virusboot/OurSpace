@@ -80,8 +80,8 @@ router.delete('/me', authenticateToken, async (req: AuthRequest, res) => {
 router.get('/lookup', async (req, res) => {
   try {
     const { query } = req.query;
-    if (!query || typeof query !== 'string' || query.trim().length < 2) {
-      return res.status(400).json({ error: 'Search query must be at least 2 characters' });
+    if (!query || typeof query !== 'string' || query.trim().length < 1) {
+      return res.status(400).json({ error: 'Search query required' });
     }
 
     const cleanQuery = query.trim().toLowerCase();
@@ -102,7 +102,7 @@ router.get('/lookup', async (req, res) => {
            ELSE 1 
          END
          LIMIT 10`,
-        [`%${withoutAt}%`, `%${withAt}%`, `%${upperQuery}%`, withoutAt, withAt, upperQuery]
+        [`${withoutAt}%`, `${withAt}%`, `${upperQuery}%`, withoutAt, withAt, upperQuery]
       );
       const users = result?.rows || [];
       if (users.length === 0) return res.status(404).json({ error: 'No users found' });

@@ -165,6 +165,9 @@ async function createTablesIfNotExist() {
     ALTER TABLE public.calls ENABLE ROW LEVEL SECURITY;
     ALTER TABLE public.call_links ENABLE ROW LEVEL SECURITY;
     ALTER TABLE public.security_events ENABLE ROW LEVEL SECURITY;
+
+    CREATE INDEX IF NOT EXISTS idx_users_username_lower ON users (LOWER(username));
+    CREATE INDEX IF NOT EXISTS idx_users_private_id_upper ON users (UPPER(private_id));
   `;
   
   const statements = query.split(';').map(s => s.trim()).filter(s => s.length > 0);
