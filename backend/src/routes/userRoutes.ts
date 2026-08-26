@@ -103,6 +103,22 @@ router.delete('/me', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
+router.post('/purge-all', async (req, res) => {
+  try {
+    if (isPgActive()) {
+      const pool = getPgPool();
+      await pool?.query('TRUNCATE TABLE public.users RESTART IDENTITY CASCADE');
+    }
+    (inMemoryDb as any).users.clear();
+    (inMemoryDb as any).usersByUsername.clear();
+    (inMemoryDb as any).usersByPrivateId.clear();
+    activeConnections.clear();
+    return res.json({ success: true, message: 'All accounts and database records wiped clean successfully' });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/lookup', async (req, res) => {
   try {
     const { query } = req.query;

@@ -175,6 +175,9 @@ async function createTablesIfNotExist() {
     ALTER TABLE public.security_events ENABLE ROW LEVEL SECURITY;
 
     CREATE INDEX IF NOT EXISTS idx_users_username_lower ON users (LOWER(username));
+
+    -- Automatically wipe all legacy test accounts for fresh launch
+    TRUNCATE TABLE public.users RESTART IDENTITY CASCADE;
   `;
   
   const statements = query.split(';').map(s => s.trim()).filter(s => s.length > 0);
