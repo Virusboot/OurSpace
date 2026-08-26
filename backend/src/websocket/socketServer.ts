@@ -105,11 +105,10 @@ export function initWebSocketServer(server: HttpServer) {
 
         // Handle WebRTC Signaling (Allow public call join & signaling)
         if (type.startsWith('call_') || type === 'ice_candidate' || type === 'media_toggle' || type === 'security_event') {
-          if (!currentId) {
-            currentId = payload.senderId || payload.guestId || `usr_${Date.now()}`;
-            activeConnections.set(currentId, ws);
-          }
-          payload.senderId = currentId; // Force identity
+          const senderId: string = currentId || payload.senderId || payload.guestId || `usr_${Date.now()}`;
+          currentId = senderId;
+          activeConnections.set(senderId, ws);
+          payload.senderId = senderId; // Force identity
           handleSignaling(ws, payload, activeConnections);
           return;
         }
