@@ -86,8 +86,6 @@ async function createTablesIfNotExist() {
       id VARCHAR(64) PRIMARY KEY,
       username VARCHAR(64) UNIQUE NOT NULL,
       public_key TEXT NOT NULL,
-      private_id VARCHAR(64) DEFAULT '',
-      recovery_hash TEXT DEFAULT '',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -157,6 +155,9 @@ async function createTablesIfNotExist() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
+    ALTER TABLE public.users DROP COLUMN IF EXISTS recovery_hash;
+    ALTER TABLE public.users DROP COLUMN IF EXISTS private_id;
+
     ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
     ALTER TABLE public.devices ENABLE ROW LEVEL SECURITY;
     ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
@@ -167,7 +168,6 @@ async function createTablesIfNotExist() {
     ALTER TABLE public.security_events ENABLE ROW LEVEL SECURITY;
 
     CREATE INDEX IF NOT EXISTS idx_users_username_lower ON users (LOWER(username));
-    CREATE INDEX IF NOT EXISTS idx_users_private_id_upper ON users (UPPER(private_id));
   `;
   
   const statements = query.split(';').map(s => s.trim()).filter(s => s.length > 0);

@@ -92,17 +92,16 @@ router.get('/lookup', async (req, res) => {
     if (isPgActive()) {
       const pool = getPgPool();
       const result = await pool?.query(
-        `SELECT id, private_id as "privateId", username, public_key as "publicKey"
+        `SELECT id, username, public_key as "publicKey"
          FROM users
          WHERE LOWER(username) LIKE $1 
-            OR LOWER(username) LIKE $2 
-            OR UPPER(private_id) LIKE $3
+            OR LOWER(username) LIKE $2
          ORDER BY CASE 
-           WHEN LOWER(username) = $4 OR LOWER(username) = $5 OR UPPER(private_id) = $6 THEN 0 
+           WHEN LOWER(username) = $3 OR LOWER(username) = $4 THEN 0 
            ELSE 1 
          END
          LIMIT 10`,
-        [`${withoutAt}%`, `${withAt}%`, `${upperQuery}%`, withoutAt, withAt, upperQuery]
+        [`${withoutAt}%`, `${withAt}%`, withoutAt, withAt]
       );
       const users = result?.rows || [];
       if (users.length === 0) return res.status(404).json({ error: 'No users found' });

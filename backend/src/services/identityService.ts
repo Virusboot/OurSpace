@@ -61,9 +61,9 @@ export async function createIdentity(username: string, publicKey: string, recove
   if (isPgActive()) {
     const pool = getPgPool();
     await pool?.query(
-      `INSERT INTO users (id, private_id, username, public_key, recovery_hash, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [id, privateId, cleanUsername, publicKey, recoveryHash, now, now]
+      `INSERT INTO users (id, username, public_key, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [id, cleanUsername, publicKey, now, now]
     );
   } else {
     inMemoryDb.users.set(id, user);

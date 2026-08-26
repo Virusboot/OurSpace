@@ -28,27 +28,16 @@ router.post('/login', authRateLimiter, async (req, res) => {
       const pool = getPgPool();
       const withoutAt = loginIdentifier.replace(/^@/, '');
       const withAt = `@${withoutAt}`;
-      let query = 'SELECT * FROM users WHERE LOWER(username) = $1 OR LOWER(username) = $2 OR LOWER(private_id) = $1 OR LOWER(private_id) = $3';
-      let resDb = await pool?.query(query, [loginIdentifier, withAt, withoutAt]);
-      
-      // If email format, try extracting private ID
-      if (!resDb || resDb.rows.length === 0) {
-        if (loginIdentifier.includes('@ourspace.local')) {
-           const extractedId = loginIdentifier.split('@')[0];
-           resDb = await pool?.query(query, [extractedId]);
-        }
-      }
+      let query = 'SELECT * FROM users WHERE LOWER(username) = $1 OR LOWER(username) = $2';
+      let resDb = await pool?.query(query, [loginIdentifier, withAt]);
 
       if (resDb && resDb.rows.length > 0) {
         const row = resDb.rows[0];
         existing = {
           id: row.id,
           name: row.username.replace('@', ''),
-          email: `${row.private_id.toLowerCase()}@ourspace.local`,
           username: row.username,
-          privateId: row.private_id,
         };
-        existingHash = row.recovery_hash;
       }
     } else {
       // Fallback in-memory logic
@@ -118,9 +107,9 @@ router.post('/register', authRateLimiter, async (req, res) => {
 
       // Insert into PostgreSQL
       await pool?.query(
-        `INSERT INTO users (id, private_id, username, public_key, recovery_hash, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [userId, privateId, cleanUsername, 'mock_public_key', hashedPass, now, now]
+        `INSERT INTO users (id, username, public_key, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [userId, cleanUsername, 'mock_public_key', now, now]
       );
     } else {
       if (usersByEmail.has(cleanEmail)) {
