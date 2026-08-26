@@ -10,6 +10,10 @@ ALTER TABLE IF EXISTS public.calls ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.call_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.security_events ENABLE ROW LEVEL SECURITY;
 
+-- Make legacy recovery_hash and private_id optional/nullable on users table
+ALTER TABLE IF EXISTS public.users ALTER COLUMN recovery_hash DROP NOT NULL;
+ALTER TABLE IF EXISTS public.users ALTER COLUMN private_id DROP NOT NULL;
+
 -- Create service access policies to ensure backend connections can query tables seamlessly
 DO $$
 BEGIN

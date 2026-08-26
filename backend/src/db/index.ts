@@ -84,10 +84,10 @@ async function createTablesIfNotExist() {
   const query = `
     CREATE TABLE IF NOT EXISTS users (
       id VARCHAR(64) PRIMARY KEY,
-      private_id VARCHAR(64) UNIQUE NOT NULL,
       username VARCHAR(64) UNIQUE NOT NULL,
       public_key TEXT NOT NULL,
-      recovery_hash TEXT NOT NULL,
+      private_id VARCHAR(64) DEFAULT '',
+      recovery_hash TEXT DEFAULT '',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );

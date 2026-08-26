@@ -20,7 +20,7 @@ export function generatePrivateId(): string {
   return `USER-${bytes}`;
 }
 
-export async function createIdentity(username: string, publicKey: string, recoveryKey: string): Promise<{ user: UserRecord; token: string }> {
+export async function createIdentity(username: string, publicKey: string, recoveryKey: string = ''): Promise<{ user: UserRecord; token: string }> {
   const cleanUsername = username.trim().toLowerCase();
   if (!cleanUsername.startsWith('@')) {
     throw new Error('Username must start with @');
@@ -45,7 +45,7 @@ export async function createIdentity(username: string, publicKey: string, recove
 
   const id = uuidv4();
   const privateId = generatePrivateId();
-  const recoveryHash = await bcrypt.hash(recoveryKey, 10);
+  const recoveryHash = recoveryKey ? await bcrypt.hash(recoveryKey, 10) : '';
   const now = new Date().toISOString();
 
   const user: UserRecord = {
