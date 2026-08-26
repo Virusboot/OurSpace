@@ -61,9 +61,9 @@ export async function createIdentity(username: string, publicKey: string, recove
   if (isPgActive()) {
     const pool = getPgPool();
     await pool?.query(
-      `INSERT INTO users (id, username, public_key, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [id, cleanUsername, publicKey, now, now]
+      `INSERT INTO users (id, username, private_id, password_hash, public_key, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [id, cleanUsername, privateId, recoveryHash, publicKey, now, now]
     );
   } else {
     inMemoryDb.users.set(id, user);
@@ -80,7 +80,7 @@ export async function getUserByUsername(username: string): Promise<UserRecord | 
   const cleanUsername = username.trim().toLowerCase();
   if (isPgActive()) {
     const pool = getPgPool();
-    const res = await pool?.query('SELECT id, private_id as "privateId", username, public_key as "publicKey", created_at as "createdAt", updated_at as "updatedAt" FROM users WHERE LOWER(username) = $1', [cleanUsername]);
+    const res = await pool?.query('SELECT id, COALESCE(private_id, id) as "privateId", username, public_key as "publicKey", created_at as "createdAt", updated_at as "updatedAt" FROM users WHERE LOWER(username) = $1', [cleanUsername]);
     return res?.rows[0] || null;
   } else {
     return inMemoryDb.usersByUsername.get(cleanUsername) || null;
@@ -91,7 +91,7 @@ export async function getUserByPrivateId(privateId: string): Promise<UserRecord 
   const cleanId = privateId.trim().toUpperCase();
   if (isPgActive()) {
     const pool = getPgPool();
-    const res = await pool?.query('SELECT id, private_id as "privateId", username, public_key as "publicKey", created_at as "createdAt", updated_at as "updatedAt" FROM users WHERE UPPER(private_id) = $1', [cleanId]);
+    const res = await pool?.query('SELECT id, COALESCE(private_id, id) as "privateId", username, public_key as "publicKey", created_at as "createdAt", updated_at as "updatedAt" FROM users WHERE UPPER(COALESCE(private_id, \'\')) = $1 OR id = $1', [cleanId]);
     return res?.rows[0] || null;
   } else {
     return inMemoryDb.usersByPrivateId.get(cleanId) || null;
@@ -101,7 +101,7 @@ export async function getUserByPrivateId(privateId: string): Promise<UserRecord 
 export async function getUserById(id: string): Promise<UserRecord | null> {
   if (isPgActive()) {
     const pool = getPgPool();
-    const res = await pool?.query('SELECT id, private_id as "privateId", username, public_key as "publicKey", created_at as "createdAt", updated_at as "updatedAt" FROM users WHERE id = $1', [id]);
+    const res = await pool?.query('SELECT id, COALESCE(private_id, id) as "privateId", username, public_key as "publicKey", created_at as "createdAt", updated_at as "updatedAt" FROM users WHERE id = $1', [id]);
     return res?.rows[0] || null;
   } else {
     return inMemoryDb.users.get(id) || null;
@@ -112,7 +112,7 @@ export async function recoverAccount(privateId: string, recoveryKey: string, new
   let user: any = null;
   if (isPgActive()) {
     const pool = getPgPool();
-    const res = await pool?.query('SELECT * FROM users WHERE UPPER(private_id) = $1', [privateId.toUpperCase()]);
+    const res = await pool?.query('SELECT * FROM users WHERE UPPER(COALESCE(private_id, \'\')) = $1 OR id = $1', [privateId.toUpperCase()]);
     user = res?.rows[0];
   } else {
     user = inMemoryDb.usersByPrivateId.get(privateId.toUpperCase());

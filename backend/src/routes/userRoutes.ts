@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getUserByUsername, getUserByPrivateId, getUserById, getUserCount, deleteUserAccount, updateUserUsername } from '../services/identityService';
+import { getUserByUsername, getUserByPrivateId, getUserById, getUserCount, deleteUserAccount, updateUserProfile } from '../services/identityService';
 import { authenticateToken, AuthRequest } from '../middleware/authMiddleware';
 import { activeConnections } from '../websocket/socketServer';
 

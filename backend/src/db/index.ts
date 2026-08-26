@@ -85,6 +85,9 @@ async function createTablesIfNotExist() {
     CREATE TABLE IF NOT EXISTS users (
       id VARCHAR(64) PRIMARY KEY,
       username VARCHAR(64) UNIQUE NOT NULL,
+      email VARCHAR(255),
+      password_hash TEXT,
+      private_id VARCHAR(64),
       display_name VARCHAR(128) DEFAULT '',
       bio TEXT DEFAULT '',
       profile_image TEXT DEFAULT '',
@@ -158,9 +161,9 @@ async function createTablesIfNotExist() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
-    ALTER TABLE public.users DROP COLUMN IF EXISTS recovery_hash;
-    ALTER TABLE public.users DROP COLUMN IF EXISTS private_id;
-
+    ALTER TABLE public.users ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+    ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+    ALTER TABLE public.users ADD COLUMN IF NOT EXISTS private_id VARCHAR(64);
     ALTER TABLE public.users ADD COLUMN IF NOT EXISTS display_name VARCHAR(128) DEFAULT '';
     ALTER TABLE public.users ADD COLUMN IF NOT EXISTS bio TEXT DEFAULT '';
     ALTER TABLE public.users ADD COLUMN IF NOT EXISTS profile_image TEXT DEFAULT '';
@@ -175,9 +178,6 @@ async function createTablesIfNotExist() {
     ALTER TABLE public.security_events ENABLE ROW LEVEL SECURITY;
 
     CREATE INDEX IF NOT EXISTS idx_users_username_lower ON users (LOWER(username));
-
-    -- Automatically wipe all legacy test accounts for fresh launch
-    TRUNCATE TABLE public.users RESTART IDENTITY CASCADE;
   `;
   
   const statements = query.split(';').map(s => s.trim()).filter(s => s.length > 0);

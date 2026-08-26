@@ -28,16 +28,19 @@ router.post('/login', authRateLimiter, async (req, res) => {
       const pool = getPgPool();
       const withoutAt = loginIdentifier.replace(/^@/, '');
       const withAt = `@${withoutAt}`;
-      let query = 'SELECT * FROM users WHERE LOWER(username) = $1 OR LOWER(username) = $2';
+      let query = 'SELECT * FROM users WHERE LOWER(username) = $1 OR LOWER(username) = $2 OR (email IS NOT NULL AND LOWER(email) = $1)';
       let resDb = await pool?.query(query, [loginIdentifier, withAt]);
 
       if (resDb && resDb.rows.length > 0) {
         const row = resDb.rows[0];
         existing = {
           id: row.id,
-          name: row.username.replace('@', ''),
+          name: row.display_name || row.username.replace('@', ''),
           username: row.username,
+          email: row.email,
+          privateId: row.private_id || row.id,
         };
+        existingHash = row.password_hash || '';
       }
     } else {
       // Fallback in-memory logic
@@ -97,19 +100,23 @@ router.post('/register', authRateLimiter, async (req, res) => {
     if (isPgActive()) {
       const pool = getPgPool();
       // Check if exists
-      const existing = await pool?.query('SELECT id FROM users WHERE LOWER(username) = $1 OR UPPER(private_id) = $2', [cleanUsername.toLowerCase(), privateId.toUpperCase()]);
+      const existing = await pool?.query(
+        'SELECT id FROM users WHERE LOWER(username) = $1 OR (email IS NOT NULL AND LOWER(email) = $2)',
+        [cleanUsername.toLowerCase(), cleanEmail]
+      );
       if (existing && existing.rows.length > 0) {
-        return res.status(400).json({ error: 'Username or Private ID already exists' });
+        return res.status(400).json({ error: 'Username or email already exists' });
       }
 
       // Hash password using bcrypt
       const hashedPass = await bcrypt.hash(password, 10);
+      const displayName = name || cleanUsername.replace('@', '');
 
       // Insert into PostgreSQL
       await pool?.query(
-        `INSERT INTO users (id, username, public_key, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [userId, cleanUsername, 'mock_public_key', now, now]
+        `INSERT INTO users (id, username, email, password_hash, private_id, display_name, public_key, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [userId, cleanUsername, cleanEmail, hashedPass, privateId, displayName, 'mock_public_key', now, now]
       );
     } else {
       if (usersByEmail.has(cleanEmail)) {
