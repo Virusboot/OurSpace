@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "cd backend && npm install --include=dev && npx tsc",
+    "build": "cd web && npm install && npm run build",
+    "build:backend": "cd backend && npm install --include=dev && npx tsc",
     "start": "cd backend && node dist/server.js"
   }
 }
