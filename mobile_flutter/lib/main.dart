@@ -15,7 +15,10 @@ import 'features/chat/presentation/screens/home_screen.dart';
 import 'features/chat/presentation/screens/chat_screen.dart';
 import 'features/media/presentation/screens/secure_image_viewer_screen.dart';
 import 'features/calls/presentation/screens/call_screen.dart';
+import 'features/calls/presentation/screens/incoming_call_screen.dart';
 import 'features/settings/presentation/screens/settings_screen.dart';
+import 'core/notifications/notification_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -42,12 +45,12 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
   String _activeImageUri = '';
   bool _activeIsViewOnce = false;
   bool _isDarkMode = false;
+  Map<String, dynamic>? _incomingCallData;
 
   final GlobalKey _callScreenKey = GlobalKey();
   final _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
   StreamSubscription<Map<String, dynamic>>? _wsCallSubscription;
-  BuildContext? _incomingCallDialogContext;
 
   @override
   void initState() {
@@ -57,7 +60,42 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
     _checkStoredUser();
     _loadThemeMode();
     _initDeepLinking();
+    _initNotifications();
     _initCallSignalListener();
+  }
+
+  void _initNotifications() async {
+    await NotificationService().initialize(
+      onNotificationSelected: (payload) {
+        if (!mounted) return;
+        final type = payload['type'];
+        if (type == 'chat') {
+          final conversationId = payload['conversationId'];
+          final senderName = payload['senderName'];
+          setState(() {
+            _activeRecipient = {
+              'username': senderName,
+              'conversationId': conversationId,
+            };
+            _currentScreen = 'chat';
+          });
+        } else if (type == 'call') {
+          final callId = payload['callId'];
+          final callerName = payload['callerName'];
+          final callType = payload['callType'];
+          final senderId = payload['senderId'];
+          setState(() {
+            _incomingCallData = {
+              'callId': callId,
+              'callerUsername': callerName,
+              'callType': callType,
+              'senderId': senderId,
+            };
+            _currentScreen = 'incoming_call';
+          });
+        }
+      },
+    );
   }
 
   void _wakeUpServer() async {
@@ -72,16 +110,40 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
     _wsCallSubscription = WebSocketClient().stream.listen((event) {
       if (!mounted) return;
       final type = event['type'];
-      if (type == 'call_offer' || type == 'call_invite') {
+      if (type == 'chat_receive') {
+        _handleIncomingChatMessage(event);
+      } else if (type == 'call_offer' || type == 'call_invite') {
         _handleIncomingCall(event);
       } else if (type == 'call_ended' || type == 'call_hangup') {
         _handleCallEndedByRemote(event);
+      } else if (type == 'call_failed') {
+        _handleCallFailed(event);
       }
     });
   }
 
+  void _handleIncomingChatMessage(Map<String, dynamic> event) {
+    final msg = event['message'] ?? event;
+    final senderName = msg['senderUsername'] ?? msg['senderId'] ?? 'Someone';
+    final text = msg['text'] ?? 'Sent you an encrypted message';
+    final conversationId = msg['conversationId'] ?? '';
+
+    // If user is currently looking at this exact chat screen, don't trigger notification
+    if (_currentScreen == 'chat' &&
+        _activeRecipient != null &&
+        (_activeRecipient!['username'] == senderName || _activeRecipient!['id'] == msg['senderId'])) {
+      return;
+    }
+
+    NotificationService().showMessageNotification(
+      senderName: senderName,
+      messageText: text,
+      conversationId: conversationId,
+    );
+  }
+
   void _handleIncomingCall(Map<String, dynamic> event) {
-    if (_currentScreen == 'call') {
+    if (_currentScreen == 'call' || _currentScreen == 'incoming_call') {
       WebSocketClient().send({
         'type': 'call_hangup',
         'callId': event['callId'],
@@ -90,79 +152,63 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
       return;
     }
 
+    final callId = event['callId'] ?? 'call_${DateTime.now().millisecondsSinceEpoch}';
     final senderUsername = event['senderUsername'] ?? '@peer';
     final callType = event['callType'] ?? 'video';
+    final senderId = event['senderId'] ?? '';
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogCtx) {
-        _incomingCallDialogContext = dialogCtx;
-        return AlertDialog(
-          backgroundColor: _isDarkMode ? const Color(0xFF14161C) : Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            children: [
-              Icon(
-                callType == 'video' ? Icons.videocam_rounded : Icons.phone_rounded,
-                color: const Color(0xFF7B2FBE),
-              ),
-              const SizedBox(width: 8),
-              const Text('Incoming Call', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            ],
-          ),
-          content: Text(
-            '$senderUsername is calling you...',
-            style: TextStyle(color: _isDarkMode ? Colors.white70 : Colors.black87, fontSize: 14),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                _incomingCallDialogContext = null;
-                Navigator.pop(dialogCtx);
-                WebSocketClient().send({
-                  'type': 'call_hangup',
-                  'callId': event['callId'],
-                  'targetId': event['senderId'],
-                });
-              },
-              child: const Text('Reject', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF7B2FBE),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () {
-                _incomingCallDialogContext = null;
-                Navigator.pop(dialogCtx);
-                setState(() {
-                  _activeCallType = callType;
-                  _activeCallId = event['callId'];
-                  _activeRecipient = {
-                    'id': event['senderId'],
-                    'username': senderUsername,
-                  };
-                  _currentScreen = 'call';
-                });
-              },
-              child: const Text('Accept', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        );
-      },
+    // Trigger high-priority call notification
+    NotificationService().showIncomingCallNotification(
+      callId: callId,
+      callerName: senderUsername,
+      callType: callType,
+      senderId: senderId,
     );
+
+    // Show full-screen WhatsApp/Telegram style Incoming Call screen
+    setState(() {
+      _incomingCallData = {
+        'callId': callId,
+        'callerUsername': senderUsername,
+        'callType': callType,
+        'senderId': senderId,
+      };
+      _currentScreen = 'incoming_call';
+    });
   }
 
-  void _handleCallEndedByRemote(Map<String, dynamic> event) {
-    if (_incomingCallDialogContext != null) {
-      Navigator.of(_incomingCallDialogContext!).pop();
-      _incomingCallDialogContext = null;
-    }
-
+  void _handleCallFailed(Map<String, dynamic> event) {
+    NotificationService().cancelNotification(999);
     if (_currentScreen == 'call' && _activeCallId == event['callId']) {
       setState(() {
         _currentScreen = 'home';
+        _activeCallId = null;
+      });
+      final target = event['targetUsername'] ?? 'User';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$target is currently offline or unavailable.'),
+          backgroundColor: const Color(0xFFF43F5E),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  void _handleCallEndedByRemote(Map<String, dynamic> event) {
+    NotificationService().cancelNotification(999);
+
+    if (_currentScreen == 'incoming_call' &&
+        _incomingCallData != null &&
+        _incomingCallData!['callId'] == event['callId']) {
+      setState(() {
+        _incomingCallData = null;
+        _currentScreen = 'home';
+      });
+    } else if (_currentScreen == 'call' && _activeCallId == event['callId']) {
+      setState(() {
+        _currentScreen = 'home';
+        _activeCallId = null;
       });
     }
   }
@@ -177,6 +223,9 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      WebSocketClient().ensureConnected();
+    }
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       _lockAppIfEnabled();
     }
@@ -293,6 +342,15 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
     } else if (uri.scheme == 'ourspace' && uri.host == 'c' && uri.pathSegments.isNotEmpty) {
       final token = uri.pathSegments[0];
       _resolveCallLink(token);
+    } else if (uri.scheme == 'ourspace' && uri.pathSegments.isNotEmpty) {
+      final token = uri.pathSegments.last;
+      _resolveCallLink(token);
+    } else if (uri.pathSegments.contains('c')) {
+      final idx = uri.pathSegments.indexOf('c');
+      if (idx + 1 < uri.pathSegments.length) {
+        final token = uri.pathSegments[idx + 1];
+        _resolveCallLink(token);
+      }
     }
   }
 
@@ -347,6 +405,39 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
         _showDeepLinkError('Call Link Error', errStr.replaceFirst('Exception: ', ''));
       }
     }
+  }
+
+  Future<bool> _ensureCallPermissions(String callType) async {
+    try {
+      var micStatus = await Permission.microphone.status;
+      if (!micStatus.isGranted) {
+        micStatus = await Permission.microphone.request();
+      }
+
+      bool camGranted = true;
+      if (callType == 'video') {
+        var camStatus = await Permission.camera.status;
+        if (!camStatus.isGranted) {
+          camStatus = await Permission.camera.request();
+        }
+        camGranted = camStatus.isGranted;
+      }
+
+      if (micStatus.isGranted && camGranted) {
+        return true;
+      }
+    } catch (_) {}
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Camera and Microphone permissions are required to make calls.'),
+          backgroundColor: Color(0xFFF43F5E),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+    return false;
   }
 
   void _promptForCallPin(String token) {
@@ -620,6 +711,9 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
             });
           },
           onStartCall: (type, recipient, {callId}) async {
+            final hasPerm = await _ensureCallPermissions(type);
+            if (!hasPerm) return;
+
             // If a callId was given directly (incoming call), use it
             if (callId != null) {
               setState(() {
@@ -646,7 +740,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                   _currentScreen = 'call';
                 });
                 // Send the call link to the recipient via WebSocket
-                if (recipient != null && recipient['id'] != null) {
+                if (recipient != null) {
                   WebSocketClient().send({
                     'type': 'call_invite',
                     'callId': generatedCallId,
@@ -656,6 +750,8 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                     'targetUsername': recipient['username'],
                     'targetPrivateId': recipient['privateId'],
                     'callerUsername': _user?['username'] ?? '@user',
+                    'senderId': _user?['id'],
+                    'senderProfileImage': _user?['profileImage'],
                   });
                 }
               }
@@ -669,6 +765,19 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                   _activeRecipient = recipient ?? {'username': '@user'};
                   _currentScreen = 'call';
                 });
+                if (recipient != null) {
+                  WebSocketClient().send({
+                    'type': 'call_invite',
+                    'callId': fallbackId,
+                    'callType': type,
+                    'targetUserId': recipient['id'],
+                    'targetUsername': recipient['username'],
+                    'targetPrivateId': recipient['privateId'],
+                    'callerUsername': _user?['username'] ?? '@user',
+                    'senderId': _user?['id'],
+                    'senderProfileImage': _user?['profileImage'],
+                  });
+                }
               }
             }
           },
@@ -681,6 +790,9 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
           isDarkMode: _isDarkMode,
           onBack: () => setState(() => _currentScreen = 'home'),
           onStartCall: (type, recipient, {callId}) async {
+            final hasPerm = await _ensureCallPermissions(type);
+            if (!hasPerm) return;
+
             if (callId != null) {
               setState(() {
                 _activeCallType = type;
@@ -704,18 +816,18 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                   _activeRecipient = recipient;
                   _currentScreen = 'call';
                 });
-                if (recipient['id'] != null) {
-                  WebSocketClient().send({
-                    'type': 'call_invite',
-                    'callId': generatedCallId,
-                    'callType': type,
-                    'token': token,
-                    'targetUserId': recipient['id'],
-                    'targetUsername': recipient['username'],
-                    'targetPrivateId': recipient['privateId'],
-                    'callerUsername': _user?['username'] ?? '@user',
-                  });
-                }
+                WebSocketClient().send({
+                  'type': 'call_invite',
+                  'callId': generatedCallId,
+                  'callType': type,
+                  'token': token,
+                  'targetUserId': recipient['id'],
+                  'targetUsername': recipient['username'],
+                  'targetPrivateId': recipient['privateId'],
+                  'callerUsername': _user?['username'] ?? '@user',
+                  'senderId': _user?['id'],
+                  'senderProfileImage': _user?['profileImage'],
+                });
               }
             } catch (e) {
               final fallbackId = 'call_${DateTime.now().millisecondsSinceEpoch}';
@@ -725,6 +837,17 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                   _activeCallId = fallbackId;
                   _activeRecipient = recipient;
                   _currentScreen = 'call';
+                });
+                WebSocketClient().send({
+                  'type': 'call_invite',
+                  'callId': fallbackId,
+                  'callType': type,
+                  'targetUserId': recipient['id'],
+                  'targetUsername': recipient['username'],
+                  'targetPrivateId': recipient['privateId'],
+                  'callerUsername': _user?['username'] ?? '@user',
+                  'senderId': _user?['id'],
+                  'senderProfileImage': _user?['profileImage'],
                 });
               }
             }
@@ -744,6 +867,47 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
           isDarkMode: _isDarkMode,
           onClose: () => setState(() => _currentScreen = 'chat'),
         );
+      case 'incoming_call':
+        if (_incomingCallData == null) {
+          return HomeScreen(
+            user: _user,
+            isDarkMode: _isDarkMode,
+            onToggleTheme: _toggleTheme,
+            onOpenChat: (recipient) {
+              setState(() {
+                _activeRecipient = recipient;
+                _currentScreen = 'chat';
+              });
+            },
+            onStartCall: (type, recipient, {callId}) async {},
+            onOpenSettings: () => setState(() => _currentScreen = 'settings'),
+          );
+        }
+        return IncomingCallScreen(
+          callId: _incomingCallData!['callId'] ?? '',
+          callerUsername: _incomingCallData!['callerUsername'] ?? '@peer',
+          callType: _incomingCallData!['callType'] ?? 'video',
+          senderId: _incomingCallData!['senderId'] ?? '',
+          senderProfileImage: _incomingCallData!['senderProfileImage'],
+          onAccept: () {
+            setState(() {
+              _activeCallType = _incomingCallData!['callType'] ?? 'video';
+              _activeCallId = _incomingCallData!['callId'];
+              _activeRecipient = {
+                'id': _incomingCallData!['senderId'],
+                'username': _incomingCallData!['callerUsername'],
+              };
+              _incomingCallData = null;
+              _currentScreen = 'call';
+            });
+          },
+          onDecline: () {
+            setState(() {
+              _incomingCallData = null;
+              _currentScreen = 'home';
+            });
+          },
+        );
       case 'call':
         return const SizedBox();
       case 'settings':
@@ -754,12 +918,21 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
           onToggleTheme: _toggleTheme,
           onBack: () => setState(() => _currentScreen = 'home'),
           onLogout: _handleLogout,
-          onProfileImageUpdated: (path) {
+          onProfileImageUpdated: (base64Img) async {
             setState(() {
               if (_user != null) {
-                _user!['profileImage'] = path;
+                _user!['profileImage'] = base64Img;
               }
             });
+            if (_user != null) {
+              await SecureStorageService.write('user_info', jsonEncode(_user));
+              WebSocketClient().send({
+                'type': 'profile_update',
+                'senderId': _user!['id'],
+                'senderUsername': _user!['username'],
+                'profileImage': base64Img,
+              });
+            }
           },
         );
       default:

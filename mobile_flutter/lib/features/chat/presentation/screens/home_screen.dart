@@ -36,6 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _activeTab = 0; // 0: Chat, 1: Calls, 2: Status, 3: Settings
   final TextEditingController _searchCtrl = TextEditingController();
   final List<Map<String, dynamic>> _conversations = [];
+  bool _isLoadingChats = true;
   StreamSubscription? _wsSubscription;
   List<Map<String, dynamic>> _onlineUsers = [];
   
@@ -63,8 +64,49 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           });
         }
+      } else if (event['type'] == 'profile_update' || event['type'] == 'chat_receive') {
+        final profileImg = event['profileImage'] ?? (event['message']?['senderProfileImage']);
+        final username = event['senderUsername'] ?? (event['message']?['senderUsername']);
+        if (profileImg != null && username != null && mounted) {
+          setState(() {
+            for (var chat in _conversations) {
+              if (chat['username'] == username) {
+                chat['profileImage'] = profileImg;
+              }
+            }
+          });
+        }
       }
     });
+  }
+
+  Widget _buildAvatarImage(String? imageSource, {double size = 50, required String fallbackName}) {
+    if (imageSource != null && imageSource.isNotEmpty) {
+      if (imageSource.startsWith('data:image')) {
+        try {
+          final base64Data = imageSource.split(',').last;
+          final bytes = base64Decode(base64Data);
+          return Image.memory(bytes, width: size, height: size, fit: BoxFit.cover);
+        } catch (_) {}
+      } else if (imageSource.length > 80 && !imageSource.contains('/') && !imageSource.startsWith('http')) {
+        try {
+          final bytes = base64Decode(imageSource);
+          return Image.memory(bytes, width: size, height: size, fit: BoxFit.cover);
+        } catch (_) {}
+      } else if (imageSource.startsWith('http')) {
+        return Image.network(imageSource, width: size, height: size, fit: BoxFit.cover);
+      } else if (File(imageSource).existsSync()) {
+        return Image.file(File(imageSource), width: size, height: size, fit: BoxFit.cover);
+      }
+    }
+    final clean = fallbackName.replaceAll('@', '').trim();
+    final initial = clean.isNotEmpty ? clean[0].toUpperCase() : 'U';
+    return Center(
+      child: Text(
+        initial,
+        style: TextStyle(color: const Color(0xFF7B2FBE), fontWeight: FontWeight.bold, fontSize: size * 0.45),
+      ),
+    );
   }
 
   @override
@@ -75,42 +117,48 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  String _buildFormattedShareText(String url) {
+    return '🔒 *OurSpace — Private Encrypted Call*\n\n'
+        '💬 You have been invited to an end-to-end encrypted audio & video session.\n\n'
+        '👉 *Click link to join:* \n$url\n\n'
+        '✨ _Zero data logging | E2EE P2P Security_';
+  }
+
   Future<void> _shareToTelegram(String url) async {
-    final msg = Uri.encodeComponent('Join my secure encrypted call on OurSpace: $url');
-    final tgUri = Uri.parse('https://t.me/share/url?url=${Uri.encodeComponent(url)}&text=$msg');
+    final formattedText = _buildFormattedShareText(url);
+    final tgUri = Uri.parse('https://t.me/share/url?url=${Uri.encodeComponent(url)}&text=${Uri.encodeComponent(formattedText)}');
     try {
       if (await canLaunchUrl(tgUri)) {
         await launchUrl(tgUri, mode: LaunchMode.externalApplication);
       } else {
-        await launchUrl(tgUri, mode: LaunchMode.externalNonBrowserApplication);
+        Share.share(formattedText);
       }
     } catch (_) {
-      Share.share('Join my secure encrypted call on OurSpace:\n$url');
+      Share.share(formattedText);
     }
   }
 
   Future<void> _shareToWhatsApp(String url) async {
-    final msg = Uri.encodeComponent('Join my secure encrypted call on OurSpace:\n$url');
-    final waUri = Uri.parse('whatsapp://send?text=$msg');
-    final waWebUri = Uri.parse('https://api.whatsapp.com/send?text=$msg');
+    final formattedText = _buildFormattedShareText(url);
+    final encodedMsg = Uri.encodeComponent(formattedText);
+    final waUri = Uri.parse('whatsapp://send?text=$encodedMsg');
+    final waWebUri = Uri.parse('https://api.whatsapp.com/send?text=$encodedMsg');
     try {
       if (await canLaunchUrl(waUri)) {
         await launchUrl(waUri, mode: LaunchMode.externalApplication);
       } else if (await canLaunchUrl(waWebUri)) {
         await launchUrl(waWebUri, mode: LaunchMode.externalApplication);
       } else {
-        Share.share('Join my secure encrypted call on OurSpace:\n$url');
+        Share.share(formattedText);
       }
     } catch (_) {
-      Share.share('Join my secure encrypted call on OurSpace:\n$url');
+      Share.share(formattedText);
     }
   }
 
   void _shareViaNative(String url) {
-    Share.share(
-      'Join my secure encrypted call on OurSpace:\n$url',
-      subject: 'OurSpace Call Invitation',
-    );
+    final formattedText = _buildFormattedShareText(url);
+    Share.share(formattedText, subject: 'OurSpace Private Encrypted Call');
   }
 
   void _showShareOptionsModal(BuildContext context, String url) {
@@ -355,47 +403,74 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadRecentChats() async {
-    final data = await SecureStorageService.read('recent_chats');
-    if (data != null && data.isNotEmpty) {
-      try {
+    try {
+      final data = await SecureStorageService.read('recent_chats');
+      if (data != null && data.isNotEmpty) {
         final decoded = jsonDecode(data);
-        if (decoded is List) {
+        if (decoded is List && mounted) {
           setState(() {
             _conversations.clear();
             _conversations.addAll(List<Map<String, dynamic>>.from(decoded));
           });
         }
-      } catch (_) {}
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingChats = false;
+        });
+      }
     }
   }
 
   Future<void> _saveRecentChat(Map<String, dynamic> peer) async {
-    // Skip saving guest users — they have no real account on the platform
     final peerId = peer['id']?.toString() ?? '';
     if (peerId.startsWith('guest_')) return;
 
-    final data = await SecureStorageService.read('recent_chats');
-    List<Map<String, dynamic>> list = [];
-    if (data != null && data.isNotEmpty) {
-      try {
+    final cleanUsername = peer['username']?.toString() ?? '';
+    if (cleanUsername.isEmpty) return;
+
+    final newItem = {
+      'id': peerId.isNotEmpty ? peerId : cleanUsername,
+      'username': cleanUsername,
+      'privateId': peer['privateId'] ?? '',
+      'publicKey': peer['publicKey'] ?? '',
+      'profileImage': peer['profileImage'] ?? '',
+      'unread': 0,
+      'lastMessage': peer['lastMessage'] ?? 'Click to open secure chat',
+      'time': peer['time'] ?? 'Just now',
+    };
+
+    // Update in-memory state IMMEDIATELY to prevent glitch
+    if (mounted) {
+      setState(() {
+        _conversations.removeWhere((item) =>
+          item['username'] == cleanUsername ||
+          (peerId.isNotEmpty && item['id'] == peerId)
+        );
+        _conversations.insert(0, newItem);
+        _isLoadingChats = false;
+      });
+    }
+
+    // Persist to SecureStorage in background
+    try {
+      final data = await SecureStorageService.read('recent_chats');
+      List<Map<String, dynamic>> list = [];
+      if (data != null && data.isNotEmpty) {
         final decoded = jsonDecode(data);
         if (decoded is List) {
           list = List<Map<String, dynamic>>.from(decoded);
         }
-      } catch (_) {}
-    }
-    list.removeWhere((item) => item['username'] == peer['username']);
-    list.insert(0, {
-      'id': peer['id'] ?? 'peer_${DateTime.now().millisecondsSinceEpoch}',
-      'username': peer['username'],
-      'privateId': peer['privateId'] ?? '',
-      'publicKey': peer['publicKey'] ?? '',
-      'unread': 0,
-      'lastMessage': 'Click to open secure chat',
-      'time': 'Just now',
-    });
-    await SecureStorageService.write('recent_chats', jsonEncode(list));
-    _loadRecentChats();
+      }
+      list.removeWhere((item) =>
+        item['username'] == cleanUsername ||
+        (peerId.isNotEmpty && item['id'] == peerId)
+      );
+      list.insert(0, newItem);
+      await SecureStorageService.write('recent_chats', jsonEncode(list));
+    } catch (_) {}
   }
 
 
@@ -1212,7 +1287,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                     ),
                                   Expanded(
-                                    child: filteredConvs.isEmpty
+                                    child: _isLoadingChats
+                                        ? const Center(
+                                            child: CircularProgressIndicator(
+                                              color: Color(0xFF7B2FBE),
+                                              strokeWidth: 2.5,
+                                            ),
+                                          )
+                                        : filteredConvs.isEmpty
                                         ? Center(
                                             child: SingleChildScrollView(
                                               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
@@ -1275,20 +1357,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   leading: CircleAvatar(
                                                     radius: 25,
                                                     backgroundColor: avatarBg,
-                                                    child: (item['profileImage'] != null && File(item['profileImage']).existsSync())
-                                                        ? ClipRRect(
-                                                            borderRadius: BorderRadius.circular(25),
-                                                            child: Image.file(
-                                                              File(item['profileImage']),
-                                                              width: 50,
-                                                              height: 50,
-                                                              fit: BoxFit.cover,
-                                                            ),
-                                                          )
-                                                        : Text(
-                                                            item['username'].toString().substring(0, 1).toUpperCase(),
-                                                            style: TextStyle(color: avatarTxt, fontWeight: FontWeight.bold, fontSize: 17),
-                                                          ),
+                                                    child: ClipRRect(
+                                                      borderRadius: BorderRadius.circular(25),
+                                                      child: _buildAvatarImage(
+                                                        item['profileImage'],
+                                                        size: 50,
+                                                        fallbackName: item['username'].toString(),
+                                                      ),
+                                                    ),
                                                   ),
                                                   title: Text(
                                                     item['username'],

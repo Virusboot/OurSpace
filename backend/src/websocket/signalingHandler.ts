@@ -41,13 +41,22 @@ export function handleSignaling(
     }));
 
   } else if (type === 'call_invite') {
-    let targetWs = activeConnections.get(payload.targetUserId);
+    let targetWs: WebSocket | undefined;
+    if (payload.targetUserId) {
+      targetWs = activeConnections.get(payload.targetUserId);
+    }
     if (!targetWs && payload.targetUsername) {
-      targetWs = activeConnections.get(payload.targetUsername.toLowerCase());
+      const rawUname = payload.targetUsername.toLowerCase();
+      const cleanUname = rawUname.replace(/^@/, '');
+      targetWs = activeConnections.get(rawUname) ||
+                 activeConnections.get(cleanUname) ||
+                 activeConnections.get(`@${cleanUname}`);
     }
     if (!targetWs && payload.targetPrivateId) {
-      targetWs = activeConnections.get(payload.targetPrivateId.toUpperCase());
+      targetWs = activeConnections.get(payload.targetPrivateId.toUpperCase()) ||
+                 activeConnections.get(payload.targetPrivateId.toLowerCase());
     }
+
     if (targetWs && targetWs.readyState === WebSocket.OPEN) {
       targetWs.send(JSON.stringify({
         type: 'call_invite',
@@ -55,8 +64,20 @@ export function handleSignaling(
         callType: payload.callType,
         token: payload.token,
         senderId: payload.senderId,
-        senderUsername: payload.callerUsername || '@peer',
+        senderUsername: payload.callerUsername || payload.senderUsername || '@peer',
+        senderProfileImage: payload.senderProfileImage,
       }));
+      console.log(`[Signaling] call_invite delivered for callId ${payload.callId}`);
+    } else {
+      console.log(`[Signaling] Target user offline or not found for call_invite: ${payload.targetUsername || payload.targetUserId}`);
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'call_failed',
+          callId: payload.callId,
+          reason: 'recipient_offline',
+          targetUsername: payload.targetUsername || 'User'
+        }));
+      }
     }
   } else if (type === 'call_offer' || type === 'call_answer' || type === 'ice_candidate' || type === 'media_toggle') {
     let routed = false;

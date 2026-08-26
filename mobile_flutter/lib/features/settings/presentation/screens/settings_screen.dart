@@ -24,7 +24,7 @@ class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
     Key? key,
     required this.user,
-    required this.recoveryKey,
+    this.recoveryKey = '',
     required this.isDarkMode,
     required this.onToggleTheme,
     required this.onBack,
@@ -40,7 +40,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _appLock = false;
   bool _biometric = false;
   bool _ghostMode = false;
-  bool _showRecoveryKey = false;
   XFile? _profileImage;
   final ImagePicker _picker = ImagePicker();
 
@@ -150,13 +149,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _pickImage(ImageSource source) async {
     try {
-      final picked = await _picker.pickImage(source: source, maxWidth: 600, maxHeight: 600, imageQuality: 85);
+      final picked = await _picker.pickImage(source: source, maxWidth: 400, maxHeight: 400, imageQuality: 70);
       if (picked != null) {
         setState(() {
           _profileImage = picked;
         });
+        final bytes = await picked.readAsBytes();
+        final base64Str = 'data:image/jpeg;base64,${base64Encode(bytes)}';
         await SecureStorageService.write('profile_image_path', picked.path);
-        widget.onProfileImageUpdated?.call(picked.path);
+        await SecureStorageService.write('profile_image_base64', base64Str);
+        widget.onProfileImageUpdated?.call(base64Str);
       }
     } catch (_) {}
   }
@@ -997,37 +999,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: subtxtCol),
                     onTap: _showChangePasswordModal,
                   ),
-                  Divider(height: 1, color: isDark ? Colors.white10 : const Color(0xFFF1F5F9)),
-                  ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF7B2FBE).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.key_rounded, color: Color(0xFF7B2FBE), size: 20),
-                    ),
-                    title: Text('View Master Recovery Key', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
-                    trailing: Text(_showRecoveryKey ? 'Hide' : 'View', style: const TextStyle(color: Color(0xFF7B2FBE), fontWeight: FontWeight.bold, fontSize: 13)),
-                    onTap: () => setState(() => _showRecoveryKey = !_showRecoveryKey),
-                  ),
-                  if (_showRecoveryKey)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFFFEF3C7),
-                      child: Text(
-                        widget.recoveryKey,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: isDark ? Colors.amber : const Color(0xFFB45309),
-                          fontFamily: 'monospace',
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
                 ],
               ),
             ),

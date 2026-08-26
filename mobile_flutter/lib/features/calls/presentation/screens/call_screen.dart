@@ -135,6 +135,21 @@ class _CallScreenState extends State<CallScreen> {
       }
 
       _localRenderer.srcObject = _localStream;
+      
+      // Ensure audio and video tracks are explicitly enabled for two-way communication
+      if (_localStream != null) {
+        _localStream!.getAudioTracks().forEach((track) {
+          track.enabled = true;
+        });
+        _localStream!.getVideoTracks().forEach((track) {
+          track.enabled = _camEnabled;
+        });
+      }
+
+      try {
+        Helper.setSpeakerphoneOn(widget.callType == 'video');
+      } catch (_) {}
+
       if (mounted) setState(() {});
     } catch (e) {
       debugPrint('Failed to get local media: $e');
@@ -338,7 +353,10 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _sendAnswer() async {
     if (_peerConnection == null) return;
-    final answer = await _peerConnection!.createAnswer();
+    final answer = await _peerConnection!.createAnswer({
+      'offerToReceiveAudio': true,
+      'offerToReceiveVideo': widget.callType == 'video',
+    });
     await _peerConnection!.setLocalDescription(answer);
 
     WebSocketClient().send({

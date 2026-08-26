@@ -7,6 +7,16 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <uses-permission android:name="android.permission.USE_FINGERPRINT"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
 
     <application
         android:label="OurSpace"
@@ -32,15 +42,32 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
-            <!-- Deep linking for secure call links /c/<token> -->
+            <!-- Android App Links for Vercel domain 1 -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="https" android:host="localhost" android:pathPrefix="/c/"/>
                 <data android:scheme="https" android:host="ourspace-wheat.vercel.app" android:pathPrefix="/c/"/>
+            </intent-filter>
+
+            <!-- Android App Links for Vercel domain 2 -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="https" android:host="our-space-wheat.vercel.app" android:pathPrefix="/c/"/>
-                <data android:scheme="http" android:host="localhost" android:pathPrefix="/c/"/>
+            </intent-filter>
+
+            <!-- HTTP / HTTPS Fallback Deep Links -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="http"/>
+                <data android:scheme="https"/>
+                <data android:host="ourspace-wheat.vercel.app"/>
+                <data android:host="our-space-wheat.vercel.app"/>
+                <data android:pathPrefix="/c/"/>
             </intent-filter>
 
             <!-- Deep linking for custom URL scheme ourspace://c/<token> -->
@@ -48,7 +75,7 @@
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="ourspace" android:host="c"/>
+                <data android:scheme="ourspace"/>
             </intent-filter>
         </activity>
 

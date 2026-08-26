@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/crypto/e2ee_crypto_service.dart';
@@ -37,9 +38,73 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollCtrl = ScrollController();
   final List<Map<String, dynamic>> _messages = [];
   String? _conversationId;
-  int _ttlSeconds = 30; // default 30s
+  int _ttlSeconds = 0; // 0 = permanent (no disappearance), 30s only when Ghost Mode is ON
   bool _isGhostMode = false;
   StreamSubscription<Map<String, dynamic>>? _wsSubscription;
+
+  Widget _buildAvatarImage(String? imageSource, {double size = 40, required String fallbackName}) {
+    if (imageSource != null && imageSource.isNotEmpty) {
+      if (imageSource.startsWith('data:image')) {
+        try {
+          final base64Data = imageSource.split(',').last;
+          final bytes = base64Decode(base64Data);
+          return Image.memory(bytes, width: size, height: size, fit: BoxFit.cover);
+        } catch (_) {}
+      } else if (imageSource.length > 80 && !imageSource.contains('/') && !imageSource.startsWith('http')) {
+        try {
+          final bytes = base64Decode(imageSource);
+          return Image.memory(bytes, width: size, height: size, fit: BoxFit.cover);
+        } catch (_) {}
+      } else if (imageSource.startsWith('http')) {
+        return Image.network(imageSource, width: size, height: size, fit: BoxFit.cover);
+      } else if (File(imageSource).existsSync()) {
+        return Image.file(File(imageSource), width: size, height: size, fit: BoxFit.cover);
+      }
+    }
+    final clean = fallbackName.replaceAll('@', '').trim();
+    final initial = clean.isNotEmpty ? clean[0].toUpperCase() : 'U';
+    return Center(
+      child: Text(
+        initial,
+        style: TextStyle(color: const Color(0xFF7B2FBE), fontWeight: FontWeight.bold, fontSize: size * 0.45),
+      ),
+    );
+  }
+
+  Future<void> _saveRecentChatSnippet(String lastMsgText) async {
+    try {
+      final data = await SecureStorageService.read('recent_chats');
+      List<Map<String, dynamic>> list = [];
+      if (data != null && data.isNotEmpty) {
+        final decoded = jsonDecode(data);
+        if (decoded is List) {
+          list = List<Map<String, dynamic>>.from(decoded);
+        }
+      }
+
+      final recipientUname = widget.recipient['username']?.toString() ?? '';
+      final recipientId = widget.recipient['id']?.toString() ?? '';
+      if (recipientUname.isEmpty) return;
+
+      list.removeWhere((item) =>
+        item['username'] == recipientUname ||
+        (recipientId.isNotEmpty && item['id'] == recipientId)
+      );
+
+      list.insert(0, {
+        'id': recipientId.isNotEmpty ? recipientId : recipientUname,
+        'username': recipientUname,
+        'privateId': widget.recipient['privateId'] ?? '',
+        'publicKey': widget.recipient['publicKey'] ?? '',
+        'profileImage': widget.recipient['profileImage'] ?? '',
+        'unread': 0,
+        'lastMessage': lastMsgText,
+        'time': 'Just now',
+      });
+
+      await SecureStorageService.write('recent_chats', jsonEncode(list));
+    } catch (_) {}
+  }
 
   @override
   void initState() {
@@ -55,6 +120,11 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         _isGhostMode = true;
         _ttlSeconds = 30;
+      });
+    } else {
+      setState(() {
+        _isGhostMode = false;
+        _ttlSeconds = 0;
       });
     }
   }
@@ -76,6 +146,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
       if (type == 'chat_receive') {
         final msg = event['message'] ?? event;
+        if (msg['senderProfileImage'] != null && msg['senderProfileImage'].toString().isNotEmpty) {
+          setState(() {
+            widget.recipient['profileImage'] = msg['senderProfileImage'];
+          });
+        }
         final encrypted = msg['encryptedPayload'] ?? '';
         final text = E2EECryptoService.decryptPayload(encrypted, widget.recipient['publicKey'] ?? '');
         final newMsg = {
@@ -92,9 +167,10 @@ class _ChatScreenState extends State<ChatScreen> {
           _messages.add(newMsg);
         });
         _scrollToBottom();
+        _saveRecentChatSnippet(newMsg['decryptedText'].toString());
 
-        // Ghost Mode / TTL 30s Auto Disappear
-        if (_isGhostMode || _ttlSeconds > 0) {
+        // Ghost Mode / TTL 30s Auto Disappear (only when Ghost Mode is enabled)
+        if (_isGhostMode && _ttlSeconds > 0) {
           final msgId = newMsg['id'];
           Timer(Duration(seconds: _ttlSeconds), () {
             if (mounted) {
@@ -119,6 +195,14 @@ class _ChatScreenState extends State<ChatScreen> {
             }
           });
           _scrollToBottom();
+        }
+      } else if (type == 'profile_update') {
+        if (event['senderUsername'] == widget.recipient['username'] || event['userId'] == widget.recipient['id']) {
+          if (event['profileImage'] != null && event['profileImage'].toString().isNotEmpty) {
+            setState(() {
+              widget.recipient['profileImage'] = event['profileImage'];
+            });
+          }
         }
       }
     });
@@ -184,8 +268,9 @@ class _ChatScreenState extends State<ChatScreen> {
       _messages.add(localMsg);
     });
     _scrollToBottom();
+    _saveRecentChatSnippet(text);
 
-    if (_isGhostMode || _ttlSeconds > 0) {
+    if (_isGhostMode && _ttlSeconds > 0) {
       final msgId = localMsg['id'];
       Timer(Duration(seconds: _ttlSeconds), () {
         if (mounted) {
@@ -201,6 +286,8 @@ class _ChatScreenState extends State<ChatScreen> {
         'type': 'chat_send',
         'conversationId': _conversationId,
         'senderId': widget.user['id'] ?? 'u1',
+        'senderUsername': widget.user['username'],
+        'senderProfileImage': widget.user['profileImage'],
         'recipientId': widget.recipient['id'] ?? 'u2',
         'recipientUsername': widget.recipient['username'],
         'recipientPrivateId': widget.recipient['privateId'],
@@ -223,14 +310,224 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  Widget _buildChatBubbleContent(Map<String, dynamic> item, bool isMe, Color peerBubbleBg, Color peerTxtColor) {
+    final messageType = item['messageType'] ?? 'text';
+    final mediaPath = item['mediaPath']?.toString() ?? '';
+    final isViewOnce = messageType == 'view_once_image' || item['isViewOnce'] == true;
+
+    if (messageType == 'image' || messageType == 'view_once_image' || mediaPath.isNotEmpty) {
+      return GestureDetector(
+        onTap: () {
+          if (mediaPath.isNotEmpty) {
+            widget.onOpenImageViewer(mediaPath, isViewOnce);
+          }
+        },
+        child: Container(
+          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.70),
+          decoration: BoxDecoration(
+            color: isMe ? const Color(0xFF7B2FBE) : peerBubbleBg,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (mediaPath.isNotEmpty && File(mediaPath).existsSync())
+                Stack(
+                  children: [
+                    Image.file(
+                      File(mediaPath),
+                      height: 180,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                    if (isViewOnce)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          child: const Center(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.visibility_off_rounded, color: Colors.white, size: 20),
+                                SizedBox(width: 6),
+                                Text('View-Once Photo', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                )
+              else
+                Container(
+                  height: 120,
+                  width: double.infinity,
+                  color: Colors.black12,
+                  child: Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(isViewOnce ? Icons.visibility_off_rounded : Icons.image_rounded, color: isMe ? Colors.white70 : Colors.grey),
+                        const SizedBox(width: 6),
+                        Text(
+                          isViewOnce ? 'View-Once Photo' : 'Photo Attachment',
+                          style: TextStyle(color: isMe ? Colors.white : peerTxtColor, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              if (item['decryptedText'] != null &&
+                  item['decryptedText'].toString().isNotEmpty &&
+                  !item['decryptedText'].toString().startsWith('📷'))
+                Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Text(
+                    item['decryptedText'],
+                    style: TextStyle(color: isMe ? Colors.white : peerTxtColor, fontSize: 13),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
+      decoration: BoxDecoration(
+        color: isMe ? const Color(0xFF7B2FBE) : peerBubbleBg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        item['decryptedText'] ?? '',
+        style: TextStyle(
+          color: isMe ? Colors.white : peerTxtColor,
+          fontSize: 14,
+          height: 1.4,
+          fontWeight: FontWeight.w400,
+        ),
+      ),
+    );
+  }
+
   Future<void> _pickAttachmentImage(ImageSource source, {bool isViewOnce = false}) async {
     try {
       final picker = ImagePicker();
       final picked = await picker.pickImage(source: source, maxWidth: 1000, maxHeight: 1000, imageQuality: 85);
       if (picked != null) {
-        widget.onOpenImageViewer(picked.path, isViewOnce);
+        _showSendImagePreviewDialog(picked.path, isViewOnce: isViewOnce);
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Failed to pick image: $e');
+    }
+  }
+
+  void _showSendImagePreviewDialog(String imagePath, {bool isViewOnce = false}) {
+    final captionCtrl = TextEditingController();
+    final isDark = widget.isDarkMode;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF14161C) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          isViewOnce ? 'Send View-Once Photo' : 'Send Photo',
+          style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Image.file(
+                  File(imagePath),
+                  height: 220,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: captionCtrl,
+                style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Add a caption (optional)...',
+                  hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
+                  filled: true,
+                  fillColor: isDark ? Colors.black.withValues(alpha: 0.3) : const Color(0xFFF1F5F9),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isViewOnce ? const Color(0xFFF43F5E) : const Color(0xFF7B2FBE),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _sendImageMessage(imagePath, isViewOnce: isViewOnce, caption: captionCtrl.text.trim());
+            },
+            icon: const Icon(Icons.send_rounded, color: Colors.white, size: 16),
+            label: Text(
+              isViewOnce ? 'Send View-Once' : 'Send',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _sendImageMessage(String imagePath, {bool isViewOnce = false, String caption = ''}) {
+    final text = caption.isNotEmpty ? caption : (isViewOnce ? '📷 View-once photo' : '📷 Photo');
+    final encrypted = E2EECryptoService.encryptPayload(text, widget.recipient['publicKey'] ?? '');
+    
+    final localMsg = {
+      'id': 'img_${DateTime.now().millisecondsSinceEpoch}',
+      'conversationId': _conversationId ?? 'c1',
+      'senderId': widget.user['id'] ?? 'u1',
+      'encryptedPayload': encrypted,
+      'decryptedText': text,
+      'messageType': isViewOnce ? 'view_once_image' : 'image',
+      'mediaPath': imagePath,
+      'isViewOnce': isViewOnce,
+      'time': '${DateTime.now().hour > 12 ? DateTime.now().hour - 12 : DateTime.now().hour == 0 ? 12 : DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')} ${DateTime.now().hour >= 12 ? 'PM' : 'AM'}',
+      'isTyping': false,
+      'createdAt': DateTime.now().toIso8601String(),
+    };
+
+    setState(() {
+      _messages.removeWhere((m) => m['isTyping'] == true);
+      _messages.add(localMsg);
+    });
+    _scrollToBottom();
+
+    if (_conversationId != null) {
+      WebSocketClient().send({
+        'type': 'chat_send',
+        'conversationId': _conversationId,
+        'senderId': widget.user['id'] ?? 'u1',
+        'recipientId': widget.recipient['id'] ?? 'u2',
+        'encryptedPayload': encrypted,
+        'messageType': isViewOnce ? 'view_once_image' : 'image',
+        'mediaPath': imagePath,
+        'isViewOnce': isViewOnce,
+      });
+    }
   }
 
   void _showAttachmentOptions() {
@@ -472,23 +769,11 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(52),
-                child: (profileImgPath != null && File(profileImgPath).existsSync())
-                    ? Image.file(
-                        File(profileImgPath),
-                        width: 104,
-                        height: 104,
-                        fit: BoxFit.cover,
-                      )
-                    : Center(
-                        child: Text(
-                          displayName.replaceAll('@', '').substring(0, 1).toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 42,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
+                child: _buildAvatarImage(
+                  widget.recipient['profileImage'] ?? profileImgPath,
+                  size: 104,
+                  fallbackName: displayName,
+                ),
               ),
             ),
             const SizedBox(height: 14),
@@ -685,20 +970,14 @@ class _ChatScreenState extends State<ChatScreen> {
                             CircleAvatar(
                               radius: 19,
                               backgroundColor: const Color(0xFF7B2FBE).withValues(alpha: 0.12),
-                              child: (widget.recipient['profileImage'] != null && File(widget.recipient['profileImage']).existsSync())
-                                  ? ClipRRect(
-                                      borderRadius: BorderRadius.circular(19),
-                                      child: Image.file(
-                                        File(widget.recipient['profileImage']),
-                                        width: 38,
-                                        height: 38,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    )
-                                  : Text(
-                                      displayName.replaceAll('@', '').substring(0, 1).toUpperCase(),
-                                      style: const TextStyle(color: Color(0xFF7B2FBE), fontWeight: FontWeight.bold, fontSize: 15),
-                                    ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(19),
+                                child: _buildAvatarImage(
+                                  widget.recipient['profileImage'],
+                                  size: 38,
+                                  fallbackName: displayName,
+                                ),
+                              ),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
@@ -921,23 +1200,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                   const SizedBox(width: 10),
                                 ],
                                 Flexible(
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
-                                    decoration: BoxDecoration(
-                                      color: isMe ? const Color(0xFF7B2FBE) : peerBubbleBg,
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      item['decryptedText'] ?? '',
-                                      style: TextStyle(
-                                        color: isMe ? Colors.white : peerTxtColor,
-                                        fontSize: 14,
-                                        height: 1.4,
-                                        fontWeight: FontWeight.w400,
-                                      ),
-                                    ),
-                                  ),
+                                  child: _buildChatBubbleContent(item, isMe, peerBubbleBg, peerTxtColor),
                                 ),
                               ],
                             ),

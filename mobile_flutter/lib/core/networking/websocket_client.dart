@@ -18,6 +18,13 @@ class WebSocketClient {
   bool _isExplicitlyDisconnected = false;
 
   Stream<Map<String, dynamic>> get stream => _messageController.stream;
+  bool get isConnected => _channel != null;
+
+  void ensureConnected() {
+    if (_channel == null && !_isConnecting) {
+      connect();
+    }
+  }
 
   Future<void> connect() async {
     if (_isConnecting) return;
@@ -41,9 +48,21 @@ class WebSocketClient {
       _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
 
       final token = await SecureStorageService.read('auth_token');
-      if (token != null && token.isNotEmpty) {
-        send({'type': 'auth', 'token': token});
+      final userInfoStr = await SecureStorageService.read('user_info');
+      Map<String, dynamic>? uObj;
+      if (userInfoStr != null && userInfoStr.isNotEmpty) {
+        try {
+          uObj = jsonDecode(userInfoStr);
+        } catch (_) {}
       }
+
+      send({
+        'type': 'auth',
+        'token': token ?? '',
+        'userId': uObj?['id'],
+        'username': uObj?['username'],
+        'privateId': uObj?['privateId'],
+      });
 
       _channel!.stream.listen(
         (data) {

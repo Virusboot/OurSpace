@@ -21,17 +21,27 @@ export async function handleChatMessage(
     // 2. Transmit to recipient if currently online
     let recipientWs = activeConnections.get(recipientId);
     if (!recipientWs && payload.recipientUsername) {
-      recipientWs = activeConnections.get(payload.recipientUsername.toLowerCase());
+      const rawUname = payload.recipientUsername.toLowerCase();
+      const cleanUname = rawUname.replace(/^@/, '');
+      recipientWs = activeConnections.get(rawUname) ||
+                    activeConnections.get(cleanUname) ||
+                    activeConnections.get(`@${cleanUname}`);
     }
     if (!recipientWs && payload.recipientPrivateId) {
-      recipientWs = activeConnections.get(payload.recipientPrivateId.toUpperCase());
+      recipientWs = activeConnections.get(payload.recipientPrivateId.toUpperCase()) ||
+                    activeConnections.get(payload.recipientPrivateId.toLowerCase());
     }
 
     const isDelivered = !!(recipientWs && recipientWs.readyState === WebSocket.OPEN);
     if (isDelivered) {
       recipientWs!.send(JSON.stringify({
         type: 'chat_receive',
-        message: msg
+        message: {
+          ...msg,
+          senderUsername: payload.senderUsername || payload.senderId || 'Someone',
+          senderProfileImage: payload.senderProfileImage,
+          text: payload.text
+        }
       }));
     }
 

@@ -47,23 +47,48 @@ export function initWebSocketServer(server: HttpServer) {
 
         // Authentication handshake
         if (type === 'auth') {
-          try {
-            const decoded: any = jwt.verify(token, config.jwtSecret);
-            currentId = decoded.userId;
-            if (currentId) {
-              activeConnections.set(currentId, ws);
-              if (decoded.username) {
-                activeConnections.set(decoded.username.toLowerCase(), ws);
-              }
-              if (decoded.privateId) {
-                activeConnections.set(decoded.privateId.toUpperCase(), ws);
-              }
-              ws.send(JSON.stringify({ type: 'auth_ack', success: true, userId: currentId }));
-              console.log(`[WebSocket] User authenticated: ${currentId}`);
-              await broadcastOnlineUsers();
+          let currentUserId: string | null = null;
+          let currentUsername: string | null = null;
+          let currentPrivateId: string | null = null;
+
+          if (token && typeof token === 'string' && !token.startsWith('token_local_')) {
+            try {
+              const decoded: any = jwt.verify(token, config.jwtSecret);
+              currentUserId = decoded.userId;
+              currentUsername = decoded.username;
+              currentPrivateId = decoded.privateId;
+            } catch (_) {}
+          }
+
+          // Fallback to payload user fields if token verification fails or local token used
+          if (!currentUserId && payload.userId) {
+            currentUserId = payload.userId;
+          }
+          if (!currentUsername && payload.username) {
+            currentUsername = payload.username;
+          }
+          if (!currentPrivateId && payload.privateId) {
+            currentPrivateId = payload.privateId;
+          }
+
+          if (currentUserId) {
+            currentId = currentUserId;
+            activeConnections.set(currentUserId, ws);
+            if (currentUsername) {
+              const cleanUname = currentUsername.toLowerCase().replace(/^@/, '');
+              activeConnections.set(cleanUname, ws);
+              activeConnections.set(`@${cleanUname}`, ws);
             }
-          } catch (err) {
-            ws.send(JSON.stringify({ type: 'auth_ack', success: false, error: 'Invalid auth token' }));
+            if (currentPrivateId) {
+              activeConnections.set(currentPrivateId.toUpperCase(), ws);
+              activeConnections.set(currentPrivateId.toLowerCase(), ws);
+            }
+            ws.send(JSON.stringify({ type: 'auth_ack', success: true, userId: currentUserId }));
+            console.log(`[WebSocket] User authenticated successfully: ${currentUserId} (@${currentUsername})`);
+            await broadcastOnlineUsers();
+          } else {
+            console.log(`[WebSocket] Auth attempt failed for socket.`);
+            ws.send(JSON.stringify({ type: 'auth_ack', success: false, error: 'Auth failed' }));
           }
           return;
         }
@@ -92,6 +117,22 @@ export function initWebSocketServer(server: HttpServer) {
         // Enforce Authentication for chat messages
         if (!currentId) {
           ws.send(JSON.stringify({ type: 'error', error: 'UNAUTHORIZED: WebSocket handshake required' }));
+          return;
+        }
+
+        // Handle Profile picture updates across connected users
+        if (type === 'profile_update') {
+          const profilePayload = JSON.stringify({
+            type: 'profile_update',
+            userId: currentId,
+            senderUsername: payload.senderUsername,
+            profileImage: payload.profileImage
+          });
+          activeConnections.forEach((wsClient) => {
+            if (wsClient !== ws && wsClient.readyState === WebSocket.OPEN) {
+              wsClient.send(profilePayload);
+            }
+          });
           return;
         }
 

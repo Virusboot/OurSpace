@@ -13,16 +13,24 @@ export const LandingJoin: React.FC<LandingJoinProps> = ({ token, callType, pinRe
   const [nickname, setNickname] = useState('');
   const [pin, setPin] = useState('');
   const [activeTab, setActiveTab] = useState<'guest' | 'login'>('guest');
+  const [deviceInfo, setDeviceInfo] = useState<{ isAndroid: boolean; isIOS: boolean }>({
+    isAndroid: false,
+    isIOS: false,
+  });
 
   useEffect(() => {
-    if (token) {
-      // Auto-redirect to the custom app scheme immediately on mobile device detection
-      const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
-      const isMobile = /android|iPad|iPhone|iPod/.test(userAgent.toLowerCase());
-      if (isMobile) {
-        window.location.href = `ourspace://c/${token}`;
-      }
+    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+    const isAndroid = /android/i.test(userAgent);
+    const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
+    setDeviceInfo({ isAndroid, isIOS });
+
+    if (token && isAndroid) {
+      // Android phone: Open App if installed, fallback to Google Play Store if not installed
+      const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.ourspace.app';
+      const intentUrl = `intent://c/${token}#Intent;scheme=ourspace;package=com.ourspace.app;S.browser_fallback_url=${encodeURIComponent(playStoreUrl)};end`;
+      window.location.href = intentUrl;
     }
+    // iOS (iPhone/iPad) & Desktop Web: Stay on Web Browser for direct Guest Join
   }, [token]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -74,6 +82,30 @@ export const LandingJoin: React.FC<LandingJoinProps> = ({ token, callType, pinRe
       {/* Main Container */}
       <main className="flex-1 flex items-center justify-center p-4 relative z-10 my-6">
         <div className="glass-panel max-w-md w-full rounded-3xl p-8 animate-fade-in shadow-2xl bg-white/90 border border-slate-200">
+          
+          {deviceInfo.isAndroid && (
+            <div className="mb-4 p-3 rounded-2xl bg-purple-50 border border-purple-200 text-purple-900 text-xs flex flex-col items-center text-center space-y-1">
+              <div className="flex items-center space-x-1.5 font-bold text-[#7B2FBE]">
+                <Smartphone className="w-4 h-4" />
+                <span>Android Phone Detected</span>
+              </div>
+              <p className="text-[11px] text-purple-700">
+                Opening in OurSpace App... If not installed, opening Google Play Store.
+              </p>
+            </div>
+          )}
+
+          {deviceInfo.isIOS && (
+            <div className="mb-4 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex flex-col items-center text-center space-y-1">
+              <div className="flex items-center space-x-1.5 font-bold text-emerald-700">
+                <Globe className="w-4 h-4" />
+                <span>iOS Web Guest Mode</span>
+              </div>
+              <p className="text-[11px] text-emerald-600">
+                Join call directly in your iOS Web browser as Guest. No app required.
+              </p>
+            </div>
+          )}
           
           {/* Website Banner Info */}
           <div className="flex items-center justify-center space-x-1.5 mb-4 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 text-[11px] font-medium mx-auto w-fit">
@@ -179,11 +211,11 @@ export const LandingJoin: React.FC<LandingJoinProps> = ({ token, callType, pinRe
 
             <div className="grid grid-cols-2 gap-3">
               <a
-                href={`ourspace://c/${token || ''}`}
+                href={`intent://c/${token || ''}#Intent;scheme=ourspace;package=com.ourspace.app;S.browser_fallback_url=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.ourspace.app;end`}
                 className="flex items-center justify-center space-x-1.5 py-2.5 px-3 rounded-xl bg-slate-100 border border-slate-200 text-[#0F172A] hover:bg-slate-200 text-xs font-semibold transition cursor-pointer text-center"
               >
                 <ExternalLink className="w-3.5 h-3.5 text-[#7B2FBE]" />
-                <span>Open Mobile App</span>
+                <span>Open in App</span>
               </a>
 
               <a
@@ -193,7 +225,7 @@ export const LandingJoin: React.FC<LandingJoinProps> = ({ token, callType, pinRe
                 className="flex items-center justify-center space-x-1.5 py-2.5 px-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-[#7B2FBE] hover:bg-purple-500/20 text-xs font-semibold transition cursor-pointer text-center"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Get Play Store App</span>
+                <span>Google Play Store</span>
               </a>
             </div>
           </div>
