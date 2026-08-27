@@ -533,7 +533,7 @@ class _CallScreenState extends State<CallScreen> {
 
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         if (widget.onMinimize != null) {
           widget.onMinimize!();

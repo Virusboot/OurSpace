@@ -1,6 +1,6 @@
 import { createIdentity, getUserByUsername, getUserByPrivateId } from '../services/identityService';
 import { createCallLink, verifyAndGetCallLink } from '../services/callLinkService';
-import { createMessage, markMessageRead } from '../services/chatService';
+import { createMessage, markMessageRead, getConversationMessages } from '../services/chatService';
 import { purgeExpiredData } from '../services/cleanupService';
 
 describe('Backend Security & Privacy Services Test Suite', () => {
@@ -75,5 +75,14 @@ describe('Backend Security & Privacy Services Test Suite', () => {
     const byNameMixed = await getUserByUsername('  @HARSH01  ');
     expect(byNameMixed).not.toBeNull();
     expect(byNameMixed?.id).toBe(createdUser.id);
+  });
+
+  test('6. Conversation IDOR authorization check', async () => {
+    const user2 = await createIdentity('@alice_test', 'mock_pub_key_2');
+    const convId = 'conv_secure_99';
+
+    // Alice is not in conv_secure_99
+    await expect(getConversationMessages(convId, user2.user.id))
+      .rejects.toThrow('UNAUTHORIZED: You are not a participant in this conversation');
   });
 });

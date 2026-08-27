@@ -103,7 +103,7 @@ router.delete('/me', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
-router.post('/purge-all', async (req, res) => {
+router.post('/purge-all', authenticateToken, async (req: AuthRequest, res) => {
   try {
     // Notify all active WebSocket connections that accounts have been deleted
     activeConnections.forEach((wsClient) => {

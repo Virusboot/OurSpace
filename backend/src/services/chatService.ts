@@ -107,7 +107,29 @@ export async function markMessageRead(messageId: string, readTtlSeconds?: number
   }
 }
 
-export async function getConversationMessages(conversationId: string): Promise<MessageRecord[]> {
+export async function isUserInConversation(userId: string, conversationId: string): Promise<boolean> {
+  if (isPgActive()) {
+    const pool = getPgPool();
+    const res = await pool?.query(
+      'SELECT id FROM conversations WHERE id = $1 AND (user_a_id = $2 OR user_b_id = $2)',
+      [conversationId, userId]
+    );
+    return !!(res && res.rows.length > 0);
+  } else {
+    const conv = inMemoryDb.conversations.get(conversationId);
+    if (!conv) return false;
+    return conv.userAId === userId || conv.userBId === userId;
+  }
+}
+
+export async function getConversationMessages(conversationId: string, requestingUserId?: string): Promise<MessageRecord[]> {
+  if (requestingUserId) {
+    const allowed = await isUserInConversation(requestingUserId, conversationId);
+    if (!allowed) {
+      throw new Error('UNAUTHORIZED: You are not a participant in this conversation');
+    }
+  }
+
   const now = new Date().toISOString();
   if (isPgActive()) {
     const pool = getPgPool();

@@ -168,13 +168,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final txtPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
     final txtSub = isDark ? Colors.white60 : const Color(0xFF64748B);
 
+    bool isCopied = false;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
-          bool isCopied = false;
           return Container(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
             decoration: BoxDecoration(
@@ -1227,7 +1227,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final itemTxt = isDark ? Colors.white : const Color(0xFF0F172A);
     final itemSubtxt = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
     final avatarBg = isDark ? const Color(0xFF26282F) : const Color(0xFFE2E8F0);
-    final avatarTxt = isDark ? Colors.white : const Color(0xFF0F172A);
     final dockPillBg = isDark ? const Color(0xFF1A1C24) : const Color(0xFFFFFFFF);
     final dockBorder = isDark ? Colors.white.withValues(alpha: 0.14) : const Color(0xFFE2E8F0);
     final dockShadow = isDark

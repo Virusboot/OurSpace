@@ -51,24 +51,15 @@ export function initWebSocketServer(server: HttpServer) {
           let currentUsername: string | null = null;
           let currentPrivateId: string | null = null;
 
-          if (token && typeof token === 'string' && !token.startsWith('token_local_')) {
+          if (token && typeof token === 'string') {
             try {
               const decoded: any = jwt.verify(token, config.jwtSecret);
               currentUserId = decoded.userId;
               currentUsername = decoded.username;
               currentPrivateId = decoded.privateId;
-            } catch (_) {}
-          }
-
-          // Fallback to payload user fields if token verification fails or local token used
-          if (!currentUserId && payload.userId) {
-            currentUserId = payload.userId;
-          }
-          if (!currentUsername && payload.username) {
-            currentUsername = payload.username;
-          }
-          if (!currentPrivateId && payload.privateId) {
-            currentPrivateId = payload.privateId;
+            } catch (err) {
+              console.log(`[WebSocket] Token verification failed:`, err);
+            }
           }
 
           if (currentUserId) {
@@ -96,8 +87,8 @@ export function initWebSocketServer(server: HttpServer) {
             console.log(`[WebSocket] User authenticated successfully: ${dbUser.id} (@${dbUser.username})`);
             await broadcastOnlineUsers();
           } else {
-            console.log(`[WebSocket] Auth attempt failed for socket.`);
-            ws.send(JSON.stringify({ type: 'auth_ack', success: false, error: 'Auth failed' }));
+            console.log(`[WebSocket] Auth attempt rejected: Invalid or missing token.`);
+            ws.send(JSON.stringify({ type: 'auth_ack', success: false, error: 'UNAUTHORIZED: Valid token required' }));
           }
           return;
         }

@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import '../../../../core/networking/api_client.dart';
 import '../../../../core/networking/websocket_client.dart';
@@ -82,25 +81,7 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
     super.dispose();
   }
 
-  // Copies content to clipboard and shows snackbar
-  void _copyToClipboard(String text, String label) {
-    Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
-            const SizedBox(width: 8),
-            Text('$label copied to clipboard!', style: const TextStyle(fontWeight: FontWeight.bold)),
-          ],
-        ),
-        backgroundColor: widget.isDarkMode ? const Color(0xFF121317) : Colors.white,
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
+
 
   // Keypad Tap
   void _onKeyTap(String key) {
@@ -424,8 +405,6 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
     final isDark = widget.isDarkMode;
     final titleColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final subtitleColor = isDark ? Colors.grey : const Color(0xFF475569);
-    final boxBg = isDark ? const Color(0xFF121317) : const Color(0xFFF1F5F9);
-    final boxBorder = isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -892,6 +892,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               username,
                               style: const TextStyle(color: Color(0xFF7B2FBE), fontSize: 13, fontWeight: FontWeight.w600),
                             ),
+                            const SizedBox(height: 2),
+                            Text(
+                              privateId,
+                              style: TextStyle(color: subtxtCol, fontSize: 12, fontWeight: FontWeight.w500),
+                            ),
                             const SizedBox(height: 6),
                           ],
                         ),

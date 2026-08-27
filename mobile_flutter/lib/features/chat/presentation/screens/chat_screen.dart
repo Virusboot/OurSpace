@@ -862,6 +862,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   const SizedBox(height: 6),
                   Text('Hey there! I am using OurSpace Privacy Chat.', style: TextStyle(color: txtColor, fontSize: 14, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
+                  Text('Private ID: $privateId', style: const TextStyle(color: Color(0xFF7B2FBE), fontSize: 12, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
                   const Text('Available | End-to-End Encrypted', style: TextStyle(color: Color(0xFF10B981), fontSize: 12, fontWeight: FontWeight.w500)),
                 ],
               ),

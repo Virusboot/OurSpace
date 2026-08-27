@@ -19,10 +19,11 @@ router.post('/conversation', authenticateToken, async (req: AuthRequest, res) =>
 router.get('/messages/:conversationId', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { conversationId } = req.params;
-    const messages = await getConversationMessages(conversationId);
+    const messages = await getConversationMessages(conversationId, req.user!.userId);
     return res.json({ messages });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    const status = err.message?.includes('UNAUTHORIZED') ? 403 : 500;
+    return res.status(status).json({ error: err.message });
   }
 });
 

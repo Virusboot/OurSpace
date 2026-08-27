@@ -240,7 +240,7 @@ export async function updateUserProfile(
   }
 
   const token = jwt.sign(
-    { userId: updatedUser.id, username: updatedUser.username },
+    { userId: updatedUser.id, privateId: updatedUser.privateId || updatedUser.private_id, username: updatedUser.username },
     config.jwtSecret,
     { expiresIn: '30d' }
   );
