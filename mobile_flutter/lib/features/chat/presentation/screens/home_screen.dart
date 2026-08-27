@@ -9,6 +9,7 @@ import '../../../../core/networking/api_client.dart';
 import '../../../../core/networking/websocket_client.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 import '../../../../shared/widgets/app_gradient_button.dart';
+import '../../../../shared/widgets/brand_icons.dart';
 
 class HomeScreen extends StatefulWidget {
   final Map<String, dynamic>? user;
@@ -336,21 +337,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    // WhatsApp
+                    // WhatsApp with Official Logo
                     _buildShareAppBadge(
                       label: 'WhatsApp',
                       color: const Color(0xFF25D366),
-                      icon: Icons.chat_bubble_rounded,
+                      customWidget: const WhatsAppBrandIcon(size: 32),
                       onTap: () {
                         Navigator.pop(ctx);
                         _shareToWhatsApp(url);
                       },
                     ),
-                    // Telegram
+                    // Telegram with Official Logo
                     _buildShareAppBadge(
                       label: 'Telegram',
                       color: const Color(0xFF229ED9),
-                      icon: Icons.send_rounded,
+                      customWidget: const TelegramBrandIcon(size: 32),
                       onTap: () {
                         Navigator.pop(ctx);
                         _shareToTelegram(url);
@@ -427,7 +428,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildShareAppBadge({
     required String label,
     required Color color,
-    required IconData icon,
+    IconData? icon,
+    Widget? customWidget,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
@@ -451,7 +453,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             child: Center(
-              child: Icon(icon, color: color, size: 24),
+              child: customWidget ?? Icon(icon, color: color, size: 24),
             ),
           ),
           const SizedBox(height: 8),
