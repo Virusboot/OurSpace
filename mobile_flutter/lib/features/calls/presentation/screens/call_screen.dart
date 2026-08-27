@@ -34,7 +34,7 @@ class CallScreen extends StatefulWidget {
 class _CallScreenState extends State<CallScreen> {
   bool _micEnabled = true;
   late bool _camEnabled;
-  bool _speakerEnabled = false;
+  late bool _speakerEnabled;
   int _secondsElapsed = 0;
   Timer? _timer;
 
@@ -51,6 +51,7 @@ class _CallScreenState extends State<CallScreen> {
   bool _isConnected = false;
   bool _hasRemoteDescription = false;
   final List<RTCIceCandidate> _queuedRemoteCandidates = [];
+  final List<Map<String, dynamic>> _queuedLocalCandidates = [];
 
   final Map<String, dynamic> _iceConfig = {
     'iceServers': [
@@ -82,6 +83,7 @@ class _CallScreenState extends State<CallScreen> {
     super.initState();
     NativeSecurityService.enableFlagSecure();
     _camEnabled = widget.callType == 'video';
+    _speakerEnabled = widget.callType == 'video';
     
     _initRenderers();
     _startTimer();
@@ -180,8 +182,8 @@ class _CallScreenState extends State<CallScreen> {
         case 'call_joined_ack':
           final existing = event['existingParticipants'] as List<dynamic>?;
           if (existing != null && existing.isNotEmpty) {
-            // Room host is already waiting. Store host ID and wait for their offer.
             _remoteParticipantId = existing.first.toString();
+            _flushLocalCandidates();
           }
           break;
 
@@ -195,7 +197,7 @@ class _CallScreenState extends State<CallScreen> {
                 _remoteParticipantName = newNickname;
               }
             });
-            // We are the host in the room. Initiate peer connection and send offer.
+            _flushLocalCandidates();
             await _createPeerConnection();
             await _sendOffer();
           }
@@ -204,6 +206,7 @@ class _CallScreenState extends State<CallScreen> {
         case 'call_offer':
           if (event['senderId'] != null) {
             _remoteParticipantId = event['senderId']?.toString();
+            _flushLocalCandidates();
           }
           await _createPeerConnection();
           
@@ -222,6 +225,7 @@ class _CallScreenState extends State<CallScreen> {
           if (_peerConnection != null) {
             if (event['senderId'] != null) {
               _remoteParticipantId = event['senderId']?.toString();
+              _flushLocalCandidates();
             }
             final answerMap = event['sdp'];
             final String answerSdp = (answerMap is Map ? answerMap['sdp'] : answerMap)?.toString() ?? '';
@@ -258,6 +262,15 @@ class _CallScreenState extends State<CallScreen> {
     });
   }
 
+  void _flushLocalCandidates() {
+    if (_remoteParticipantId == null) return;
+    for (final payload in _queuedLocalCandidates) {
+      payload['targetId'] = _remoteParticipantId;
+      WebSocketClient().send(payload);
+    }
+    _queuedLocalCandidates.clear();
+  }
+
   Future<void> _createPeerConnection() async {
     if (_peerConnection != null) return;
 
@@ -268,8 +281,8 @@ class _CallScreenState extends State<CallScreen> {
     _peerConnection = await createPeerConnection(_iceConfig);
 
     _peerConnection!.onIceCandidate = (candidate) {
-      if (_remoteParticipantId != null) {
-        WebSocketClient().send({
+      if (candidate.candidate != null && candidate.candidate!.isNotEmpty) {
+        final payload = {
           'type': 'ice_candidate',
           'callId': widget.callId,
           'senderId': widget.user?['id'] ?? 'user_host',
@@ -279,7 +292,12 @@ class _CallScreenState extends State<CallScreen> {
             'sdpMid': candidate.sdpMid,
             'sdpMLineIndex': candidate.sdpMLineIndex,
           },
-        });
+        };
+        if (_remoteParticipantId != null) {
+          WebSocketClient().send(payload);
+        } else {
+          _queuedLocalCandidates.add(payload);
+        }
       }
     };
 
@@ -383,6 +401,14 @@ class _CallScreenState extends State<CallScreen> {
       if (audioTrack != null) {
         audioTrack.enabled = !audioTrack.enabled;
         setState(() => _micEnabled = audioTrack.enabled);
+        WebSocketClient().send({
+          'type': 'media_toggle',
+          'callId': widget.callId,
+          'senderId': widget.user?['id'],
+          'targetId': _remoteParticipantId,
+          'micEnabled': _micEnabled,
+          'camEnabled': _camEnabled,
+        });
       }
     }
   }
@@ -393,6 +419,33 @@ class _CallScreenState extends State<CallScreen> {
       if (videoTrack != null) {
         videoTrack.enabled = !videoTrack.enabled;
         setState(() => _camEnabled = videoTrack.enabled);
+        WebSocketClient().send({
+          'type': 'media_toggle',
+          'callId': widget.callId,
+          'senderId': widget.user?['id'],
+          'targetId': _remoteParticipantId,
+          'micEnabled': _micEnabled,
+          'camEnabled': _camEnabled,
+        });
+      }
+    }
+  }
+
+  void _toggleSpeaker() {
+    final nextState = !_speakerEnabled;
+    setState(() => _speakerEnabled = nextState);
+    try {
+      Helper.setSpeakerphoneOn(nextState);
+    } catch (_) {}
+  }
+
+  void _switchCamera() async {
+    if (_localStream != null && widget.callType == 'video') {
+      final videoTrack = _localStream!.getVideoTracks().firstOrNull;
+      if (videoTrack != null) {
+        try {
+          await Helper.switchCamera(videoTrack);
+        } catch (_) {}
       }
     }
   }
@@ -739,15 +792,22 @@ class _CallScreenState extends State<CallScreen> {
                             icon: _speakerEnabled ? Icons.volume_up_rounded : Icons.volume_down_rounded,
                             color: _speakerEnabled ? const Color(0xFF7B2FBE) : (isDark ? Colors.white : const Color(0xFF0F172A)),
                             bgColor: _speakerEnabled ? const Color(0xFF7B2FBE).withValues(alpha: 0.2) : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.06)),
-                            onTap: () => setState(() => _speakerEnabled = !_speakerEnabled),
+                            onTap: _toggleSpeaker,
                           ),
-                          if (widget.callType == 'video')
+                          if (widget.callType == 'video') ...[
                             _buildControlButton(
                               icon: _camEnabled ? Icons.videocam_rounded : Icons.videocam_off_rounded,
                               color: _camEnabled ? (isDark ? Colors.white : const Color(0xFF0F172A)) : const Color(0xFFF43F5E),
                               bgColor: _camEnabled ? (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.06)) : const Color(0xFFF43F5E).withValues(alpha: 0.2),
                               onTap: _toggleCam,
                             ),
+                            _buildControlButton(
+                              icon: Icons.flip_camera_ios_rounded,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              bgColor: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.06),
+                              onTap: _switchCamera,
+                            ),
+                          ],
                           GestureDetector(
                             onTap: widget.onEndCall,
                             child: Container(

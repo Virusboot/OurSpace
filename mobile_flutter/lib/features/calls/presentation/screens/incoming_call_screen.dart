@@ -144,10 +144,6 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
         ? widget.callerUsername
         : '@${widget.callerUsername}';
 
-    final initialLetter = cleanName.length > 1
-        ? cleanName[1].toUpperCase()
-        : 'U';
-
     return Scaffold(
       backgroundColor: const Color(0xFF0F0C1B),
       body: SafeArea(
