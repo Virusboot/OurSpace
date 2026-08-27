@@ -72,19 +72,28 @@ export function initWebSocketServer(server: HttpServer) {
           }
 
           if (currentUserId) {
-            currentId = currentUserId;
-            activeConnections.set(currentUserId, ws);
-            if (currentUsername) {
-              const cleanUname = currentUsername.toLowerCase().replace(/^@/, '');
+            const dbUser = await getUserById(currentUserId);
+            if (!dbUser) {
+              console.log(`[WebSocket] Auth rejected: User ${currentUserId} no longer exists in DB.`);
+              ws.send(JSON.stringify({ type: 'account_deleted', success: false, error: 'ACCOUNT_DELETED' }));
+              ws.send(JSON.stringify({ type: 'auth_ack', success: false, error: 'ACCOUNT_DELETED' }));
+              try { ws.close(); } catch (_) {}
+              return;
+            }
+
+            currentId = dbUser.id;
+            activeConnections.set(dbUser.id, ws);
+            if (dbUser.username) {
+              const cleanUname = dbUser.username.toLowerCase().replace(/^@/, '');
               activeConnections.set(cleanUname, ws);
               activeConnections.set(`@${cleanUname}`, ws);
             }
-            if (currentPrivateId) {
-              activeConnections.set(currentPrivateId.toUpperCase(), ws);
-              activeConnections.set(currentPrivateId.toLowerCase(), ws);
+            if (dbUser.privateId) {
+              activeConnections.set(dbUser.privateId.toUpperCase(), ws);
+              activeConnections.set(dbUser.privateId.toLowerCase(), ws);
             }
-            ws.send(JSON.stringify({ type: 'auth_ack', success: true, userId: currentUserId }));
-            console.log(`[WebSocket] User authenticated successfully: ${currentUserId} (@${currentUsername})`);
+            ws.send(JSON.stringify({ type: 'auth_ack', success: true, userId: dbUser.id }));
+            console.log(`[WebSocket] User authenticated successfully: ${dbUser.id} (@${dbUser.username})`);
             await broadcastOnlineUsers();
           } else {
             console.log(`[WebSocket] Auth attempt failed for socket.`);

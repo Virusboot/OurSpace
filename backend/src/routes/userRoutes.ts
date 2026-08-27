@@ -105,6 +105,20 @@ router.delete('/me', authenticateToken, async (req: AuthRequest, res) => {
 
 router.post('/purge-all', async (req, res) => {
   try {
+    // Notify all active WebSocket connections that accounts have been deleted
+    activeConnections.forEach((wsClient) => {
+      try {
+        if (wsClient.readyState === 1) { // WebSocket.OPEN
+          wsClient.send(JSON.stringify({
+            type: 'account_deleted',
+            message: 'All accounts have been purged from backend database.'
+          }));
+          wsClient.close();
+        }
+      } catch (_) {}
+    });
+    activeConnections.clear();
+
     if (isPgActive()) {
       const pool = getPgPool();
       await pool?.query('TRUNCATE TABLE public.users RESTART IDENTITY CASCADE');
@@ -112,7 +126,6 @@ router.post('/purge-all', async (req, res) => {
     (inMemoryDb as any).users.clear();
     (inMemoryDb as any).usersByUsername.clear();
     (inMemoryDb as any).usersByPrivateId.clear();
-    activeConnections.clear();
     return res.json({ success: true, message: 'All accounts and database records wiped clean successfully' });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });

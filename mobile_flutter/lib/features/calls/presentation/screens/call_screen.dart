@@ -73,7 +73,8 @@ class _CallScreenState extends State<CallScreen> {
         'username': 'openrelayproject',
         'credential': 'openrelayproject'
       }
-    ]
+    ],
+    'sdpSemantics': 'unified-plan',
   };
 
   @override

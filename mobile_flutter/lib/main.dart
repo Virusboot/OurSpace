@@ -110,7 +110,9 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
     _wsCallSubscription = WebSocketClient().stream.listen((event) {
       if (!mounted) return;
       final type = event['type'];
-      if (type == 'chat_receive') {
+      if (type == 'account_deleted' || (type == 'auth_ack' && event['success'] == false && event['error'] == 'ACCOUNT_DELETED')) {
+        _handleForceLogout(reason: 'Account deleted from server. Please create a new account.');
+      } else if (type == 'chat_receive') {
         _handleIncomingChatMessage(event);
       } else if (type == 'call_offer' || type == 'call_invite') {
         _handleIncomingCall(event);
@@ -143,6 +145,17 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
   }
 
   void _handleIncomingCall(Map<String, dynamic> event) {
+    final incomingCallId = event['callId'];
+
+    // If this signaling event belongs to an active call we are currently in, ignore it here (CallScreen will process the WebRTC offer/SDP)
+    if (_activeCallId != null && _activeCallId == incomingCallId) {
+      return;
+    }
+    // If this signal belongs to an incoming call we are currently displaying/answering, do not hang up
+    if (_incomingCallData != null && _incomingCallData!['callId'] == incomingCallId) {
+      return;
+    }
+
     if (_currentScreen == 'call' || _currentScreen == 'incoming_call') {
       WebSocketClient().send({
         'type': 'call_hangup',
@@ -233,6 +246,8 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
 
   Future<void> _lockAppIfEnabled() async {
     if (_user == null) return;
+    // Do not lock out or unmount screen if user is currently in an active or incoming call
+    if (_activeCallId != null || _incomingCallData != null) return;
     final appLock = await SecureStorageService.read('app_lock_enabled');
     if (appLock == 'true') {
       if (_currentScreen != 'enter_pin' &&
@@ -295,6 +310,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
             setState(() {
               _currentScreen = 'enter_pin';
             });
+            _validateSessionWithBackend();
             return;
           }
         }
@@ -303,6 +319,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
           _currentScreen = 'home';
         });
         WebSocketClient().connect();
+        _validateSessionWithBackend();
         return;
       } catch (_) {}
     }
@@ -563,10 +580,60 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
   void _handleLogout() async {
     WebSocketClient().disconnect();
     await SecureStorageService.delete('user_info');
+    await SecureStorageService.delete('auth_token');
+    await SecureStorageService.delete('user_pin_hash');
+    await SecureStorageService.delete('app_lock_enabled');
+    await SecureStorageService.delete('profile_image_path');
     setState(() {
       _user = null;
       _currentScreen = 'create_identity';
     });
+  }
+
+  Future<void> _handleForceLogout({String? reason}) async {
+    WebSocketClient().disconnect();
+    await SecureStorageService.delete('user_info');
+    await SecureStorageService.delete('auth_token');
+    await SecureStorageService.delete('user_pin_hash');
+    await SecureStorageService.delete('app_lock_enabled');
+    await SecureStorageService.delete('profile_image_path');
+    
+    if (!mounted) return;
+    setState(() {
+      _user = null;
+      _activeCallId = null;
+      _incomingCallData = null;
+      _currentScreen = 'onboarding';
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(reason ?? 'Account deleted from server. Please create a new account.'),
+        backgroundColor: const Color(0xFFF43F5E),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 5),
+      ),
+    );
+  }
+
+  Future<void> _validateSessionWithBackend() async {
+    if (_user == null) return;
+    try {
+      final res = await ApiClient.get('/users/me');
+      if (res['id'] != null) {
+        if (mounted && _user != null) {
+          setState(() {
+            _user!['username'] = res['username'] ?? _user!['username'];
+            _user!['privateId'] = res['privateId'] ?? _user!['privateId'];
+          });
+        }
+      }
+    } catch (e) {
+      final errStr = e.toString().toLowerCase();
+      if (errStr.contains('user not found') || errStr.contains('404') || errStr.contains('account_deleted')) {
+        _handleForceLogout(reason: 'Account deleted from server. Please create a new account.');
+      }
+    }
   }
 
   @override
