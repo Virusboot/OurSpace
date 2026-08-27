@@ -11,6 +11,7 @@ import 'terms_conditions_screen.dart';
 import 'about_us_screen.dart';
 import 'contact_us_screen.dart';
 import 'package:http/http.dart' as http;
+import 'package:share_plus/share_plus.dart';
 import '../../../../shared/widgets/app_gradient_button.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -487,27 +488,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: GestureDetector(
-                    onTap: () async {
-                      await Clipboard.setData(ClipboardData(text: 'Connect with me on OurSpace Privacy Chat!\nUsername: $username'));
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Row(
-                            children: [
-                              const Icon(Icons.share_rounded, color: Colors.white, size: 20),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text('Share text copied to clipboard!\n$username', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                              ),
-                            ],
-                          ),
-                          duration: const Duration(seconds: 2),
-                          backgroundColor: const Color(0xFF7B2FBE),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      );
+                    onTap: () {
+                      final pId = widget.user?['privateId']?.toString() ?? '';
+                      final inviteText = '🔒 *Connect with me on OurSpace Privacy Chat!*\n\n'
+                          '👤 *Username:* $username\n'
+                          '${pId.isNotEmpty ? "🔑 *Private ID:* $pId\n\n" : ""}'
+                          '💬 Experience zero-trust end-to-end encrypted messaging and P2P WebRTC calls.\n'
+                          '👉 Download app / Join online: https://our-space-wheat.vercel.app';
+                      Share.share(inviteText, subject: 'OurSpace Identity Invitation');
                     },
                     child: Container(
                       height: 48,

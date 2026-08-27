@@ -118,10 +118,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _buildFormattedShareText(String url) {
-    return '🔒 *OurSpace — Private Encrypted Call*\n\n'
-        '💬 You have been invited to an end-to-end encrypted audio & video session.\n\n'
-        '👉 *Click link to join:* \n$url\n\n'
-        '✨ _Zero data logging | E2EE P2P Security_';
+    return '📞 *OurSpace Encrypted Call Invitation*\n\n'
+        '💬 You have been invited to a private end-to-end encrypted voice & video session.\n\n'
+        '👉 *Tap link to join:* \n$url\n\n'
+        '🛡️ _Zero data logging | E2EE P2P Security_';
   }
 
   Future<void> _shareToTelegram(String url) async {
@@ -163,185 +163,307 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showShareOptionsModal(BuildContext context, String url) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1A1D2C) : const Color(0xFFF1F5F9);
+    final txtPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
+    final txtSub = isDark ? Colors.white60 : const Color(0xFF64748B);
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (ctx) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF161822) : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          bool isCopied = false;
+          return Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF11131E) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  blurRadius: 30,
+                  offset: const Offset(0, -10),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
+                // Top Sheet Handle
+                Container(
+                  width: 42,
+                  height: 4.5,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : Colors.grey[300],
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Header Row
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF7B2FBE).withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.share_rounded, color: Color(0xFF7B2FBE), size: 20),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF7B2FBE), Color(0xFFE91E8C)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF7B2FBE).withValues(alpha: 0.35),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(Icons.security_rounded, color: Colors.white, size: 20),
+                        ),
+                        const SizedBox(width: 14),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Share Call Link',
+                              style: TextStyle(
+                                color: txtPrimary,
+                                fontSize: 19,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            Text(
+                              'End-to-End Encrypted Session',
+                              style: TextStyle(color: txtSub, fontSize: 12, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Share Call Link',
-                      style: TextStyle(
-                        color: isDark ? Colors.white : const Color(0xFF0F172A),
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    IconButton(
+                      icon: Icon(Icons.close_rounded, color: txtSub, size: 22),
+                      onPressed: () => Navigator.pop(ctx),
                     ),
                   ],
                 ),
-                IconButton(
-                  icon: Icon(Icons.close_rounded, color: isDark ? Colors.grey[400] : Colors.grey[600]),
-                  onPressed: () => Navigator.pop(ctx),
+                const SizedBox(height: 20),
+
+                // Telegram / WhatsApp Style Link Card
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: cardBg,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.link_rounded, color: Color(0xFF7B2FBE), size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              url,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Color(0xFF7B2FBE),
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 40,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF7B2FBE),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          icon: Icon(isCopied ? Icons.check_circle_rounded : Icons.copy_rounded, size: 16),
+                          label: Text(
+                            isCopied ? 'Copied to Clipboard!' : 'Copy Link',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(text: url));
+                            setModalState(() => isCopied = true);
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Row(
+                                  children: [
+                                    Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                                    SizedBox(width: 10),
+                                    Text('Link copied to clipboard!', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                                duration: const Duration(seconds: 2),
+                                backgroundColor: const Color(0xFF7B2FBE),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                margin: const EdgeInsets.all(16),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // WhatsApp / Telegram Style Apps Action Grid
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // WhatsApp
+                    _buildShareAppBadge(
+                      label: 'WhatsApp',
+                      color: const Color(0xFF25D366),
+                      icon: Icons.chat_bubble_rounded,
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _shareToWhatsApp(url);
+                      },
+                    ),
+                    // Telegram
+                    _buildShareAppBadge(
+                      label: 'Telegram',
+                      color: const Color(0xFF229ED9),
+                      icon: Icons.send_rounded,
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _shareToTelegram(url);
+                      },
+                    ),
+                    // Copy Link
+                    _buildShareAppBadge(
+                      label: 'Copy Link',
+                      color: const Color(0xFF7B2FBE),
+                      icon: Icons.link_rounded,
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        Clipboard.setData(ClipboardData(text: url));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Row(
+                              children: [
+                                Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                                SizedBox(width: 10),
+                                Text('Link copied to clipboard!', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                            duration: const Duration(seconds: 2),
+                            backgroundColor: const Color(0xFF7B2FBE),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            margin: const EdgeInsets.all(16),
+                          ),
+                        );
+                      },
+                    ),
+                    // More Apps (Native Share Tray)
+                    _buildShareAppBadge(
+                      label: 'More Apps',
+                      color: const Color(0xFF6366F1),
+                      icon: Icons.share_rounded,
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _shareViaNative(url);
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Privacy Security Badge Pill
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF7B2FBE).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.25)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.verified_user_rounded, size: 14, color: Color(0xFF7B2FBE)),
+                      SizedBox(width: 8),
+                      Text(
+                        'Zero-Trust Encrypted • No Data Stored',
+                        style: TextStyle(color: Color(0xFF7B2FBE), fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _shareToTelegram(url);
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF229ED9).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFF229ED9).withValues(alpha: 0.3)),
-                      ),
-                      child: const Column(
-                        children: [
-                          Icon(Icons.send_rounded, color: Color(0xFF229ED9), size: 26),
-                          SizedBox(height: 6),
-                          Text(
-                            'Telegram',
-                            style: TextStyle(color: Color(0xFF229ED9), fontWeight: FontWeight.bold, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _shareToWhatsApp(url);
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF25D366).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFF25D366).withValues(alpha: 0.3)),
-                      ),
-                      child: const Column(
-                        children: [
-                          Icon(Icons.chat_rounded, color: Color(0xFF25D366), size: 26),
-                          SizedBox(height: 6),
-                          Text(
-                            'WhatsApp',
-                            style: TextStyle(color: Color(0xFF25D366), fontWeight: FontWeight.bold, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _shareViaNative(url);
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF7B2FBE).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFF7B2FBE).withValues(alpha: 0.3)),
-                      ),
-                      child: const Column(
-                        children: [
-                          Icon(Icons.grid_view_rounded, color: Color(0xFF7B2FBE), size: 26),
-                          SizedBox(height: 6),
-                          Text(
-                            'All Apps',
-                            style: TextStyle(color: Color(0xFF7B2FBE), fontWeight: FontWeight.bold, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildShareAppBadge({
+    required String label,
+    required Color color,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+              border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.2),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              tileColor: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
-              leading: const Icon(Icons.copy_rounded, color: Color(0xFF7B2FBE)),
-              title: const Text('Copy Link to Clipboard', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
-              onTap: () {
-                Navigator.pop(ctx);
-                Clipboard.setData(ClipboardData(text: url));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Row(
-                      children: [
-                        Icon(Icons.check_circle_rounded, color: Colors.white, size: 16),
-                        SizedBox(width: 8),
-                        Text('Link copied to clipboard!'),
-                      ],
-                    ),
-                    duration: const Duration(seconds: 2),
-                    backgroundColor: const Color(0xFF7B2FBE),
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    margin: const EdgeInsets.all(16),
-                  ),
-                );
-              },
+            child: Center(
+              child: Icon(icon, color: color, size: 24),
             ),
-            const SizedBox(height: 12),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
