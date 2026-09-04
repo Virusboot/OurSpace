@@ -158,9 +158,20 @@ class _ChatScreenState extends State<ChatScreen> {
           'senderId': msg['senderId'] ?? widget.recipient['id'],
           'encryptedPayload': encrypted,
           'decryptedText': text.isNotEmpty ? text : (msg['text'] ?? 'Encrypted message'),
+          'status': msg['status'] ?? 'delivered',
           'time': 'Just now',
           'isTyping': false,
         };
+
+        // Confirm read receipt if user is actively on this chat screen
+        if (msg['id'] != null) {
+          WebSocketClient().send({
+            'type': 'chat_read',
+            'messageId': msg['id'],
+            'senderId': msg['senderId'],
+            'recipientId': widget.user['id'],
+          });
+        }
 
         setState(() {
           _messages.removeWhere((m) => m['isTyping'] == true);
@@ -177,6 +188,19 @@ class _ChatScreenState extends State<ChatScreen> {
               setState(() {
                 _messages.removeWhere((m) => m['id'] == msgId);
               });
+            }
+          });
+        }
+      } else if (type == 'chat_ack' || type == 'chat_delivered_ack' || type == 'chat_read_ack') {
+        final ackId = event['messageId'];
+        final newStatus = event['status'] ?? (type == 'chat_delivered_ack' ? 'delivered' : type == 'chat_read_ack' ? 'seen' : 'sent');
+        if (ackId != null) {
+          setState(() {
+            for (final m in _messages) {
+              if (m['id'] == ackId) {
+                m['status'] = newStatus;
+                break;
+              }
             }
           });
         }
@@ -207,8 +231,6 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     });
   }
-
-
 
   Future<void> _initChat() async {
     try {
@@ -249,21 +271,22 @@ class _ChatScreenState extends State<ChatScreen> {
     if (text.isEmpty) return;
     _inputCtrl.clear();
 
+    final clientMsgId = 'msg_${DateTime.now().millisecondsSinceEpoch}_${(_messages.length + 1)}';
     final encrypted = E2EECryptoService.encryptPayload(text, widget.recipient['publicKey'] ?? '');
     final localMsg = {
-      'id': 'temp_${DateTime.now().millisecondsSinceEpoch}',
+      'id': clientMsgId,
       'conversationId': _conversationId ?? 'c1',
       'senderId': widget.user['id'] ?? 'u1',
       'encryptedPayload': encrypted,
       'decryptedText': text,
       'messageType': 'text',
+      'status': 'sending',
       'time': '${DateTime.now().hour > 12 ? DateTime.now().hour - 12 : DateTime.now().hour == 0 ? 12 : DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')} ${DateTime.now().hour >= 12 ? 'PM' : 'AM'}',
       'isTyping': false,
       'createdAt': DateTime.now().toIso8601String(),
     };
 
     setState(() {
-      // Remove typing indicator if present before inserting new msg
       _messages.removeWhere((m) => m['isTyping'] == true);
       _messages.add(localMsg);
     });
@@ -284,6 +307,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (_conversationId != null) {
       WebSocketClient().send({
         'type': 'chat_send',
+        'messageId': clientMsgId,
         'conversationId': _conversationId,
         'senderId': widget.user['id'] ?? 'u1',
         'senderUsername': widget.user['username'],
@@ -310,10 +334,23 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  Widget _buildStatusIcon(String? status) {
+    if (status == 'seen') {
+      return const Icon(Icons.done_all_rounded, size: 14, color: Color(0xFF38BDF8));
+    } else if (status == 'delivered') {
+      return const Icon(Icons.done_all_rounded, size: 14, color: Colors.white70);
+    } else if (status == 'sent') {
+      return const Icon(Icons.done_rounded, size: 14, color: Colors.white70);
+    } else {
+      return const Icon(Icons.access_time_rounded, size: 12, color: Colors.white60);
+    }
+  }
+
   Widget _buildChatBubbleContent(Map<String, dynamic> item, bool isMe, Color peerBubbleBg, Color peerTxtColor) {
     final messageType = item['messageType'] ?? 'text';
     final mediaPath = item['mediaPath']?.toString() ?? '';
     final isViewOnce = messageType == 'view_once_image' || item['isViewOnce'] == true;
+    final status = item['status']?.toString();
 
     if (messageType == 'image' || messageType == 'view_once_image' || mediaPath.isNotEmpty) {
       return GestureDetector(
@@ -383,9 +420,20 @@ class _ChatScreenState extends State<ChatScreen> {
                   !item['decryptedText'].toString().startsWith('📷'))
                 Padding(
                   padding: const EdgeInsets.all(10),
-                  child: Text(
-                    item['decryptedText'],
-                    style: TextStyle(color: isMe ? Colors.white : peerTxtColor, fontSize: 13),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item['decryptedText'],
+                          style: TextStyle(color: isMe ? Colors.white : peerTxtColor, fontSize: 13),
+                        ),
+                      ),
+                      if (isMe) ...[
+                        const SizedBox(width: 4),
+                        _buildStatusIcon(status),
+                      ]
+                    ],
                   ),
                 ),
             ],
@@ -395,20 +443,32 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
       decoration: BoxDecoration(
         color: isMe ? const Color(0xFF7B2FBE) : peerBubbleBg,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(
-        item['decryptedText'] ?? '',
-        style: TextStyle(
-          color: isMe ? Colors.white : peerTxtColor,
-          fontSize: 14,
-          height: 1.4,
-          fontWeight: FontWeight.w400,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Flexible(
+            child: Text(
+              item['decryptedText'] ?? '',
+              style: TextStyle(
+                color: isMe ? Colors.white : peerTxtColor,
+                fontSize: 14,
+                height: 1.4,
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+          if (isMe) ...[
+            const SizedBox(width: 6),
+            _buildStatusIcon(status),
+          ],
+        ],
       ),
     );
   }

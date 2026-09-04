@@ -42,3 +42,31 @@ flutter_*.png
 *.swp
 *.swo
 *.tmp
+
+# ===========================================================================
+# SECURITY — Never commit these files
+# ===========================================================================
+
+# All .env files (real secrets — only .env.example is safe to commit)
+.env
+.env.*
+!.env.example
+
+# TLS Certificates and Private Keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.cer
+*.csr
+
+# Database backups
+*.sql.gz
+*.dump
+*.pgdump
+*.backup
+
+# Coturn authentication secrets (if stored locally)
+coturn.conf
+turnserver.conf

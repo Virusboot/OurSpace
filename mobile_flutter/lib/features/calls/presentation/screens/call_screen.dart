@@ -4,6 +4,19 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../../../core/security/native_security_service.dart';
 import '../../../../shared/widgets/security_overlay.dart';
 import '../../../../core/networking/websocket_client.dart';
+import '../../../../core/networking/api_client.dart';
+
+enum CallState {
+  idle,
+  outgoingRinging,
+  incomingRinging,
+  connecting,
+  connected,
+  reconnecting,
+  ending,
+  ended,
+  failed,
+}
 
 class CallScreen extends StatefulWidget {
   final String callType; // 'audio' or 'video'
@@ -37,6 +50,7 @@ class _CallScreenState extends State<CallScreen> {
   late bool _speakerEnabled;
   int _secondsElapsed = 0;
   Timer? _timer;
+  CallState _callState = CallState.idle;
 
   // WebRTC members
   final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
@@ -52,6 +66,7 @@ class _CallScreenState extends State<CallScreen> {
   bool _hasRemoteDescription = false;
   final List<RTCIceCandidate> _queuedRemoteCandidates = [];
   final List<Map<String, dynamic>> _queuedLocalCandidates = [];
+  final Set<String> _processedCandidateKeys = {};
 
   final Map<String, dynamic> _iceConfig = {
     'iceServers': [
@@ -59,21 +74,6 @@ class _CallScreenState extends State<CallScreen> {
       {'urls': 'stun:stun1.l.google.com:19302'},
       {'urls': 'stun:stun2.l.google.com:19302'},
       {'urls': 'stun:stun3.l.google.com:19302'},
-      {
-        'urls': 'turn:openrelay.metered.ca:80',
-        'username': 'openrelayproject',
-        'credential': 'openrelayproject'
-      },
-      {
-        'urls': 'turn:openrelay.metered.ca:443',
-        'username': 'openrelayproject',
-        'credential': 'openrelayproject'
-      },
-      {
-        'urls': 'turn:openrelay.metered.ca:443?transport=tcp',
-        'username': 'openrelayproject',
-        'credential': 'openrelayproject'
-      }
     ],
     'sdpSemantics': 'unified-plan',
   };
@@ -84,6 +84,7 @@ class _CallScreenState extends State<CallScreen> {
     NativeSecurityService.enableFlagSecure();
     _camEnabled = widget.callType == 'video';
     _speakerEnabled = widget.callType == 'video';
+    _callState = CallState.outgoingRinging;
     
     _initRenderers();
     _startTimer();
@@ -97,7 +98,17 @@ class _CallScreenState extends State<CallScreen> {
     });
   }
 
+  Future<void> _fetchIceConfig() async {
+    try {
+      final res = await ApiClient.get('/turn-credentials');
+      if (res != null && res['iceServers'] != null && res['iceServers'] is List) {
+        _iceConfig['iceServers'] = res['iceServers'];
+      }
+    } catch (_) {}
+  }
+
   Future<void> _initRenderers() async {
+    await _fetchIceConfig();
     await _localRenderer.initialize();
     await _remoteRenderer.initialize();
     
@@ -245,11 +256,19 @@ class _CallScreenState extends State<CallScreen> {
               candidateMap['sdpMid'],
               candidateMap['sdpMLineIndex'],
             );
-            
-            if (_peerConnection != null && _hasRemoteDescription) {
-              await _peerConnection!.addCandidate(candidate);
-            } else {
-              _queuedRemoteCandidates.add(candidate);
+
+            final candKey = '${candidate.candidate}_${candidate.sdpMid}_${candidate.sdpMLineIndex}';
+            if (!_processedCandidateKeys.contains(candKey)) {
+              _processedCandidateKeys.add(candKey);
+              if (_peerConnection != null && _hasRemoteDescription) {
+                try {
+                  await _peerConnection!.addCandidate(candidate);
+                } catch (e) {
+                  debugPrint('Failed to add ICE candidate: $e');
+                }
+              } else {
+                _queuedRemoteCandidates.add(candidate);
+              }
             }
           }
           break;
@@ -390,7 +409,11 @@ class _CallScreenState extends State<CallScreen> {
   Future<void> _processQueuedCandidates() async {
     if (_peerConnection == null) return;
     for (final candidate in _queuedRemoteCandidates) {
-      await _peerConnection!.addCandidate(candidate);
+      try {
+        await _peerConnection!.addCandidate(candidate);
+      } catch (e) {
+        debugPrint('Failed to add queued candidate: $e');
+      }
     }
     _queuedRemoteCandidates.clear();
   }

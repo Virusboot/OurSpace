@@ -1,18 +1,58 @@
+# =============================================================================
+# Render.com Deployment Configuration — OurSpace Backend
+# =============================================================================
+# This file configures the Render web service.
+# Secrets (JWT_SECRET, DATABASE_URL, TURN_SECRET) must be set in the
+# Render dashboard under "Environment Variables" — NOT hardcoded here.
+# =============================================================================
+
 services:
   - type: web
     name: ourspace-backend
     env: node
     region: singapore
-    plan: free
+    plan: starter          # Use 'starter' or higher for persistent connections
     rootDir: backend
     buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
+
+    # ---------------------------------------------------------------------------
+    # Health Check — used by Render to determine instance health
+    # ---------------------------------------------------------------------------
+    healthCheckPath: /health
+
+    # ---------------------------------------------------------------------------
+    # Environment Variables
+    # Values marked sync: false must be set manually in the Render dashboard.
+    # Never place real secrets in this file.
+    # ---------------------------------------------------------------------------
     envVars:
       - key: NODE_ENV
         value: production
+
+      - key: PORT
+        value: "4000"
+
+      # Required — Set in Render dashboard (not here)
       - key: JWT_SECRET
-        generateValue: true
-      - key: CORS_ORIGIN
-        value: "*"
+        generateValue: true          # Render auto-generates a secure random value
+
+      # Required — Set in Render dashboard (not here)
       - key: DATABASE_URL
-        sync: false
+        sync: false                  # Must be pasted from Supabase/Render PG dashboard
+
+      # Required — Set in Render dashboard (not here)
+      - key: TURN_SECRET
+        generateValue: true          # Must match coturn static-auth-secret
+
+      # Required — Set in Render dashboard (not here)
+      - key: TURN_URL
+        sync: false                  # e.g. turn:turn.yourserver.com:3478
+
+      # Required in production — set to your actual frontend domain
+      - key: CORS_ORIGIN
+        sync: false                  # e.g. https://app.ourspace.app
+
+      # Optional — Redis for caching (recommended for production)
+      - key: REDIS_URL
+        sync: false                  # e.g. redis://default:PASSWORD@HOST:6379

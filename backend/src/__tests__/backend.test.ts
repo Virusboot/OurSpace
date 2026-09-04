@@ -1,6 +1,6 @@
 import { createIdentity, getUserByUsername, getUserByPrivateId } from '../services/identityService';
 import { createCallLink, verifyAndGetCallLink } from '../services/callLinkService';
-import { createMessage, markMessageRead, getConversationMessages } from '../services/chatService';
+import { createMessage, markMessageRead, markMessageDelivered, getPendingUndeliveredMessagesForUser, getOrCreateConversation, getConversationMessages } from '../services/chatService';
 import { purgeExpiredData } from '../services/cleanupService';
 
 describe('Backend Security & Privacy Services Test Suite', () => {
@@ -84,5 +84,62 @@ describe('Backend Security & Privacy Services Test Suite', () => {
     // Alice is not in conv_secure_99
     await expect(getConversationMessages(convId, user2.user.id))
       .rejects.toThrow('UNAUTHORIZED: You are not a participant in this conversation');
+  });
+
+  test('7. Message Idempotency check', async () => {
+    const customId = 'msg_client_unique_id_999';
+    const msg1 = await createMessage({
+      id: customId,
+      conversationId: 'conv_idem_1',
+      senderId: createdUser.id,
+      encryptedPayload: 'ENCRYPTED_1',
+      messageType: 'text'
+    });
+    expect(msg1.id).toBe(customId);
+
+    // Re-sending with same client message ID should return original message without duplicate insert
+    const msg2 = await createMessage({
+      id: customId,
+      conversationId: 'conv_idem_1',
+      senderId: createdUser.id,
+      encryptedPayload: 'ENCRYPTED_1',
+      messageType: 'text'
+    });
+    expect(msg2.id).toBe(customId);
+  });
+
+  test('8. Message Delivery and Read Status transitions', async () => {
+    const msg = await createMessage({
+      conversationId: 'conv_status_1',
+      senderId: createdUser.id,
+      encryptedPayload: 'ENCRYPTED_PAYLOAD_STATUS',
+      messageType: 'text'
+    });
+    expect(msg.status).toBe('sent');
+
+    const delivered = await markMessageDelivered(msg.id);
+    expect(delivered?.status).toBe('delivered');
+    expect(delivered?.deliveredAt).not.toBeNull();
+
+    const read = await markMessageRead(msg.id);
+    expect(read?.status).toBe('seen');
+    expect(read?.readAt).not.toBeNull();
+  });
+
+  test('9. Pending offline message retrieval for disconnected users', async () => {
+    const userB = await createIdentity('@bob_offline', 'pub_key_bob');
+    const convId = await getOrCreateConversation(createdUser.id, userB.user.id);
+
+    // User A sends message to User B while User B is offline
+    const pendingMsg = await createMessage({
+      conversationId: convId,
+      senderId: createdUser.id,
+      encryptedPayload: 'PAYLOAD_FOR_BOB',
+      messageType: 'text'
+    });
+
+    const pendingList = await getPendingUndeliveredMessagesForUser(userB.user.id);
+    expect(pendingList.length).toBeGreaterThanOrEqual(1);
+    expect(pendingList.some(m => m.id === pendingMsg.id)).toBe(true);
   });
 });

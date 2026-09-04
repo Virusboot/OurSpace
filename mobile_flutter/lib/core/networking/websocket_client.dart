@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../storage/secure_storage_service.dart';
 
@@ -15,10 +16,13 @@ class WebSocketClient {
   final List<Map<String, dynamic>> _pendingQueue = [];
   Timer? _reconnectTimer;
   bool _isConnecting = false;
+  bool _isAuthenticated = false;
   bool _isExplicitlyDisconnected = false;
+  int _reconnectAttempts = 0;
 
   Stream<Map<String, dynamic>> get stream => _messageController.stream;
   bool get isConnected => _channel != null;
+  bool get isAuthenticated => _isAuthenticated;
 
   void ensureConnected() {
     if (_channel == null && !_isConnecting) {
@@ -56,7 +60,8 @@ class WebSocketClient {
         } catch (_) {}
       }
 
-      send({
+      // Send authentication payload immediately on connection open
+      sendDirect({
         'type': 'auth',
         'token': token ?? '',
         'userId': uObj?['id'],
@@ -68,25 +73,51 @@ class WebSocketClient {
         (data) {
           try {
             final parsed = jsonDecode(data.toString()) as Map<String, dynamic>;
+            final type = parsed['type'];
+
+            if (type == 'auth_ack') {
+              if (parsed['success'] == true) {
+                _isAuthenticated = true;
+                _reconnectAttempts = 0;
+                _flushQueue();
+              }
+            } else if (type == 'chat_receive') {
+              // Automatically confirm delivery receipt back to server
+              final msg = parsed['message'] ?? parsed;
+              final msgId = msg['id'];
+              final senderId = msg['senderId'];
+              if (msgId != null) {
+                sendDirect({
+                  'type': 'chat_delivered',
+                  'messageId': msgId,
+                  'senderId': senderId
+                });
+              }
+            }
+
             _messageController.add(parsed);
-          } catch (_) {}
+          } catch (e) {
+            debugPrint('[WebSocketClient] Error parsing message: $e');
+          }
         },
         onError: (err) {
           _isConnecting = false;
+          _isAuthenticated = false;
           _channel = null;
           _reconnect();
         },
         onDone: () {
           _isConnecting = false;
+          _isAuthenticated = false;
           _channel = null;
           _reconnect();
         },
       );
 
       _isConnecting = false;
-      _flushQueue();
-    } catch (_) {
+    } catch (err) {
       _isConnecting = false;
+      _isAuthenticated = false;
       _channel = null;
       _reconnect();
     }
@@ -95,13 +126,23 @@ class WebSocketClient {
   void _reconnect() {
     if (_isExplicitlyDisconnected) return;
     _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(const Duration(seconds: 2), () {
+    _reconnectAttempts++;
+    final delaySeconds = (1 << (_reconnectAttempts - 1)).clamp(1, 30);
+    _reconnectTimer = Timer(Duration(seconds: delaySeconds), () {
       connect();
     });
   }
 
-  void send(Map<String, dynamic> payload) {
+  void sendDirect(Map<String, dynamic> payload) {
     if (_channel != null) {
+      try {
+        _channel!.sink.add(jsonEncode(payload));
+      } catch (_) {}
+    }
+  }
+
+  void send(Map<String, dynamic> payload) {
+    if (_channel != null && _isAuthenticated) {
       try {
         _channel!.sink.add(jsonEncode(payload));
       } catch (e) {
@@ -121,16 +162,20 @@ class WebSocketClient {
     for (final payload in copy) {
       try {
         _channel!.sink.add(jsonEncode(payload));
-      } catch (_) {}
+      } catch (_) {
+        _pendingQueue.add(payload);
+      }
     }
   }
 
   void disconnect() {
     _isExplicitlyDisconnected = true;
+    _isAuthenticated = false;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _channel?.sink.close();
     _channel = null;
     _isConnecting = false;
+    _reconnectAttempts = 0;
   }
 }
