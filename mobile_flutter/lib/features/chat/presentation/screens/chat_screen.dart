@@ -552,6 +552,34 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  Widget _buildMessageStatusIcon(String status) {
+    if (status == 'seen' || status == 'read') {
+      return const Icon(
+        Icons.done_all_rounded,
+        color: Color(0xFF0284C7), // WhatsApp-style Cyan/Blue double tick for read
+        size: 16,
+      );
+    } else if (status == 'delivered') {
+      return const Icon(
+        Icons.done_all_rounded,
+        color: Color(0xFF94A3B8), // Grey double tick for delivered
+        size: 16,
+      );
+    } else if (status == 'sending') {
+      return const Icon(
+        Icons.access_time_rounded,
+        color: Color(0xFF94A3B8), // Clock for sending
+        size: 14,
+      );
+    } else {
+      return const Icon(
+        Icons.done_rounded,
+        color: Color(0xFF94A3B8), // Single grey tick for sent
+        size: 16,
+      );
+    }
+  }
+
   void _sendImageMessage(String imagePath, {bool isViewOnce = false, String caption = ''}) {
     final text = caption.isNotEmpty ? caption : (isViewOnce ? '📷 View-once photo' : '📷 Photo');
     final encrypted = E2EECryptoService.encryptPayload(text, widget.recipient['publicKey'] ?? '');
@@ -1273,12 +1301,10 @@ class _ChatScreenState extends State<ChatScreen> {
                               mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
                               children: [
                                 if (!isMe) const SizedBox(width: 46),
-                                const Icon(
-                                  Icons.done_all_rounded,
-                                  color: Color(0xFF7B2FBE),
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 4),
+                                if (isMe) ...[
+                                  _buildMessageStatusIcon(item['status']?.toString() ?? 'sent'),
+                                  const SizedBox(width: 4),
+                                ],
                                 Text(
                                   timeStr,
                                   style: const TextStyle(

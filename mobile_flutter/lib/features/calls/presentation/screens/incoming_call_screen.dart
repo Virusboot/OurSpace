@@ -97,7 +97,9 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
   void _stopRingingFeedback() {
     _ringTimer?.cancel();
     _ringTimer = null;
-    Vibration.cancel();
+    try {
+      Vibration.cancel();
+    } catch (_) {}
   }
 
   void _handleAccept() async {

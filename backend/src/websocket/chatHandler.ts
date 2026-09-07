@@ -1,5 +1,6 @@
 import WebSocket from 'ws';
 import { createMessage, markMessageRead, markMessageDelivered } from '../services/chatService';
+import { getUserByUsername, getUserByPrivateId } from '../services/identityService';
 import { sendToUserConnections } from './socketServer';
 
 export async function handleChatMessage(
@@ -44,8 +45,26 @@ export async function handleChatMessage(
       }
     };
 
-    let isDelivered = sendToUserConnections(recipientId, receivePayload);
-    
+    // Resolve recipient to canonical database userId
+    let targetUserId = recipientId;
+    if (targetUserId && !targetUserId.startsWith('usr_')) {
+      if (targetUserId.includes('@') || payload.recipientUsername) {
+        const u = await getUserByUsername(payload.recipientUsername || targetUserId);
+        if (u) targetUserId = u.id;
+      }
+      if (targetUserId === recipientId && (targetUserId.toUpperCase().startsWith('USER-') || payload.recipientPrivateId)) {
+        const u = await getUserByPrivateId(payload.recipientPrivateId || targetUserId);
+        if (u) targetUserId = u.id;
+      }
+    }
+
+    let isDelivered = false;
+    if (targetUserId) {
+      isDelivered = sendToUserConnections(targetUserId, receivePayload);
+    }
+    if (!isDelivered && recipientId && recipientId !== targetUserId) {
+      isDelivered = sendToUserConnections(recipientId, receivePayload);
+    }
     if (!isDelivered && payload.recipientUsername) {
       const rawUname = payload.recipientUsername.toLowerCase();
       const cleanUname = rawUname.replace(/^@/, '');
@@ -88,7 +107,15 @@ export async function handleChatMessage(
         status: 'delivered',
         deliveredAt: updated?.deliveredAt || new Date().toISOString()
       };
-      if (senderId) {
+      let targetSenderId = senderId;
+      if (targetSenderId && !targetSenderId.startsWith('usr_')) {
+        const u = await getUserByUsername(payload.senderUsername || targetSenderId) || await getUserByPrivateId(payload.senderPrivateId || targetSenderId);
+        if (u) targetSenderId = u.id;
+      }
+      if (targetSenderId) {
+        sendToUserConnections(targetSenderId, ackPayload);
+      }
+      if (senderId && senderId !== targetSenderId) {
         sendToUserConnections(senderId, ackPayload);
       }
     }
@@ -102,10 +129,27 @@ export async function handleChatMessage(
         readAt: updated?.readAt,
         expiresAt: updated?.expiresAt
       };
-      if (senderId) {
+      let targetSenderId = senderId;
+      if (targetSenderId && !targetSenderId.startsWith('usr_')) {
+        const u = await getUserByUsername(payload.senderUsername || targetSenderId) || await getUserByPrivateId(payload.senderPrivateId || targetSenderId);
+        if (u) targetSenderId = u.id;
+      }
+      if (targetSenderId) {
+        sendToUserConnections(targetSenderId, ackPayload);
+      }
+      if (senderId && senderId !== targetSenderId) {
         sendToUserConnections(senderId, ackPayload);
       }
-      if (recipientId) {
+
+      let targetRecipientId = recipientId;
+      if (targetRecipientId && !targetRecipientId.startsWith('usr_')) {
+        const u = await getUserByUsername(payload.recipientUsername || targetRecipientId) || await getUserByPrivateId(payload.recipientPrivateId || targetRecipientId);
+        if (u) targetRecipientId = u.id;
+      }
+      if (targetRecipientId) {
+        sendToUserConnections(targetRecipientId, ackPayload);
+      }
+      if (recipientId && recipientId !== targetRecipientId) {
         sendToUserConnections(recipientId, ackPayload);
       }
     }
@@ -116,7 +160,15 @@ export async function handleChatMessage(
       conversationId,
       isTyping: payload.isTyping
     };
-    if (recipientId) {
+    let targetRecipientId = recipientId;
+    if (targetRecipientId && !targetRecipientId.startsWith('usr_')) {
+      const u = await getUserByUsername(payload.recipientUsername || targetRecipientId) || await getUserByPrivateId(payload.recipientPrivateId || targetRecipientId);
+      if (u) targetRecipientId = u.id;
+    }
+    if (targetRecipientId) {
+      sendToUserConnections(targetRecipientId, typingPayload);
+    }
+    if (recipientId && recipientId !== targetRecipientId) {
       sendToUserConnections(recipientId, typingPayload);
     }
   }

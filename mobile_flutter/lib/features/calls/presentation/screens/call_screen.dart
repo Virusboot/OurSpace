@@ -101,7 +101,7 @@ class _CallScreenState extends State<CallScreen> {
   Future<void> _fetchIceConfig() async {
     try {
       final res = await ApiClient.get('/turn-credentials');
-      if (res != null && res['iceServers'] != null && res['iceServers'] is List) {
+      if (res['iceServers'] != null && res['iceServers'] is List) {
         _iceConfig['iceServers'] = res['iceServers'];
       }
     } catch (_) {}
@@ -109,8 +109,14 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _initRenderers() async {
     await _fetchIceConfig();
-    await _localRenderer.initialize();
-    await _remoteRenderer.initialize();
+    if (widget.callType == 'video') {
+      try {
+        await _localRenderer.initialize();
+        await _remoteRenderer.initialize();
+      } catch (e) {
+        debugPrint('Failed to initialize video renderers: $e');
+      }
+    }
     
     await _setupLocalMedia();
     _listenToSignaling();
@@ -127,13 +133,11 @@ class _CallScreenState extends State<CallScreen> {
         },
         'video': widget.callType == 'video'
             ? {
-                'mandatory': {
-                  'minWidth': '1280',
-                  'minHeight': '720',
-                  'minFrameRate': '30',
-                },
                 'facingMode': 'user',
-                'optional': [],
+                'optional': [
+                  {'minWidth': '640'},
+                  {'minHeight': '480'},
+                ],
               }
             : false,
       };
@@ -148,7 +152,9 @@ class _CallScreenState extends State<CallScreen> {
         _localStream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
       }
 
-      _localRenderer.srcObject = _localStream;
+      if (widget.callType == 'video' && _localStream != null) {
+        _localRenderer.srcObject = _localStream;
+      }
       
       // Ensure audio and video tracks are explicitly enabled for two-way communication
       if (_localStream != null) {
@@ -158,15 +164,30 @@ class _CallScreenState extends State<CallScreen> {
         _localStream!.getVideoTracks().forEach((track) {
           track.enabled = _camEnabled;
         });
-      }
 
-      try {
-        Helper.setSpeakerphoneOn(widget.callType == 'video');
-      } catch (_) {}
+        // Safely configure speakerphone after audio tracks are active
+        try {
+          if (_localStream!.getAudioTracks().isNotEmpty) {
+            Helper.setSpeakerphoneOn(widget.callType == 'video');
+          }
+        } catch (e) {
+          debugPrint('Speakerphone setting deferred or unsupported: $e');
+        }
+      }
 
       if (mounted) setState(() {});
     } catch (e) {
       debugPrint('Failed to get local media: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to access microphone or camera. Please check permissions.'),
+            backgroundColor: Color(0xFFF43F5E),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        widget.onEndCall();
+      }
     }
   }
 
@@ -485,8 +506,12 @@ class _CallScreenState extends State<CallScreen> {
     _peerConnection?.close();
     _peerConnection?.dispose();
     
-    _localRenderer.dispose();
-    _remoteRenderer.dispose();
+    if (widget.callType == 'video') {
+      try {
+        _localRenderer.dispose();
+        _remoteRenderer.dispose();
+      } catch (_) {}
+    }
     super.dispose();
   }
 
