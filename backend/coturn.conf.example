@@ -17,8 +17,8 @@ listening-ip=YOUR_SERVER_PUBLIC_IP
 relay-ip=YOUR_SERVER_PUBLIC_IP
 
 # Replace with your TURN server's public DNS hostname
-realm=turn.yourserver.com
-server-name=turn.yourserver.com
+realm=turn.kittuvirusstudio.in
+server-name=turn.kittuvirusstudio.in
 
 # ---------------------------------------------------------------------------
 # Listening Ports

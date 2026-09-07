@@ -84,17 +84,17 @@ router.get('/', authenticateToken, turnRateLimiter, (req: Request, res: Response
     // Fallback TURN config for when TURN_URL is not yet configured
     if (!turnUrl || !turnUrl.startsWith('turn:')) {
       iceServers.push({
-        urls: 'turn:turn.ourspace.app:3478',
+        urls: 'turn:turn.kittuvirusstudio.in:3478',
         username,
         credential,
       });
       iceServers.push({
-        urls: 'turn:turn.ourspace.app:3478?transport=tcp',
+        urls: 'turn:turn.kittuvirusstudio.in:3478?transport=tcp',
         username,
         credential,
       });
       iceServers.push({
-        urls: 'turns:turn.ourspace.app:5349',
+        urls: 'turns:turn.kittuvirusstudio.in:5349',
         username,
         credential,
       });
