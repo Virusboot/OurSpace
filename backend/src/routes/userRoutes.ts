@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { getUserByUsername, getUserByPrivateId, getUserById, getUserCount, deleteUserAccount, updateUserProfile } from '../services/identityService';
 import { authenticateToken, AuthRequest } from '../middleware/authMiddleware';
-import { activeConnections } from '../websocket/socketServer';
+import { activeUserConnections, addActiveConnection } from '../websocket/socketServer';
 
 const router = Router();
 
@@ -25,7 +25,7 @@ router.get('/db-status', (req, res) => {
 
 router.get('/online', authenticateToken, async (req, res) => {
   try {
-    const onlineUserIds = Array.from(activeConnections.keys());
+    const onlineUserIds = Array.from(activeUserConnections.keys());
     const onlineUsers = [];
     for (const id of onlineUserIds) {
       if (id.startsWith('usr_')) {
@@ -63,12 +63,14 @@ router.put('/profile', authenticateToken, async (req: AuthRequest, res) => {
     
     const result = await updateUserProfile(userId, { username, name, bio, profileImage });
 
-    // Update active WebSocket connection mappings
-    const ws = activeConnections.get(userId);
-    if (ws && result.user.username) {
+    // Update active WebSocket connection mappings across all user sockets
+    const userSockets = activeUserConnections.get(userId);
+    if (userSockets && result.user.username) {
       const cleanUname = result.user.username.toLowerCase().replace(/^@/, '');
-      activeConnections.set(cleanUname, ws);
-      activeConnections.set(`@${cleanUname}`, ws);
+      userSockets.forEach((ws) => {
+        addActiveConnection(cleanUname, ws);
+        addActiveConnection(`@${cleanUname}`, ws);
+      });
     }
 
     return res.json({
@@ -87,14 +89,16 @@ router.delete('/me', authenticateToken, async (req: AuthRequest, res) => {
     const userId = req.user!.userId;
     await deleteUserAccount(userId);
 
-    // Disconnect active socket if connected
-    const ws = activeConnections.get(userId);
-    if (ws) {
-      try {
-        ws.send(JSON.stringify({ type: 'account_deleted', message: 'Your account has been deleted permanently' }));
-        ws.close();
-      } catch (_) {}
-      activeConnections.delete(userId);
+    // Disconnect all active sockets for deleted user
+    const userSockets = activeUserConnections.get(userId);
+    if (userSockets) {
+      userSockets.forEach((ws) => {
+        try {
+          ws.send(JSON.stringify({ type: 'account_deleted', message: 'Your account has been deleted permanently' }));
+          ws.close();
+        } catch (_) {}
+      });
+      activeUserConnections.delete(userId);
     }
 
     return res.json({ success: true, message: 'Account and all identity data deleted successfully from database' });
@@ -103,34 +107,7 @@ router.delete('/me', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
-router.post('/purge-all', authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    // Notify all active WebSocket connections that accounts have been deleted
-    activeConnections.forEach((wsClient) => {
-      try {
-        if (wsClient.readyState === 1) { // WebSocket.OPEN
-          wsClient.send(JSON.stringify({
-            type: 'account_deleted',
-            message: 'All accounts have been purged from backend database.'
-          }));
-          wsClient.close();
-        }
-      } catch (_) {}
-    });
-    activeConnections.clear();
 
-    if (isPgActive()) {
-      const pool = getPgPool();
-      await pool?.query('TRUNCATE TABLE public.users RESTART IDENTITY CASCADE');
-    }
-    (inMemoryDb as any).users.clear();
-    (inMemoryDb as any).usersByUsername.clear();
-    (inMemoryDb as any).usersByPrivateId.clear();
-    return res.json({ success: true, message: 'All accounts and database records wiped clean successfully' });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
-});
 
 router.get('/lookup', async (req, res) => {
   try {

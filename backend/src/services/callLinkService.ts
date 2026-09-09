@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import { inMemoryDb, isPgActive, getPgPool } from '../db';
+import { inMemoryDb, isPgActive, getPgPool, ensureDbActive } from '../db';
 
 export interface CallLinkRecord {
   id: string;
@@ -33,7 +33,9 @@ export async function createCallLink(params: {
   const token = crypto.randomBytes(16).toString('hex'); // 32 random hex chars
   const tokenHash = hashToken(token);
   
-  const duration = params.durationMinutes && params.durationMinutes > 0 ? params.durationMinutes : 60; // default 60 min
+  // Cap duration between 1 and 1440 minutes (24h)
+  const requestedDuration = params.durationMinutes && params.durationMinutes > 0 ? params.durationMinutes : 60;
+  const duration = Math.min(Math.max(requestedDuration, 1), 1440);
   const expiresAt = new Date(Date.now() + duration * 60 * 1000).toISOString();
   const now = new Date().toISOString();
 
@@ -79,27 +81,23 @@ export async function createCallLink(params: {
 }
 
 export async function verifyAndGetCallLink(token: string, pin?: string): Promise<{ valid: boolean; error?: string; link?: CallLinkRecord }> {
-  const tokenHash = hashToken(token);
+  if (!token || typeof token !== 'string' || token.trim().length === 0) {
+    return { valid: false, error: 'Call link token required' };
+  }
+  const tokenHash = hashToken(token.trim());
   let record: CallLinkRecord | null = null;
 
   if (isPgActive()) {
     const pool = getPgPool();
     const res = await pool?.query(
       `SELECT id, call_id as "callId", token_hash as "tokenHash", pin_hash as "pinHash", expires_at as "expiresAt", revoked, one_time as "oneTime", host_id as "hostId", call_type as "callType", created_at as "createdAt"
-       FROM call_links WHERE token_hash = $1 OR call_id = $2 OR id = $2`,
-      [tokenHash, token]
+       FROM call_links WHERE token_hash = $1`,
+      [tokenHash]
     );
     record = res?.rows[0] || null;
   } else {
+    ensureDbActive();
     record = inMemoryDb.callLinks.get(tokenHash) || null;
-    if (!record) {
-      for (const r of inMemoryDb.callLinks.values()) {
-        if (r.tokenHash === token || r.callId === token || r.id === token || r.randomToken === token) {
-          record = r;
-          break;
-        }
-      }
-    }
   }
 
   if (!record) {

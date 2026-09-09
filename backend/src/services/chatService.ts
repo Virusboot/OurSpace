@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { inMemoryDb, isPgActive, getPgPool } from '../db';
+import { inMemoryDb, isPgActive, getPgPool, ensureDbActive } from '../db';
 
 export interface MessageRecord {
   id: string;
@@ -155,7 +155,11 @@ export async function markMessageDelivered(messageId: string): Promise<MessageRe
   }
 }
 
-export async function markMessageRead(messageId: string, readTtlSeconds?: number): Promise<MessageRecord | null> {
+export async function markMessageRead(
+  messageId: string,
+  requestingUserId?: string,
+  readTtlSeconds?: number
+): Promise<MessageRecord | null> {
   const readAt = new Date().toISOString();
   let expiresAt: string | null = null;
 
@@ -165,6 +169,19 @@ export async function markMessageRead(messageId: string, readTtlSeconds?: number
 
   if (isPgActive()) {
     const pool = getPgPool();
+    if (requestingUserId) {
+      const msgCheck = await pool?.query(
+        `SELECT m.id, m.conversation_id, m.sender_id
+         FROM messages m
+         JOIN conversations c ON m.conversation_id = c.id
+         WHERE m.id = $1 AND (c.user_a_id = $2 OR c.user_b_id = $2)`,
+        [messageId, requestingUserId]
+      );
+      if (!msgCheck || msgCheck.rows.length === 0) {
+        throw new Error('UNAUTHORIZED: You are not authorized to mark this message as read');
+      }
+    }
+
     const res = await pool?.query(
       `UPDATE messages SET status = 'seen', read_at = $1, expires_at = COALESCE($2, expires_at) WHERE id = $3 RETURNING *`,
       [readAt, expiresAt, messageId]
@@ -186,8 +203,15 @@ export async function markMessageRead(messageId: string, readTtlSeconds?: number
     }
     return null;
   } else {
+    ensureDbActive();
     const msg = inMemoryDb.messages.get(messageId);
     if (!msg) return null;
+    if (requestingUserId) {
+      const allowed = await isUserInConversation(requestingUserId, msg.conversationId);
+      if (!allowed) {
+        throw new Error('UNAUTHORIZED: You are not authorized to mark this message as read');
+      }
+    }
     msg.status = 'seen';
     msg.readAt = readAt;
     if (expiresAt) {
@@ -305,26 +329,50 @@ export async function saveMediaBlob(messageId: string, encryptedBlobRef: string,
   return mediaId;
 }
 
-export async function getAndConsumeMediaBlob(mediaId: string): Promise<string | null> {
+export async function getAndConsumeMediaBlob(mediaId: string, requestingUserId?: string): Promise<string | null> {
   const now = new Date().toISOString();
   if (isPgActive()) {
     const pool = getPgPool();
-    const res = await pool?.query(
-      `SELECT encrypted_blob_ref FROM media WHERE id = $1 AND (expires_at IS NULL OR expires_at > $2)`,
-      [mediaId, now]
-    );
-    const blobRef = res?.rows[0]?.encrypted_blob_ref || null;
-    // Mark viewed and mark for deletion
-    await pool?.query(`DELETE FROM media WHERE id = $1`, [mediaId]);
-    return blobRef;
+    let query = `DELETE FROM media 
+                 WHERE id = $1 
+                   AND (expires_at IS NULL OR expires_at > $2)`;
+    const params: any[] = [mediaId, now];
+
+    if (requestingUserId) {
+      query += ` AND message_id IN (
+        SELECT id FROM messages WHERE conversation_id IN (
+          SELECT id FROM conversations WHERE user_a_id = $3 OR user_b_id = $3
+        )
+      )`;
+      params.push(requestingUserId);
+    }
+
+    query += ` RETURNING encrypted_blob_ref`;
+
+    const res = await pool?.query(query, params);
+    return res?.rows[0]?.encrypted_blob_ref || null;
   } else {
+    ensureDbActive();
     const item = inMemoryDb.media.get(mediaId);
     if (!item) return null;
+    
+    // Delete immediately to prevent concurrent second read
+    inMemoryDb.media.delete(mediaId);
+
     if (item.expiresAt && new Date(item.expiresAt) < new Date()) {
-      inMemoryDb.media.delete(mediaId);
       return null;
     }
-    inMemoryDb.media.delete(mediaId);
+
+    if (requestingUserId) {
+      const msg = inMemoryDb.messages.get(item.messageId);
+      if (msg) {
+        const allowed = await isUserInConversation(requestingUserId, msg.conversationId);
+        if (!allowed) {
+          throw new Error('UNAUTHORIZED: You are not authorized to access this media');
+        }
+      }
+    }
+
     return item.encryptedBlobRef;
   }
 }

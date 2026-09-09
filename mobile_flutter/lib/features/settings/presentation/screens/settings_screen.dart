@@ -536,8 +536,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
 
   Future<void> _handleLogout() async {
-    await SecureStorageService.delete('auth_token');
-    await SecureStorageService.delete('user_info');
+    await SecureStorageService.clearAll();
     widget.onLogout();
   }
 

@@ -61,6 +61,17 @@ export const activeConnections = new Proxy(activeUserConnections, {
         return undefined;
       };
     }
+    if (prop === 'set') {
+      return (key: string, ws: WebSocket) => {
+        addActiveConnection(key, ws);
+        return true;
+      };
+    }
+    if (prop === 'delete') {
+      return (key: string) => {
+        return target.delete(key);
+      };
+    }
     return Reflect.get(target, prop, receiver);
   }
 }) as unknown as Map<string, WebSocket>;
@@ -100,7 +111,7 @@ export function initWebSocketServer(server: HttpServer) {
     let currentId: string | null = null;
     let registeredKeys: string[] = [];
 
-    const registerKey = (key: string) => {
+    const registerKey = (key: string | null) => {
       if (!key) return;
       addActiveConnection(key, ws);
       if (!registeredKeys.includes(key)) {
@@ -119,7 +130,7 @@ export function initWebSocketServer(server: HttpServer) {
 
           if (token && typeof token === 'string') {
             try {
-              const decoded: any = jwt.verify(token, config.jwtSecret);
+              const decoded: any = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] });
               currentUserId = decoded.userId;
             } catch (err) {
               console.log(`[WebSocket] Token verification failed:`, err);
@@ -159,7 +170,15 @@ export function initWebSocketServer(server: HttpServer) {
                   type: 'chat_receive',
                   message: pendingMsg
                 }));
-                await markMessageDelivered(pendingMsg.id);
+                const updated = await markMessageDelivered(pendingMsg.id);
+                if (updated && updated.senderId) {
+                  sendToUserConnections(updated.senderId, {
+                    type: 'chat_delivered_ack',
+                    messageId: pendingMsg.id,
+                    status: 'delivered',
+                    deliveredAt: updated.deliveredAt || new Date().toISOString()
+                  });
+                }
               }
             } catch (err: any) {
               console.error('[WebSocket] Failed to deliver pending messages:', err.message);
@@ -173,22 +192,26 @@ export function initWebSocketServer(server: HttpServer) {
           return;
         }
 
-        // Guest identification for public call links
+        // Guest identification for public call links (prevent claiming real user IDs)
         if (type === 'guest_register') {
-          currentId = payload.guestId || `guest_${Math.random().toString(36).substring(2, 9)}`;
-          if (currentId) {
-            registerKey(currentId);
-            ws.send(JSON.stringify({ type: 'guest_ack', guestId: currentId }));
+          const rawId = payload.guestId && typeof payload.guestId === 'string' ? payload.guestId.trim() : '';
+          if (rawId && !rawId.startsWith('usr_') && !rawId.startsWith('USER-') && rawId.length <= 64) {
+            currentId = rawId;
+          } else {
+            currentId = `guest_${Math.random().toString(36).substring(2, 9)}`;
           }
+          registerKey(currentId);
+          ws.send(JSON.stringify({ type: 'guest_ack', guestId: currentId }));
           return;
         }
 
-        // Handle WebRTC Signaling (Allow public call join & signaling)
+        // Handle WebRTC Signaling (Require verified identity from auth or guest_register)
         if (type.startsWith('call_') || type === 'ice_candidate' || type === 'media_toggle' || type === 'security_event') {
-          const senderId: string = currentId || payload.senderId || payload.guestId || `usr_${Date.now()}`;
-          currentId = senderId;
-          registerKey(senderId);
-          payload.senderId = senderId; // Force identity
+          if (!currentId) {
+            ws.send(JSON.stringify({ type: 'error', error: 'UNAUTHORIZED: Authentication or guest registration required before signaling' }));
+            return;
+          }
+          payload.senderId = currentId; // Force verified identity
           handleSignaling(ws, payload, activeConnections);
           return;
         }

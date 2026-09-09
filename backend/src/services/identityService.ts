@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { inMemoryDb, isPgActive, getPgPool } from '../db';
+import { inMemoryDb, isPgActive, getPgPool, ensureDbActive } from '../db';
 import { config } from '../config';
 
 export interface UserRecord {
@@ -153,14 +153,39 @@ export async function getUserCount(): Promise<number> {
 export async function deleteUserAccount(userId: string): Promise<boolean> {
   if (isPgActive()) {
     const pool = getPgPool();
-    // Cascade delete associated records and user account
-    await pool?.query('DELETE FROM users WHERE id = $1', [userId]);
-    await pool?.query('DELETE FROM devices WHERE user_id = $1', [userId]);
-    await pool?.query('DELETE FROM conversations WHERE user_a_id = $1 OR user_b_id = $1', [userId]);
-    await pool?.query('DELETE FROM calls WHERE host_id = $1', [userId]);
-    await pool?.query('DELETE FROM call_links WHERE host_id = $1', [userId]);
-    await pool?.query('DELETE FROM security_events WHERE user_id = $1', [userId]);
+    if (!pool) throw new Error('Database pool unavailable');
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        `DELETE FROM media WHERE message_id IN (
+           SELECT id FROM messages WHERE sender_id = $1 OR conversation_id IN (
+             SELECT id FROM conversations WHERE user_a_id = $1 OR user_b_id = $1
+           )
+         )`,
+        [userId]
+      );
+      await client.query(
+        `DELETE FROM messages WHERE sender_id = $1 OR conversation_id IN (
+           SELECT id FROM conversations WHERE user_a_id = $1 OR user_b_id = $1
+         )`,
+        [userId]
+      );
+      await client.query('DELETE FROM conversations WHERE user_a_id = $1 OR user_b_id = $1', [userId]);
+      await client.query('DELETE FROM devices WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM calls WHERE host_id = $1', [userId]);
+      await client.query('DELETE FROM call_links WHERE host_id = $1', [userId]);
+      await client.query('DELETE FROM security_events WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM users WHERE id = $1', [userId]);
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   } else {
+    ensureDbActive();
     const user = inMemoryDb.users.get(userId);
     if (user) {
       inMemoryDb.users.delete(userId);

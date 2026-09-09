@@ -6,18 +6,6 @@ import '../../../../shared/widgets/security_overlay.dart';
 import '../../../../core/networking/websocket_client.dart';
 import '../../../../core/networking/api_client.dart';
 
-enum CallState {
-  idle,
-  outgoingRinging,
-  incomingRinging,
-  connecting,
-  connected,
-  reconnecting,
-  ending,
-  ended,
-  failed,
-}
-
 class CallScreen extends StatefulWidget {
   final String callType; // 'audio' or 'video'
   final Map<String, dynamic>? recipient;
@@ -50,7 +38,6 @@ class _CallScreenState extends State<CallScreen> {
   late bool _speakerEnabled;
   int _secondsElapsed = 0;
   Timer? _timer;
-  CallState _callState = CallState.idle;
 
   // WebRTC members
   final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
@@ -84,7 +71,6 @@ class _CallScreenState extends State<CallScreen> {
     NativeSecurityService.enableFlagSecure();
     _camEnabled = widget.callType == 'video';
     _speakerEnabled = widget.callType == 'video';
-    _callState = CallState.outgoingRinging;
     
     _initRenderers();
     _startTimer();
@@ -121,6 +107,16 @@ class _CallScreenState extends State<CallScreen> {
     await _setupLocalMedia();
     _listenToSignaling();
     _joinCallRoom();
+  }
+
+  void _applySpeakerphone() {
+    try {
+      if (_localStream != null && _localStream!.getAudioTracks().isNotEmpty) {
+        Helper.setSpeakerphoneOn(_speakerEnabled);
+      }
+    } catch (e) {
+      debugPrint('Speakerphone setting deferred or unsupported: $e');
+    }
   }
 
   Future<void> _setupLocalMedia() async {
@@ -166,13 +162,7 @@ class _CallScreenState extends State<CallScreen> {
         });
 
         // Safely configure speakerphone after audio tracks are active
-        try {
-          if (_localStream!.getAudioTracks().isNotEmpty) {
-            Helper.setSpeakerphoneOn(widget.callType == 'video');
-          }
-        } catch (e) {
-          debugPrint('Speakerphone setting deferred or unsupported: $e');
-        }
+        _applySpeakerphone();
       }
 
       if (mounted) setState(() {});
@@ -345,7 +335,9 @@ class _CallScreenState extends State<CallScreen> {
       if (event.streams.isNotEmpty) {
         setState(() {
           _remoteStream = event.streams[0];
-          _remoteRenderer.srcObject = event.streams[0];
+          if (widget.callType == 'video') {
+            _remoteRenderer.srcObject = event.streams[0];
+          }
           _isConnected = true;
         });
       } else {
@@ -353,34 +345,46 @@ class _CallScreenState extends State<CallScreen> {
         stream.addTrack(event.track);
         setState(() {
           _remoteStream = stream;
-          _remoteRenderer.srcObject = stream;
+          if (widget.callType == 'video') {
+            _remoteRenderer.srcObject = stream;
+          }
           _isConnected = true;
         });
       }
+      _applySpeakerphone();
     };
 
     _peerConnection!.onAddStream = (stream) {
       setState(() {
         _remoteStream = stream;
-        _remoteRenderer.srcObject = stream;
+        if (widget.callType == 'video') {
+          _remoteRenderer.srcObject = stream;
+        }
         _isConnected = true;
       });
+      _applySpeakerphone();
     };
 
     _peerConnection!.onConnectionState = (state) {
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
-        setState(() => _isConnected = true);
+        setState(() {
+          _isConnected = true;
+        });
       } else if (state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
                  state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
                  state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
-        setState(() => _isConnected = false);
+        setState(() {
+          _isConnected = false;
+        });
       }
     };
 
     _peerConnection!.onIceConnectionState = (state) {
       if (state == RTCIceConnectionState.RTCIceConnectionStateConnected ||
           state == RTCIceConnectionState.RTCIceConnectionStateCompleted) {
-        setState(() => _isConnected = true);
+        setState(() {
+          _isConnected = true;
+        });
       }
     };
 
@@ -478,9 +482,7 @@ class _CallScreenState extends State<CallScreen> {
   void _toggleSpeaker() {
     final nextState = !_speakerEnabled;
     setState(() => _speakerEnabled = nextState);
-    try {
-      Helper.setSpeakerphoneOn(nextState);
-    } catch (_) {}
+    _applySpeakerphone();
   }
 
   void _switchCamera() async {
@@ -508,6 +510,8 @@ class _CallScreenState extends State<CallScreen> {
     
     if (widget.callType == 'video') {
       try {
+        _localRenderer.srcObject = null;
+        _remoteRenderer.srcObject = null;
         _localRenderer.dispose();
         _remoteRenderer.dispose();
       } catch (_) {}

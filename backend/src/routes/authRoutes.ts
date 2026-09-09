@@ -64,8 +64,8 @@ router.post('/login', authRateLimiter, async (req, res) => {
       return res.status(400).json({ error: 'No account found. Please register first.' });
     }
 
-    // Compare passwords
-    const isValid = isPgActive() ? await bcrypt.compare(password, existingHash) : existingHash === password;
+    // Compare passwords using bcrypt
+    const isValid = await bcrypt.compare(password, existingHash);
     if (!isValid) {
       return res.status(400).json({ error: 'Incorrect password' });
     }
@@ -122,29 +122,30 @@ router.post('/register', authRateLimiter, async (req, res) => {
       if (usersByEmail.has(cleanEmail)) {
         return res.status(400).json({ error: 'An account with this email already exists' });
       }
+      const hashedPass = await bcrypt.hash(password, 10);
       const userObj = {
         id: userId,
         name: name || 'User',
         email: cleanEmail,
-        password, // stored plaintext in memory only
+        password: hashedPass, // hashed with bcrypt
         username: cleanUsername,
         privateId,
         createdAt: now,
       };
       usersByEmail.set(cleanEmail, userObj);
 
-    const lookupRecord = {
-      id: userId,
-      privateId,
-      username: cleanUsername,
-      publicKey: 'mock_public_key',
-      recoveryHash: password,
-      createdAt: now,
-      updatedAt: now,
-    };
-    inMemoryDb.users.set(userId, lookupRecord);
-    inMemoryDb.usersByPrivateId.set(privateId.toUpperCase(), lookupRecord);
-    inMemoryDb.usersByUsername.set(cleanUsername.toLowerCase(), lookupRecord);
+      const lookupRecord = {
+        id: userId,
+        privateId,
+        username: cleanUsername,
+        publicKey: 'mock_public_key',
+        recoveryHash: hashedPass,
+        createdAt: now,
+        updatedAt: now,
+      };
+      inMemoryDb.users.set(userId, lookupRecord);
+      inMemoryDb.usersByPrivateId.set(privateId.toUpperCase(), lookupRecord);
+      inMemoryDb.usersByUsername.set(cleanUsername.toLowerCase(), lookupRecord);
     }
 
     const token = jwt.sign(

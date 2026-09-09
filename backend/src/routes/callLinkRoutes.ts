@@ -2,31 +2,19 @@ import { Router } from 'express';
 import { authenticateToken, AuthRequest } from '../middleware/authMiddleware';
 import { createCallLink, verifyAndGetCallLink, revokeCallLink } from '../services/callLinkService';
 import { authRateLimiter } from '../middleware/rateLimiter';
-import jwt from 'jsonwebtoken';
-import { config } from '../config';
-import { v4 as uuidv4 } from 'uuid';
+import { isProductionEnv } from '../db';
 
 const router = Router();
 
-// Create call link (Authenticated or Guest)
-router.post('/create', async (req: AuthRequest, res) => {
+// Create call link (Requires authenticated user)
+router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { callType, durationMinutes, pin, oneTime } = req.body;
     if (!callType || (callType !== 'audio' && callType !== 'video')) {
       return res.status(400).json({ error: 'Valid callType (audio or video) is required' });
     }
 
-    let hostId = 'guest_' + uuidv4().substring(0, 8);
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    if (token) {
-      try {
-        const decoded = jwt.verify(token, config.jwtSecret) as any;
-        if (decoded && decoded.userId) {
-          hostId = decoded.userId;
-        }
-      } catch (_) {}
-    }
+    const hostId = req.user!.userId;
 
     const result = await createCallLink({
       hostId,
@@ -38,7 +26,7 @@ router.post('/create', async (req: AuthRequest, res) => {
 
     return res.json(result);
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: isProductionEnv() ? 'Failed to create call link' : err.message });
   }
 });
 
@@ -48,7 +36,11 @@ router.post('/resolve/:token', authRateLimiter, async (req, res) => {
     const { token } = req.params;
     const { pin } = req.body;
 
-    const verification = await verifyAndGetCallLink(token, pin);
+    if (!token || typeof token !== 'string' || token.trim().length === 0) {
+      return res.status(400).json({ error: 'Call link token required' });
+    }
+
+    const verification = await verifyAndGetCallLink(token.trim(), pin);
     if (!verification.valid) {
       if (verification.error === 'PIN_REQUIRED') {
         return res.status(401).json({ error: 'PIN_REQUIRED', pinRequired: true });
@@ -67,21 +59,24 @@ router.post('/resolve/:token', authRateLimiter, async (req, res) => {
       oneTime: link.oneTime
     });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: isProductionEnv() ? 'Failed to resolve call link' : err.message });
   }
 });
 
-// Revoke call link
+// Revoke call link (Requires link owner authentication)
 router.post('/revoke/:linkId', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { linkId } = req.params;
+    if (!linkId || typeof linkId !== 'string') {
+      return res.status(400).json({ error: 'linkId required' });
+    }
     const revoked = await revokeCallLink(linkId, req.user!.userId);
     if (!revoked) {
       return res.status(400).json({ error: 'Link not found or user unauthorized to revoke' });
     }
     return res.json({ success: true, message: 'Call link successfully revoked' });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: isProductionEnv() ? 'Failed to revoke call link' : err.message });
   }
 });
 

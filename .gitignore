@@ -70,3 +70,9 @@ flutter_*.png
 # Coturn authentication secrets (if stored locally)
 coturn.conf
 turnserver.conf
+
+# Android Signing Secrets — Never commit
+**/key.properties
+**/*.jks
+**/*.keystore
+

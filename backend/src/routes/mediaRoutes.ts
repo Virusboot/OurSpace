@@ -23,13 +23,14 @@ router.post('/upload', authenticateToken, async (req: AuthRequest, res) => {
 router.get('/:mediaId', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { mediaId } = req.params;
-    const encryptedBlob = await getAndConsumeMediaBlob(mediaId);
+    const encryptedBlob = await getAndConsumeMediaBlob(mediaId, req.user!.userId);
     if (!encryptedBlob) {
       return res.status(404).json({ error: 'Media expired, already viewed, or not found' });
     }
     return res.json({ encryptedBlob });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    const status = err.message?.includes('UNAUTHORIZED') ? 403 : 500;
+    return res.status(status).json({ error: status === 403 ? err.message : 'Failed to fetch media' });
   }
 });
 

@@ -103,15 +103,17 @@ app.get('/ready', async (req, res) => {
       dbStatus = 'degraded';
     }
   } else {
-    dbStatus = 'degraded'; // in-memory fallback — not production-safe
+    dbStatus = 'disconnected';
   }
 
-  const isHealthy = dbStatus === 'connected';
-  const statusCode = isHealthy ? 200 : 503;
+  const isProd = config.env === 'production' || process.env.NODE_ENV === 'production';
+  const isHealthy = dbStatus === 'connected' || (!isProd && dbStatus === 'disconnected');
+  const statusCode = (isHealthy && dbStatus === 'connected') ? 200 : (isProd ? 503 : 200);
 
   return res.status(statusCode).json({
-    status: isHealthy ? 'ready' : 'degraded',
+    status: isHealthy ? (dbStatus === 'connected' ? 'ready' : 'degraded') : 'not_ready',
     database: dbStatus,
+    environment: config.env,
     timestamp: new Date().toISOString(),
   });
 });

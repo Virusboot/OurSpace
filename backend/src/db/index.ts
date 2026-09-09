@@ -22,6 +22,16 @@ let usePg = false;
 
 import { setLastDbError } from '../routes/userRoutes';
 
+export function isProductionEnv(): boolean {
+  return config.env === 'production' || process.env.NODE_ENV === 'production';
+}
+
+export function ensureDbActive() {
+  if (!usePg && isProductionEnv()) {
+    throw new Error('503: Database connection unavailable (Production Fail-Closed)');
+  }
+}
+
 export async function initDb() {
   try {
     if (pgPool) {

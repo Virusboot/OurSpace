@@ -1,4 +1,5 @@
 import WebSocket from 'ws';
+import { sendToUserConnections } from './socketServer';
 
 // In-memory call room participants registry (callId -> Map of participantId -> { ws, role, nickname })
 export const activeCallRooms = new Map<string, Map<string, { ws: WebSocket; role: string; nickname?: string }>>();
@@ -80,6 +81,12 @@ export function handleSignaling(
       }
     }
   } else if (type === 'call_offer' || type === 'call_answer' || type === 'ice_candidate' || type === 'media_toggle') {
+    const room = activeCallRooms.get(callId);
+    if (!room || (senderId && !room.has(senderId))) {
+      console.warn(`[Signaling] Unauthorized ${type} attempt for callId ${callId} from ${senderId}`);
+      return;
+    }
+
     let routed = false;
     if (targetId) {
       const targetWs = activeConnections.get(targetId);
@@ -87,7 +94,6 @@ export function handleSignaling(
         targetWs.send(JSON.stringify(payload));
         routed = true;
       } else {
-        const room = activeCallRooms.get(callId);
         if (room && room.has(targetId)) {
           const targetObj = room.get(targetId)!;
           if (targetObj.ws.readyState === WebSocket.OPEN) {
@@ -100,7 +106,6 @@ export function handleSignaling(
     
     if (!routed) {
       // Broadcast to room members except sender
-      const room = activeCallRooms.get(callId);
       if (room) {
         room.forEach((participant) => {
           if (participant.ws !== ws && participant.ws.readyState === WebSocket.OPEN) {
@@ -109,7 +114,7 @@ export function handleSignaling(
         });
       }
     }
-  } else if (type === 'call_hangup') {
+  } else if (type === 'call_hangup' || type === 'call_decline' || type === 'call_reject') {
     const room = activeCallRooms.get(callId);
     if (room) {
       room.forEach((participant) => {
@@ -123,10 +128,18 @@ export function handleSignaling(
       });
       activeCallRooms.delete(callId);
     }
+
+    if (targetId) {
+      sendToUserConnections(targetId, {
+        type: 'call_ended',
+        callId,
+        reason: 'Call declined or ended'
+      });
+    }
   } else if (type === 'security_event') {
     // Screenshot / screen recording alert during active call
     const room = activeCallRooms.get(callId);
-    if (room) {
+    if (room && room.has(senderId)) {
       room.forEach((participant) => {
         if (participant.ws !== ws && participant.ws.readyState === WebSocket.OPEN) {
           participant.ws.send(JSON.stringify({

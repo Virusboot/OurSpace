@@ -152,45 +152,67 @@ class _ChatScreenState extends State<ChatScreen> {
           });
         }
         final encrypted = msg['encryptedPayload'] ?? '';
-        final text = E2EECryptoService.decryptPayload(encrypted, widget.recipient['publicKey'] ?? '');
-        final newMsg = {
-          'id': msg['id'] ?? 'm_${DateTime.now().millisecondsSinceEpoch}',
-          'senderId': msg['senderId'] ?? widget.recipient['id'],
-          'encryptedPayload': encrypted,
-          'decryptedText': text.isNotEmpty ? text : (msg['text'] ?? 'Encrypted message'),
-          'status': msg['status'] ?? 'delivered',
-          'time': 'Just now',
-          'isTyping': false,
-        };
+        final msgId = msg['id'] ?? 'm_${DateTime.now().millisecondsSinceEpoch}';
 
-        // Confirm read receipt if user is actively on this chat screen
-        if (msg['id'] != null) {
-          WebSocketClient().send({
-            'type': 'chat_read',
-            'messageId': msg['id'],
-            'senderId': msg['senderId'],
-            'recipientId': widget.user['id'],
-          });
-        }
-
-        setState(() {
-          _messages.removeWhere((m) => m['isTyping'] == true);
-          _messages.add(newMsg);
-        });
-        _scrollToBottom();
-        _saveRecentChatSnippet(newMsg['decryptedText'].toString());
-
-        // Ghost Mode / TTL 30s Auto Disappear (only when Ghost Mode is enabled)
-        if (_isGhostMode && _ttlSeconds > 0) {
-          final msgId = newMsg['id'];
-          Timer(Duration(seconds: _ttlSeconds), () {
-            if (mounted) {
-              setState(() {
-                _messages.removeWhere((m) => m['id'] == msgId);
-              });
+        SecureStorageService.read('user_private_key').then((userPriv) async {
+          String text = await SecureStorageService.read('local_msg_txt_$msgId') ?? '';
+          if (text.isEmpty && encrypted.isNotEmpty) {
+            text = await E2EECryptoService.decryptPayloadAsync(
+              encryptedPayload: encrypted,
+              recipientPrivateKeyHex: userPriv ?? '',
+              senderPublicKey: widget.recipient['publicKey'] ?? '',
+            );
+            if (text.isNotEmpty && !text.startsWith('[Decryption Error')) {
+              await SecureStorageService.write('local_msg_txt_$msgId', text);
             }
-          });
-        }
+          }
+
+          final newMsg = {
+            'id': msgId,
+            'conversationId': msg['conversationId'] ?? _conversationId ?? '',
+            'senderId': msg['senderId'] ?? widget.recipient['id'],
+            'encryptedPayload': encrypted,
+            'decryptedText': text.isNotEmpty ? text : (msg['text'] ?? 'Encrypted message'),
+            'status': msg['status'] ?? 'delivered',
+            'time': 'Just now',
+            'isTyping': false,
+            'createdAt': msg['createdAt'] ?? DateTime.now().toIso8601String(),
+          };
+
+          // Confirm read receipt if user is actively on this chat screen
+          if (msgId.isNotEmpty) {
+            WebSocketClient().send({
+              'type': 'chat_read',
+              'messageId': msgId,
+              'senderId': msg['senderId'],
+              'recipientId': widget.user['id'],
+            });
+          }
+
+          if (mounted) {
+            setState(() {
+              _messages.removeWhere((m) => m['isTyping'] == true);
+              final existingIdx = _messages.indexWhere((m) => m['id'] == msgId);
+              if (existingIdx >= 0) {
+                _messages[existingIdx] = newMsg;
+              } else {
+                _messages.add(newMsg);
+              }
+            });
+            _scrollToBottom();
+          }
+
+          // Ghost Mode / TTL 30s Auto Disappear (only when Ghost Mode is enabled)
+          if (_isGhostMode && _ttlSeconds > 0) {
+            Timer(Duration(seconds: _ttlSeconds), () {
+              if (mounted) {
+                setState(() {
+                  _messages.removeWhere((m) => m['id'] == msgId);
+                });
+              }
+            });
+          }
+        });
       } else if (type == 'chat_ack' || type == 'chat_delivered_ack' || type == 'chat_read_ack') {
         final ackId = event['messageId'];
         final newStatus = event['status'] ?? (type == 'chat_delivered_ack' ? 'delivered' : type == 'chat_read_ack' ? 'seen' : 'sent');
@@ -246,9 +268,30 @@ class _ChatScreenState extends State<ChatScreen> {
       final rawMsgs = res['messages'] as List<dynamic>;
       if (rawMsgs.isNotEmpty) {
         final decryptedList = <Map<String, dynamic>>[];
+        final currentUserId = widget.user['id']?.toString() ?? '';
+
         for (final msg in rawMsgs) {
-          final text = E2EECryptoService.decryptPayload(msg['encryptedPayload'], widget.recipient['publicKey'] ?? '');
+          final msgId = msg['id']?.toString() ?? '';
+          final senderId = msg['senderId']?.toString() ?? '';
+          final cachedText = await SecureStorageService.read('local_msg_txt_$msgId');
           
+          String text = cachedText ?? '';
+          if (text.isEmpty) {
+            if (senderId == currentUserId) {
+              text = msg['text'] ?? msg['decryptedText'] ?? '';
+            } else {
+              final userPriv = await SecureStorageService.read('user_private_key') ?? '';
+              text = await E2EECryptoService.decryptPayloadAsync(
+                encryptedPayload: msg['encryptedPayload'] ?? '',
+                recipientPrivateKeyHex: userPriv,
+                senderPublicKey: widget.recipient['publicKey'] ?? '',
+              );
+              if (text.isNotEmpty && !text.startsWith('[Decryption Error') && msgId.isNotEmpty) {
+                await SecureStorageService.write('local_msg_txt_$msgId', text);
+              }
+            }
+          }
+
           String timeStr = 'Just now';
           if (msg['createdAt'] != null) {
             try {
@@ -256,12 +299,44 @@ class _ChatScreenState extends State<ChatScreen> {
               timeStr = '${dt.hour > 12 ? dt.hour - 12 : dt.hour == 0 ? 12 : dt.hour}:${dt.minute.toString().padLeft(2, '0')} ${dt.hour >= 12 ? 'PM' : 'AM'}';
             } catch (_) {}
           }
-          decryptedList.add({...msg, 'decryptedText': text, 'time': timeStr});
+
+          // Trigger read receipt for unread incoming messages
+          if (senderId != currentUserId && msg['status'] != 'seen' && msgId.isNotEmpty) {
+            WebSocketClient().send({
+              'type': 'chat_read',
+              'messageId': msgId,
+              'senderId': senderId,
+              'recipientId': currentUserId,
+            });
+          }
+
+          decryptedList.add({
+            ...msg,
+            'decryptedText': text.isNotEmpty ? text : 'Encrypted message',
+            'time': timeStr,
+            'isTyping': false
+          });
         }
-        setState(() {
-          _messages.clear();
-          _messages.addAll(decryptedList);
-        });
+
+        if (mounted) {
+          setState(() {
+            for (final newM in decryptedList) {
+              final idx = _messages.indexWhere((m) => m['id'] == newM['id']);
+              if (idx >= 0) {
+                _messages[idx] = {..._messages[idx], ...newM};
+              } else {
+                _messages.add(newM);
+              }
+            }
+            // Sort chronologically
+            _messages.sort((a, b) {
+              final ca = a['createdAt']?.toString() ?? '';
+              final cb = b['createdAt']?.toString() ?? '';
+              return ca.compareTo(cb);
+            });
+          });
+          _scrollToBottom();
+        }
       }
     } catch (_) {}
   }
@@ -272,7 +347,14 @@ class _ChatScreenState extends State<ChatScreen> {
     _inputCtrl.clear();
 
     final clientMsgId = 'msg_${DateTime.now().millisecondsSinceEpoch}_${(_messages.length + 1)}';
-    final encrypted = E2EECryptoService.encryptPayload(text, widget.recipient['publicKey'] ?? '');
+    await SecureStorageService.write('local_msg_txt_$clientMsgId', text);
+
+    final userPriv = await SecureStorageService.read('user_private_key') ?? '';
+    final encrypted = await E2EECryptoService.encryptPayloadAsync(
+      plaintext: text,
+      recipientPublicKey: widget.recipient['publicKey'] ?? '',
+      senderPrivateKeyHex: userPriv,
+    );
     final localMsg = {
       'id': clientMsgId,
       'conversationId': _conversationId ?? 'c1',

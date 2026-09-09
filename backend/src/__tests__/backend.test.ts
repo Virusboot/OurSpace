@@ -50,8 +50,10 @@ describe('Backend Security & Privacy Services Test Suite', () => {
   });
 
   test('4. Create E2EE message and test disappearing timer read receipt', async () => {
+    const recipient = await createIdentity('@recipient_test', 'pub_key_rec');
+    const convId = await getOrCreateConversation(createdUser.id, recipient.user.id);
     const msg = await createMessage({
-      conversationId: 'conv_123',
+      conversationId: convId,
       senderId: createdUser.id,
       encryptedPayload: 'AES_GCM_ENCRYPTED_BLOB_BASE64',
       messageType: 'text',
@@ -62,7 +64,7 @@ describe('Backend Security & Privacy Services Test Suite', () => {
     expect(msg.expiresAt).not.toBeNull();
 
     // Mark message read
-    const read = await markMessageRead(msg.id, 1);
+    const read = await markMessageRead(msg.id, createdUser.id);
     expect(read?.readAt).not.toBeNull();
 
     // Wait 1.1 seconds and run cleanup purge
