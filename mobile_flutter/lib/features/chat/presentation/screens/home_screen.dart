@@ -484,10 +484,18 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
+    final currentUserId = widget.user?['id']?.toString() ?? '';
+    final currentUname = widget.user?['username']?.toString().toLowerCase().replaceAll('@', '') ?? '';
+
     final clean = query.trim().toLowerCase().replaceAll('@', '');
-    // Instant local match for 0ms UI feedback
+    // Instant local match for 0ms UI feedback (excluding current user)
     final localMatch = _onlineUsers.firstWhere(
-      (u) => (u['username']?.toString().toLowerCase().contains(clean) ?? false),
+      (u) {
+        final uId = u['id']?.toString() ?? '';
+        final uname = u['username']?.toString().toLowerCase().replaceAll('@', '') ?? '';
+        if (uId == currentUserId || uname == currentUname) return false;
+        return uname.contains(clean);
+      },
       orElse: () => {},
     );
     if (localMatch.isNotEmpty) {
@@ -507,11 +515,21 @@ class _HomeScreenState extends State<HomeScreen> {
       try {
         final res = await ApiClient.get('/users/lookup?query=${Uri.encodeComponent(query)}');
         if (mounted) {
-          setState(() {
-            _globalSearchResult = res;
-            _isSearchingGlobal = false;
-            _searchNotFound = false;
-          });
+          final resId = res['id']?.toString() ?? '';
+          final resUname = res['username']?.toString().toLowerCase().replaceAll('@', '') ?? '';
+          if (resId == currentUserId || resUname == currentUname) {
+            setState(() {
+              _globalSearchResult = null;
+              _isSearchingGlobal = false;
+              _searchNotFound = true;
+            });
+          } else {
+            setState(() {
+              _globalSearchResult = res;
+              _isSearchingGlobal = false;
+              _searchNotFound = false;
+            });
+          }
         }
       } catch (e) {
         if (mounted) {

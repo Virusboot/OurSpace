@@ -5,6 +5,7 @@ import 'package:local_auth/local_auth.dart';
 import '../../../../core/networking/api_client.dart';
 import '../../../../core/networking/websocket_client.dart';
 import '../../../../core/storage/secure_storage_service.dart';
+import '../../../../core/crypto/e2ee_crypto_service.dart';
 import '../../../../shared/widgets/app_gradient_button.dart';
 
 class CreateIdentityScreen extends StatefulWidget {
@@ -191,6 +192,12 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
       token = 'token_local_${DateTime.now().millisecondsSinceEpoch}';
     }
 
+    // Generate & Persist E2EE V3 Identity Keys
+    final identityKeys = await E2EECryptoService.generateIdentityKeys();
+    await SecureStorageService.write('user_public_key', identityKeys['publicKey']!);
+    await SecureStorageService.write('user_private_key', identityKeys['privateKey']!);
+    userObj['publicKey'] = identityKeys['publicKey'];
+
     // Save user info
     final accountsJson = await SecureStorageService.read('registered_accounts');
     Map<String, dynamic> accountsMap = {};
@@ -285,6 +292,15 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
         accountsMap[userObj['email']] = userObj;
         await SecureStorageService.write('registered_accounts', jsonEncode(accountsMap));
       }
+    }
+
+    // Ensure E2EE keys are present for imported account
+    var existingPrivKey = await SecureStorageService.read('user_private_key');
+    if (existingPrivKey == null || existingPrivKey.isEmpty) {
+      final identityKeys = await E2EECryptoService.generateIdentityKeys();
+      await SecureStorageService.write('user_public_key', identityKeys['publicKey']!);
+      await SecureStorageService.write('user_private_key', identityKeys['privateKey']!);
+      userObj['publicKey'] = identityKeys['publicKey'];
     }
 
     await SecureStorageService.write('auth_token', token);

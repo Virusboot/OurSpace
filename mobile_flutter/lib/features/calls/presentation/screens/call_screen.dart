@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../../../core/security/native_security_service.dart';
 import '../../../../shared/widgets/security_overlay.dart';
 import '../../../../core/networking/websocket_client.dart';
@@ -121,6 +122,25 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _setupLocalMedia() async {
     try {
+      // Verify runtime permission status before starting media recording
+      var micStatus = await Permission.microphone.status;
+      if (!micStatus.isGranted) {
+        micStatus = await Permission.microphone.request();
+      }
+      if (!micStatus.isGranted) {
+        throw Exception('Microphone permission denied');
+      }
+
+      if (widget.callType == 'video') {
+        var camStatus = await Permission.camera.status;
+        if (!camStatus.isGranted) {
+          camStatus = await Permission.camera.request();
+        }
+        if (!camStatus.isGranted) {
+          throw Exception('Camera permission denied');
+        }
+      }
+
       final mediaConstraints = <String, dynamic>{
         'audio': {
           'echoCancellation': true,
@@ -130,10 +150,8 @@ class _CallScreenState extends State<CallScreen> {
         'video': widget.callType == 'video'
             ? {
                 'facingMode': 'user',
-                'optional': [
-                  {'minWidth': '640'},
-                  {'minHeight': '480'},
-                ],
+                'width': {'ideal': 640},
+                'height': {'ideal': 480},
               }
             : false,
       };
@@ -332,6 +350,7 @@ class _CallScreenState extends State<CallScreen> {
     };
 
     _peerConnection!.onTrack = (event) async {
+      if (!mounted) return;
       if (event.streams.isNotEmpty) {
         setState(() {
           _remoteStream = event.streams[0];
@@ -343,6 +362,7 @@ class _CallScreenState extends State<CallScreen> {
       } else {
         final stream = await createLocalMediaStream('remote_stream_${DateTime.now().millisecondsSinceEpoch}');
         stream.addTrack(event.track);
+        if (!mounted) return;
         setState(() {
           _remoteStream = stream;
           if (widget.callType == 'video') {
@@ -355,6 +375,7 @@ class _CallScreenState extends State<CallScreen> {
     };
 
     _peerConnection!.onAddStream = (stream) {
+      if (!mounted) return;
       setState(() {
         _remoteStream = stream;
         if (widget.callType == 'video') {
@@ -366,6 +387,7 @@ class _CallScreenState extends State<CallScreen> {
     };
 
     _peerConnection!.onConnectionState = (state) {
+      if (!mounted) return;
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
         setState(() {
           _isConnected = true;
@@ -380,6 +402,7 @@ class _CallScreenState extends State<CallScreen> {
     };
 
     _peerConnection!.onIceConnectionState = (state) {
+      if (!mounted) return;
       if (state == RTCIceConnectionState.RTCIceConnectionStateConnected ||
           state == RTCIceConnectionState.RTCIceConnectionStateCompleted) {
         setState(() {

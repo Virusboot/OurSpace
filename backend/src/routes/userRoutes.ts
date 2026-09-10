@@ -109,13 +109,14 @@ router.delete('/me', authenticateToken, async (req: AuthRequest, res) => {
 
 
 
-router.get('/lookup', async (req, res) => {
+router.get('/lookup', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { query } = req.query;
     if (!query || typeof query !== 'string' || query.trim().length < 1) {
       return res.status(400).json({ error: 'Search query required' });
     }
 
+    const currentUserId = req.user?.userId || '';
     const cleanQuery = query.trim().toLowerCase();
     const withoutAt = cleanQuery.replace(/^@/, '');
     const withAt = `@${withoutAt}`;
@@ -126,14 +127,14 @@ router.get('/lookup', async (req, res) => {
       const result = await pool?.query(
         `SELECT id, username, public_key as "publicKey"
          FROM users
-         WHERE LOWER(username) LIKE $1 
-            OR LOWER(username) LIKE $2
+         WHERE (LOWER(username) LIKE $1 OR LOWER(username) LIKE $2)
+           AND id != $5
          ORDER BY CASE 
            WHEN LOWER(username) = $3 OR LOWER(username) = $4 THEN 0 
            ELSE 1 
          END
          LIMIT 10`,
-        [`${withoutAt}%`, `${withAt}%`, withoutAt, withAt]
+        [`${withoutAt}%`, `${withAt}%`, withoutAt, withAt, currentUserId]
       );
       const users = result?.rows || [];
       if (users.length === 0) return res.status(404).json({ error: 'No users found' });
@@ -141,6 +142,7 @@ router.get('/lookup', async (req, res) => {
     } else {
       const allUsers = Array.from((inMemoryDb as any).users.values()) as any[];
       const matches = allUsers.filter((u: any) => {
+        if (u.id === currentUserId) return false;
         const uname = (u.username || '').toLowerCase();
         const pid = (u.privateId || '').toUpperCase();
         return uname.includes(withoutAt) || uname.includes(withAt) || pid.includes(upperQuery);

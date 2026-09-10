@@ -161,8 +161,10 @@ class _ChatScreenState extends State<ChatScreen> {
               encryptedPayload: encrypted,
               recipientPrivateKeyHex: userPriv ?? '',
               senderPublicKey: widget.recipient['publicKey'] ?? '',
+              conversationId: msg['conversationId'] ?? _conversationId ?? '',
+              messageId: msgId,
             );
-            if (text.isNotEmpty && !text.startsWith('[Decryption Error')) {
+            if (text.isNotEmpty && !text.startsWith('[Decryption Error') && !text.startsWith('[Replay Error')) {
               await SecureStorageService.write('local_msg_txt_$msgId', text);
             }
           }
@@ -285,8 +287,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 encryptedPayload: msg['encryptedPayload'] ?? '',
                 recipientPrivateKeyHex: userPriv,
                 senderPublicKey: widget.recipient['publicKey'] ?? '',
+                conversationId: convId,
+                messageId: msgId,
               );
-              if (text.isNotEmpty && !text.startsWith('[Decryption Error') && msgId.isNotEmpty) {
+              if (text.isNotEmpty && !text.startsWith('[Decryption Error') && !text.startsWith('[Replay Error') && msgId.isNotEmpty) {
                 await SecureStorageService.write('local_msg_txt_$msgId', text);
               }
             }
@@ -350,10 +354,17 @@ class _ChatScreenState extends State<ChatScreen> {
     await SecureStorageService.write('local_msg_txt_$clientMsgId', text);
 
     final userPriv = await SecureStorageService.read('user_private_key') ?? '';
+    String edPriv = '';
+    if (userPriv.contains(':')) {
+      final parts = userPriv.split(':');
+      if (parts.length > 2) edPriv = parts[2];
+    }
     final encrypted = await E2EECryptoService.encryptPayloadAsync(
       plaintext: text,
       recipientPublicKey: widget.recipient['publicKey'] ?? '',
       senderPrivateKeyHex: userPriv,
+      senderEd25519PrivateKeyHex: edPriv,
+      conversationId: _conversationId,
     );
     final localMsg = {
       'id': clientMsgId,
@@ -662,9 +673,21 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void _sendImageMessage(String imagePath, {bool isViewOnce = false, String caption = ''}) {
+  void _sendImageMessage(String imagePath, {bool isViewOnce = false, String caption = ''}) async {
     final text = caption.isNotEmpty ? caption : (isViewOnce ? '📷 View-once photo' : '📷 Photo');
-    final encrypted = E2EECryptoService.encryptPayload(text, widget.recipient['publicKey'] ?? '');
+    final userPriv = await SecureStorageService.read('user_private_key') ?? '';
+    String edPriv = '';
+    if (userPriv.contains(':')) {
+      final parts = userPriv.split(':');
+      if (parts.length > 2) edPriv = parts[2];
+    }
+    final encrypted = await E2EECryptoService.encryptPayloadAsync(
+      plaintext: text,
+      recipientPublicKey: widget.recipient['publicKey'] ?? '',
+      senderPrivateKeyHex: userPriv,
+      senderEd25519PrivateKeyHex: edPriv,
+      conversationId: _conversationId,
+    );
     
     final localMsg = {
       'id': 'img_${DateTime.now().millisecondsSinceEpoch}',

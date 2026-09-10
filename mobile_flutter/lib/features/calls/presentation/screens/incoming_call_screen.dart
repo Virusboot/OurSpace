@@ -106,18 +106,42 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
     _stopRingingFeedback();
     NotificationService().cancelNotification(999);
 
+    bool micOk = false;
+    bool camOk = true;
+
     try {
       var micStatus = await Permission.microphone.status;
       if (!micStatus.isGranted) {
-        await Permission.microphone.request();
+        micStatus = await Permission.microphone.request();
       }
+      micOk = micStatus.isGranted;
+
       if (widget.callType == 'video') {
         var camStatus = await Permission.camera.status;
         if (!camStatus.isGranted) {
-          await Permission.camera.request();
+          camStatus = await Permission.camera.request();
         }
+        camOk = camStatus.isGranted;
       }
     } catch (_) {}
+
+    if (!mounted) return;
+
+    if (!micOk || !camOk) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.callType == 'video'
+                ? 'Microphone and Camera permissions are required to answer video calls.'
+                : 'Microphone permission is required to answer audio calls.',
+          ),
+          backgroundColor: const Color(0xFFF43F5E),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      _handleDecline();
+      return;
+    }
 
     widget.onAccept();
   }

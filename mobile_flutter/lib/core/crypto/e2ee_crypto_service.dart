@@ -14,8 +14,8 @@ class E2EECryptoService {
   static final Hkdf _hkdf = Hkdf(hmac: Hmac.sha256(), outputLength: 32);
   static final Ed25519 _ed25519 = Ed25519();
 
-  // Bounded replay cache (max 1000 signature hashes)
-  static final Set<String> _seenEnvelopeSignatures = <String>{};
+  // Bounded replay cache (max 1000 signature hashes mapped to messageId)
+  static final Map<String, String> _seenEnvelopeSignatures = <String, String>{};
 
   static String generateRandomHex(int length) {
     final values = List<int>.generate(length, (_) => _random.nextInt(256));
@@ -152,6 +152,7 @@ class E2EECryptoService {
     required String recipientPrivateKeyHex,
     String? senderPublicKey,
     String? conversationId,
+    String? messageId,
   }) async {
     // -------------------------------------------------------------
     // E2EE_V3_AES_GCM: Ephemeral ECDH + Ed25519 Signature + Replay Filter
@@ -170,13 +171,14 @@ class E2EECryptoService {
 
         // Replay Protection Check
         if (sigHex.isNotEmpty) {
-          if (_seenEnvelopeSignatures.contains(sigHex)) {
+          final existingMsgId = _seenEnvelopeSignatures[sigHex];
+          if (existingMsgId != null && (messageId == null || existingMsgId != messageId)) {
             return '[Replay Error: Duplicate ciphertext envelope rejected]';
           }
           if (_seenEnvelopeSignatures.length > 1000) {
-            _seenEnvelopeSignatures.remove(_seenEnvelopeSignatures.first);
+            _seenEnvelopeSignatures.remove(_seenEnvelopeSignatures.keys.first);
           }
-          _seenEnvelopeSignatures.add(sigHex);
+          _seenEnvelopeSignatures[sigHex] = messageId ?? '';
         }
 
         // Verify Ed25519 Signature if present

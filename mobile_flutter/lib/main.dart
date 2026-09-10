@@ -7,6 +7,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'core/networking/api_client.dart';
 import 'core/storage/secure_storage_service.dart';
 import 'core/networking/websocket_client.dart';
+import 'core/crypto/e2ee_crypto_service.dart';
 import 'features/auth/presentation/screens/splash_screen.dart';
 import 'features/auth/presentation/screens/onboarding_screen.dart';
 import 'features/identity/presentation/screens/create_identity_screen.dart';
@@ -48,6 +49,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
   Map<String, dynamic>? _incomingCallData;
 
   final GlobalKey _callScreenKey = GlobalKey();
+  final GlobalKey _pipCallScreenKey = GlobalKey();
   final _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
   StreamSubscription<Map<String, dynamic>>? _wsCallSubscription;
@@ -301,6 +303,17 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
         if (savedImg != null) {
           parsed['profileImage'] = savedImg;
         }
+
+        // Check & auto-generate E2EE V3 keys if missing for existing account
+        final existingPrivKey = await SecureStorageService.read('user_private_key');
+        if (existingPrivKey == null || existingPrivKey.isEmpty) {
+          final identityKeys = await E2EECryptoService.generateIdentityKeys();
+          await SecureStorageService.write('user_public_key', identityKeys['publicKey']!);
+          await SecureStorageService.write('user_private_key', identityKeys['privateKey']!);
+          parsed['publicKey'] = identityKeys['publicKey'];
+          await SecureStorageService.write('user_info', jsonEncode(parsed));
+        }
+
         _user = parsed;
 
         if (appLock == 'true') {
@@ -720,7 +733,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
               child: GestureDetector(
                 onTap: () => setState(() => _currentScreen = 'call'),
                 child: CallScreen(
-                  key: _callScreenKey,
+                  key: _pipCallScreenKey,
                   callType: _activeCallType,
                   recipient: _activeRecipient,
                   callId: _activeCallId,

@@ -165,6 +165,46 @@ void main() {
       expect(dec2, equals('[Replay Error: Duplicate ciphertext envelope rejected]'));
     });
 
+    test('7b. Transport Re-read: Re-reading same payload with identical messageId succeeds, different messageId rejected', () async {
+      final aliceKeys = await E2EECryptoService.generateIdentityKeys();
+      final bobKeys = await E2EECryptoService.generateIdentityKeys();
+
+      final ciphertext = await E2EECryptoService.encryptPayloadAsync(
+        plaintext: 'Persistent Chat Message Text',
+        recipientPublicKey: bobKeys['publicKey']!,
+        senderPrivateKeyHex: aliceKeys['privateKey']!,
+        senderEd25519PrivateKeyHex: aliceKeys['ed25519PrivateKeyHex']!,
+        conversationId: 'conv_persistent',
+      );
+
+      // Initial decryption with messageId msg_100
+      final dec1 = await E2EECryptoService.decryptPayloadAsync(
+        encryptedPayload: ciphertext,
+        recipientPrivateKeyHex: bobKeys['privateKey']!,
+        conversationId: 'conv_persistent',
+        messageId: 'msg_100',
+      );
+      expect(dec1, equals('Persistent Chat Message Text'));
+
+      // Re-reading identical messageId msg_100 must succeed
+      final decSame = await E2EECryptoService.decryptPayloadAsync(
+        encryptedPayload: ciphertext,
+        recipientPrivateKeyHex: bobKeys['privateKey']!,
+        conversationId: 'conv_persistent',
+        messageId: 'msg_100',
+      );
+      expect(decSame, equals('Persistent Chat Message Text'));
+
+      // Replaying same envelope with different messageId msg_200 must be rejected
+      final decDiff = await E2EECryptoService.decryptPayloadAsync(
+        encryptedPayload: ciphertext,
+        recipientPrivateKeyHex: bobKeys['privateKey']!,
+        conversationId: 'conv_persistent',
+        messageId: 'msg_200',
+      );
+      expect(decDiff, equals('[Replay Error: Duplicate ciphertext envelope rejected]'));
+    });
+
     test('8. Media E2EE: Client-side authenticated AES-256-GCM media encryption & decryption', () async {
       final rawMediaBytes = Uint8List.fromList(utf8.encode('BINARY_IMAGE_DATA_BYTES_123456789'));
 
