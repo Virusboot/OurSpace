@@ -348,10 +348,6 @@ class _CallScreenState extends State<CallScreen> {
       await _setupLocalMedia();
     }
 
-    try {
-      _remoteStream ??= await createLocalMediaStream('remote_stream_${widget.callId ?? DateTime.now().millisecondsSinceEpoch}');
-    } catch (_) {}
-
     _peerConnection = await createPeerConnection(_iceConfig);
 
     _peerConnection!.onIceCandidate = (candidate) {
@@ -390,14 +386,8 @@ class _CallScreenState extends State<CallScreen> {
           _isConnected = true;
         });
       } else if (event.track != null) {
-        try {
-          _remoteStream?.addTrack(event.track);
-        } catch (_) {}
         if (!mounted) return;
         setState(() {
-          if (widget.callType == 'video' && _remoteStream != null) {
-            _remoteRenderer.srcObject = _remoteStream;
-          }
           _isConnected = true;
         });
       }
