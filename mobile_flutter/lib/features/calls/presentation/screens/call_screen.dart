@@ -64,6 +64,8 @@ class _CallScreenState extends State<CallScreen> {
       {'urls': 'stun:stun3.l.google.com:19302'},
     ],
     'sdpSemantics': 'unified-plan',
+    'bundlePolicy': 'max-bundle',
+    'rtcpMuxPolicy': 'require',
   };
 
   @override
@@ -292,9 +294,14 @@ class _CallScreenState extends State<CallScreen> {
 
         case 'ice_candidate':
           final candidateMap = event['candidate'];
-          if (candidateMap != null) {
+          if (candidateMap != null && candidateMap['candidate'] != null) {
+            final candStr = candidateMap['candidate'].toString();
+            // Ignore QEMU self-loopback candidate on Android Emulator to prevent libjingle SIGABRT socket crash
+            if (candStr.contains(' 10.0.2.15 ') || candStr.contains(' 127.0.0.1 ')) {
+              break;
+            }
             final candidate = RTCIceCandidate(
-              candidateMap['candidate'],
+              candStr,
               candidateMap['sdpMid'],
               candidateMap['sdpMLineIndex'],
             );
@@ -347,6 +354,10 @@ class _CallScreenState extends State<CallScreen> {
 
     _peerConnection!.onIceCandidate = (candidate) {
       if (candidate.candidate != null && candidate.candidate!.isNotEmpty) {
+        final candStr = candidate.candidate!;
+        if (candStr.contains(' 10.0.2.15 ') || candStr.contains(' 127.0.0.1 ')) {
+          return;
+        }
         final payload = {
           'type': 'ice_candidate',
           'callId': widget.callId,
