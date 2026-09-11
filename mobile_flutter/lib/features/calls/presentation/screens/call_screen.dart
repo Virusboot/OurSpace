@@ -110,6 +110,9 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> _initRenderers() async {
+    try {
+      await WebRTC.initialize();
+    } catch (_) {}
     await _fetchIceConfig();
     try {
       await _localRenderer.initialize();

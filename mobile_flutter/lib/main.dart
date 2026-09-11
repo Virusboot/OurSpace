@@ -20,10 +20,16 @@ import 'features/calls/presentation/screens/incoming_call_screen.dart';
 import 'features/settings/presentation/screens/settings_screen.dart';
 import 'core/notifications/notification_service.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 
-void main() {
+void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  try {
+    await WebRTC.initialize();
+  } catch (e) {
+    debugPrint('WebRTC initialization error: $e');
+  }
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   runApp(const SecureChatApp());
 }
