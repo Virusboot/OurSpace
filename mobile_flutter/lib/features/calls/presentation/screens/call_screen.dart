@@ -128,9 +128,7 @@ class _CallScreenState extends State<CallScreen> {
 
   void _applySpeakerphone() {
     try {
-      if (_localStream != null && _localStream!.getAudioTracks().isNotEmpty) {
-        Helper.setSpeakerphoneOn(_speakerEnabled);
-      }
+      Helper.setSpeakerphoneOn(_speakerEnabled);
     } catch (e) {
       debugPrint('Speakerphone setting deferred or unsupported: $e');
     }
@@ -176,6 +174,9 @@ class _CallScreenState extends State<CallScreen> {
           return;
         }
       }
+
+      // Configure AudioManager mode BEFORE creating audio tracks to prevent AppOps silencing
+      _applySpeakerphone();
 
       final mediaConstraints = <String, dynamic>{
         'audio': {
