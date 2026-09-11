@@ -49,6 +49,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
   Map<String, dynamic>? _activeRecipient;
   String _activeCallType = 'video';
   String? _activeCallId;
+  bool _activeIsOutgoing = true; // true = caller, false = callee
   String _activeImageUri = '';
   bool _activeIsViewOnce = false;
   bool _isDarkMode = false;
@@ -727,6 +728,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                 user: _user,
                 isDarkMode: _isDarkMode,
                 isPipMode: false,
+                isOutgoing: _activeIsOutgoing,
                 onMinimize: () => setState(() => _currentScreen = 'home'),
                 onEndCall: () {
                   WebSocketClient().send({'type': 'call_hangup', 'callId': _activeCallId});
@@ -750,6 +752,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                   user: _user,
                   isDarkMode: _isDarkMode,
                   isPipMode: true,
+                  isOutgoing: _activeIsOutgoing,
                   onEndCall: () {
                     WebSocketClient().send({'type': 'call_hangup', 'callId': _activeCallId});
                     setState(() => _activeCallId = null);
@@ -810,6 +813,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                 _activeCallType = type;
                 _activeCallId = callId;
                 _activeRecipient = recipient ?? {'username': '@user'};
+                _activeIsOutgoing = true; // called from chat/home = outgoing
                 _currentScreen = 'call';
               });
               return;
@@ -827,6 +831,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                   _activeCallType = type;
                   _activeCallId = generatedCallId;
                   _activeRecipient = recipient ?? {'username': '@user'};
+                  _activeIsOutgoing = true;
                   _currentScreen = 'call';
                 });
                 // Send the call link to the recipient via WebSocket
@@ -853,6 +858,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                   _activeCallType = type;
                   _activeCallId = fallbackId;
                   _activeRecipient = recipient ?? {'username': '@user'};
+                  _activeIsOutgoing = true;
                   _currentScreen = 'call';
                 });
                 if (recipient != null) {
@@ -987,6 +993,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                 'id': _incomingCallData!['senderId'],
                 'username': _incomingCallData!['callerUsername'],
               };
+              _activeIsOutgoing = false; // accepting = callee, waits for offer
               _incomingCallData = null;
               _currentScreen = 'call';
             });

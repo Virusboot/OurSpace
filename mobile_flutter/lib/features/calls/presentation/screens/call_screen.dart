@@ -16,6 +16,8 @@ class CallScreen extends StatefulWidget {
   final VoidCallback onEndCall;
   final bool isPipMode;
   final VoidCallback? onMinimize;
+  /// True if this user initiated the call (caller). False if this user is receiving (callee).
+  final bool isOutgoing;
 
   const CallScreen({
     Key? key,
@@ -27,6 +29,7 @@ class CallScreen extends StatefulWidget {
     required this.onEndCall,
     this.isPipMode = false,
     this.onMinimize,
+    this.isOutgoing = true,
   }) : super(key: key);
 
   @override
@@ -261,7 +264,8 @@ class _CallScreenState extends State<CallScreen> {
           if (existing != null && existing.isNotEmpty) {
             _remoteParticipantId = existing.first.toString();
             _flushLocalCandidates();
-            if (_peerConnection == null) {
+            // Only the caller sends the offer when they find the remote peer already in the room
+            if (_peerConnection == null && widget.isOutgoing) {
               await _createPeerConnection();
               await _sendOffer();
             }
@@ -279,8 +283,11 @@ class _CallScreenState extends State<CallScreen> {
               }
             });
             _flushLocalCandidates();
-            await _createPeerConnection();
-            await _sendOffer();
+            // Only the caller (isOutgoing) sends offers — callee waits for the offer
+            if (widget.isOutgoing) {
+              await _createPeerConnection();
+              await _sendOffer();
+            }
           }
           break;
 
