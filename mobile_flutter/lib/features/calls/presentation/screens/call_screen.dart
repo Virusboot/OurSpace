@@ -318,10 +318,6 @@ class _CallScreenState extends State<CallScreen> {
           final candidateMap = event['candidate'];
           if (candidateMap != null && candidateMap['candidate'] != null) {
             final candStr = candidateMap['candidate'].toString();
-            // Ignore QEMU self-loopback candidate on Android Emulator to prevent libjingle SIGABRT socket crash
-            if (candStr.contains('10.0.2.') || candStr.contains('127.0.0.')) {
-              break;
-            }
             final candidate = RTCIceCandidate(
               candStr,
               candidateMap['sdpMid'],
@@ -368,14 +364,12 @@ class _CallScreenState extends State<CallScreen> {
       await _setupLocalMedia();
     }
 
+    if (!mounted) return;
+
     _peerConnection = await createPeerConnection(_iceConfig);
 
     _peerConnection!.onIceCandidate = (candidate) {
       if (candidate.candidate != null && candidate.candidate!.isNotEmpty) {
-        final candStr = candidate.candidate!;
-        if (candStr.contains('10.0.2.') || candStr.contains('127.0.0.')) {
-          return;
-        }
         final payload = {
           'type': 'ice_candidate',
           'callId': widget.callId,
@@ -397,16 +391,14 @@ class _CallScreenState extends State<CallScreen> {
 
     _peerConnection!.onTrack = (event) {
       if (!mounted) return;
-      if (event.streams.isNotEmpty) {
-        setState(() {
-          _remoteStream = event.streams[0];
-          if (widget.callType == 'video') {
-            _remoteRenderer.srcObject = event.streams[0];
-          }
-          _isConnected = true;
-        });
-      } else {
-        if (!mounted) return;
+      final stream = event.streams.isNotEmpty ? event.streams[0] : null;
+      if (stream != null && _remoteStream != stream) {
+        _remoteStream = stream;
+        if (widget.callType == 'video' && _remoteRenderer.srcObject != stream) {
+          _remoteRenderer.srcObject = stream;
+        }
+      }
+      if (mounted) {
         setState(() {
           _isConnected = true;
         });
@@ -416,13 +408,17 @@ class _CallScreenState extends State<CallScreen> {
 
     _peerConnection!.onAddStream = (stream) {
       if (!mounted) return;
-      setState(() {
+      if (_remoteStream != stream) {
         _remoteStream = stream;
-        if (widget.callType == 'video') {
+        if (widget.callType == 'video' && _remoteRenderer.srcObject != stream) {
           _remoteRenderer.srcObject = stream;
         }
-        _isConnected = true;
-      });
+      }
+      if (mounted) {
+        setState(() {
+          _isConnected = true;
+        });
+      }
       _applySpeakerphone();
     };
 
@@ -576,13 +572,17 @@ class _CallScreenState extends State<CallScreen> {
     }
 
     try {
+      _localRenderer.srcObject = null;
+      _remoteRenderer.srcObject = null;
+    } catch (_) {}
+
+    try {
       _localStream?.getTracks().forEach((track) => track.stop());
       _localStream?.dispose();
     } catch (_) {}
 
     try {
       _remoteStream?.getTracks().forEach((track) => track.stop());
-      _remoteStream?.dispose();
     } catch (_) {}
 
     try {
@@ -591,8 +591,6 @@ class _CallScreenState extends State<CallScreen> {
     } catch (_) {}
     
     try {
-      _localRenderer.srcObject = null;
-      _remoteRenderer.srcObject = null;
       _localRenderer.dispose();
       _remoteRenderer.dispose();
     } catch (_) {}
@@ -972,39 +970,9 @@ class _CallScreenState extends State<CallScreen> {
                 ),
               ),
             ),
-
-              // PiP local video — shown only when REMOTE is streaming (guest connected)
-              if (showRemoteVideo && _camEnabled)
-                Positioned(
-                  right: 16,
-                  top: 80,
-                  width: 100,
-                  height: 150,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white38, width: 2),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black38,
-                          blurRadius: 10,
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
-                      child: RTCVideoView(
-                        _localRenderer,
-                        key: const ValueKey('guest_overlay_local_renderer'),
-                        mirror: true,
-                        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          ),
+          ],
+        ),
+        ),
         ),
       ),
     );
