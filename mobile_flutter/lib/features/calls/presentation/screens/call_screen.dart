@@ -141,7 +141,17 @@ class _CallScreenState extends State<CallScreen> {
         micStatus = await Permission.microphone.request();
       }
       if (!micStatus.isGranted) {
-        throw Exception('Microphone permission denied');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Microphone permission is required for voice calls.'),
+              backgroundColor: Color(0xFFF43F5E),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          widget.onEndCall();
+        }
+        return;
       }
 
       if (widget.callType == 'video') {
@@ -150,7 +160,17 @@ class _CallScreenState extends State<CallScreen> {
           camStatus = await Permission.camera.request();
         }
         if (!camStatus.isGranted) {
-          throw Exception('Camera permission denied');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Camera permission is required for video calls.'),
+                backgroundColor: Color(0xFFF43F5E),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            widget.onEndCall();
+          }
+          return;
         }
       }
 
