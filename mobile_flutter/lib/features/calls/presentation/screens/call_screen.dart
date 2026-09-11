@@ -111,13 +111,11 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _initRenderers() async {
     await _fetchIceConfig();
-    if (widget.callType == 'video') {
-      try {
-        await _localRenderer.initialize();
-        await _remoteRenderer.initialize();
-      } catch (e) {
-        debugPrint('Failed to initialize video renderers: $e');
-      }
+    try {
+      await _localRenderer.initialize();
+      await _remoteRenderer.initialize();
+    } catch (e) {
+      debugPrint('Failed to initialize renderers: $e');
     }
     
     await _setupLocalMedia();
@@ -578,14 +576,12 @@ class _CallScreenState extends State<CallScreen> {
       _peerConnection?.dispose();
     } catch (_) {}
     
-    if (widget.callType == 'video') {
-      try {
-        _localRenderer.srcObject = null;
-        _remoteRenderer.srcObject = null;
-        _localRenderer.dispose();
-        _remoteRenderer.dispose();
-      } catch (_) {}
-    }
+    try {
+      _localRenderer.srcObject = null;
+      _remoteRenderer.srcObject = null;
+      _localRenderer.dispose();
+      _remoteRenderer.dispose();
+    } catch (_) {}
     super.dispose();
   }
 
