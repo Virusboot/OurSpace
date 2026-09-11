@@ -1,5 +1,6 @@
 package com.ourspace.app
 
+import android.os.Bundle
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -7,6 +8,17 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity: FlutterFragmentActivity() {
     private val CHANNEL = "com.ourspace.app/security"
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        try {
+            val contextUtilsClass = Class.forName("org.webrtc.ContextUtils")
+            val initMethod = contextUtilsClass.getMethod("initialize", android.content.Context::class.java)
+            initMethod.invoke(null, applicationContext)
+        } catch (e: Exception) {
+            // WebRTC reflection initialization fallback
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
