@@ -62,6 +62,11 @@ class _CallScreenState extends State<CallScreen> {
   final List<Map<String, dynamic>> _queuedLocalCandidates = [];
   final Set<String> _processedCandidateKeys = {};
 
+  /// Completes when renderers + local media are ready so signaling
+  /// handlers can safely create a peer connection.
+  final Completer<void> _mediaReady = Completer<void>();
+  Timer? _connectionWatchdog;
+
   final Map<String, dynamic> _iceConfig = {
     'iceServers': [
       {'urls': 'stun:stun.l.google.com:19302'},
@@ -81,6 +86,10 @@ class _CallScreenState extends State<CallScreen> {
     _camEnabled = widget.callType == 'video';
     _speakerEnabled = widget.callType == 'video';
     
+    // Subscribe to signaling FIRST — before any async work — so that
+    // call_offer / ice_candidate events are never dropped during the
+    // (potentially slow) media-setup phase.
+    _listenToSignaling();
     _initRenderers();
     _startTimer();
   }
@@ -128,8 +137,19 @@ class _CallScreenState extends State<CallScreen> {
     }
     
     await _setupLocalMedia();
-    _listenToSignaling();
+    if (!_mediaReady.isCompleted) _mediaReady.complete();
     _joinCallRoom();
+
+    // Watchdog: if still not connected 8s after joining, the callee
+    // takes initiative and sends an offer itself (handles edge-cases
+    // where the caller's offer was lost or never sent).
+    _connectionWatchdog = Timer(const Duration(seconds: 8), () {
+      if (!mounted || _isConnected) return;
+      if (_remoteParticipantId != null && _peerConnection == null) {
+        debugPrint('[CallScreen] Watchdog: no connection after 8s — sending offer');
+        _createPeerConnection().then((_) => _sendOffer());
+      }
+    });
   }
 
   void _applySpeakerphone() {
@@ -299,6 +319,8 @@ class _CallScreenState extends State<CallScreen> {
             _remoteParticipantId = event['senderId']?.toString();
             _flushLocalCandidates();
           }
+          // Wait for renderers + local media before creating the peer connection
+          await _mediaReady.future;
           await _createPeerConnection();
           
           final offerMap = event['sdp'];
@@ -415,6 +437,7 @@ class _CallScreenState extends State<CallScreen> {
         }
       }
       if (mounted) {
+        _connectionWatchdog?.cancel();
         setState(() => _isConnected = true);
       }
       _applySpeakerphone();
@@ -429,6 +452,7 @@ class _CallScreenState extends State<CallScreen> {
         }
       }
       if (mounted) {
+        _connectionWatchdog?.cancel();
         setState(() => _isConnected = true);
       }
       _applySpeakerphone();
@@ -437,6 +461,7 @@ class _CallScreenState extends State<CallScreen> {
     _peerConnection!.onConnectionState = (state) {
       if (!mounted) return;
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
+        _connectionWatchdog?.cancel();
         setState(() => _isConnected = true);
       } else if (state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
                  state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
@@ -450,7 +475,10 @@ class _CallScreenState extends State<CallScreen> {
       if (state == RTCIceConnectionState.RTCIceConnectionStateConnected ||
           state == RTCIceConnectionState.RTCIceConnectionStateCompleted) {
         // ICE connected — mark call as active even before media tracks arrive
-        if (!_isConnected && mounted) setState(() => _isConnected = true);
+        if (!_isConnected && mounted) {
+          _connectionWatchdog?.cancel();
+          setState(() => _isConnected = true);
+        }
       }
     };
 
@@ -572,6 +600,7 @@ class _CallScreenState extends State<CallScreen> {
   void dispose() {
     NativeSecurityService.disableFlagSecure();
     _timer?.cancel();
+    _connectionWatchdog?.cancel();
     _wsCallSubscription?.cancel();
     
     if (_peerConnection != null) {
@@ -638,9 +667,8 @@ class _CallScreenState extends State<CallScreen> {
     if (widget.isPipMode) {
       if (widget.callType == 'audio') {
         // WhatsApp-style compact audio call bar
-        return GestureDetector(
-          onTap: widget.onMinimize,
-          child: Container(
+        // No GestureDetector here — the parent in main.dart handles tap-to-maximize
+        return Container(
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 colors: [Color(0xFF7B2FBE), Color(0xFF0052CC)],
@@ -671,46 +699,47 @@ class _CallScreenState extends State<CallScreen> {
                 ),
               ],
             ),
-          ),
         );
       }
-      // Video PiP
-      return Container(
-        decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF7B2FBE), width: 2),
-        ),
-        child: Stack(
-          children: [
-            if (showRemoteVideo)
-              Positioned.fill(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: RTCVideoView(_remoteRenderer, key: const ValueKey('pip_remote_renderer'), objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
-                ),
-              )
-            else if (showLocalPreviewFullscreen)
-              Positioned.fill(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: RTCVideoView(_localRenderer, key: const ValueKey('pip_local_renderer'), mirror: true, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
-                ),
-              )
-            else
-              Center(child: Icon(widget.callType == 'video' ? Icons.videocam : Icons.phone, color: Colors.white)),
-            Positioned(
-              bottom: 8, left: 0, right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
-                  child: Text(_formatTimer(_secondsElapsed), style: const TextStyle(color: Colors.white, fontSize: 10)),
+      // Video PiP — IgnorePointer lets taps pass to parent GestureDetector for maximize
+      return IgnorePointer(
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF7B2FBE), width: 2),
+          ),
+          child: Stack(
+            children: [
+              if (showRemoteVideo)
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: RTCVideoView(_remoteRenderer, key: const ValueKey('pip_remote_renderer'), objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
+                  ),
                 )
-              )
-            ),
-          ]
-        )
+              else if (showLocalPreviewFullscreen)
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: RTCVideoView(_localRenderer, key: const ValueKey('pip_local_renderer'), mirror: true, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
+                  ),
+                )
+              else
+                Center(child: Icon(widget.callType == 'video' ? Icons.videocam : Icons.phone, color: Colors.white)),
+              Positioned(
+                bottom: 8, left: 0, right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
+                    child: Text(_formatTimer(_secondsElapsed), style: const TextStyle(color: Colors.white, fontSize: 10)),
+                  )
+                )
+              ),
+            ]
+          )
+        ),
       );
     }
 

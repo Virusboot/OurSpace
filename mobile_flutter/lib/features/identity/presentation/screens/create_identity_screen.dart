@@ -210,8 +210,10 @@ class _CreateIdentityScreenState extends State<CreateIdentityScreen> {
     await SecureStorageService.write('auth_token', token);
     await WebSocketClient().connect();
     await SecureStorageService.write('user_info', jsonEncode(userObj));
-    await SecureStorageService.write('app_lock_enabled', 'true');
-    await SecureStorageService.write('user_pin_hash', _enteredPin);
+    await SecureStorageService.write('app_lock_enabled', 'false');
+    if (_enteredPin.isNotEmpty) {
+      await SecureStorageService.write('user_pin_hash', _enteredPin);
+    }
 
     if (mounted) {
       setState(() => _loading = false);

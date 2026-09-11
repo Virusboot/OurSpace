@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../../core/networking/api_client.dart';
 import '../../../../core/networking/websocket_client.dart';
 import '../../../../core/storage/secure_storage_service.dart';
+import '../../../../core/crypto/e2ee_crypto_service.dart';
 import '../../../../shared/widgets/app_gradient_button.dart';
 import '../../../../shared/widgets/brand_icons.dart';
 
@@ -56,7 +57,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadRecentChats();
     _fetchOnlineUsers();
     _wsSubscription = WebSocketClient().stream.listen((event) {
-      if (event['type'] == 'online_users_update') {
+      final type = event['type'];
+      if (type == 'online_users_update') {
         final usersList = event['users'] as List?;
         if (usersList != null && mounted) {
           setState(() {
@@ -65,9 +67,60 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           });
         }
-      } else if (event['type'] == 'profile_update' || event['type'] == 'chat_receive') {
-        final profileImg = event['profileImage'] ?? (event['message']?['senderProfileImage']);
-        final username = event['senderUsername'] ?? (event['message']?['senderUsername']);
+      } else if (type == 'chat_receive') {
+        final msg = event['message'] ?? event;
+        final senderUname = (event['senderUsername'] ?? msg['senderUsername'] ?? '').toString();
+        final senderId = (event['senderId'] ?? msg['senderId'] ?? '').toString();
+        final profileImg = event['profileImage'] ?? msg['senderProfileImage'];
+        final msgId = msg['id']?.toString() ?? '';
+        final encryptedPayload = msg['encryptedPayload'] ?? '';
+
+        final currentUserId = widget.user?['id']?.toString() ?? '';
+        final currentUsername = widget.user?['username']?.toString() ?? '';
+        if ((senderId.isNotEmpty && senderId == currentUserId) ||
+            (senderUname.isNotEmpty && senderUname == currentUsername)) {
+          return;
+        }
+
+        _getOrDecryptSnippet(msgId, encryptedPayload, msg['text'] ?? msg['decryptedText']).then((snippet) {
+          if (!mounted) return;
+          final cleanSenderUname = senderUname.replaceAll('@', '');
+
+          setState(() {
+            final idx = _conversations.indexWhere((c) =>
+              (cleanSenderUname.isNotEmpty && c['username']?.toString().replaceAll('@', '') == cleanSenderUname) ||
+              (senderId.isNotEmpty && c['id']?.toString() == senderId)
+            );
+
+            if (idx >= 0) {
+              final target = _conversations.removeAt(idx);
+              final currentUnread = (target['unread'] is int) ? target['unread'] as int : 0;
+              target['unread'] = currentUnread + 1;
+              target['lastMessage'] = snippet;
+              target['time'] = 'Just now';
+              if (profileImg != null && profileImg.toString().isNotEmpty) {
+                target['profileImage'] = profileImg;
+              }
+              _conversations.insert(0, target);
+            } else if (senderUname.isNotEmpty) {
+              _conversations.insert(0, {
+                'id': senderId.isNotEmpty ? senderId : senderUname,
+                'username': senderUname,
+                'privateId': event['senderPrivateId'] ?? '',
+                'publicKey': event['senderPublicKey'] ?? '',
+                'profileImage': profileImg ?? '',
+                'unread': 1,
+                'lastMessage': snippet,
+                'time': 'Just now',
+              });
+            }
+          });
+
+          unawaited(SecureStorageService.write('recent_chats', jsonEncode(_conversations)));
+        });
+      } else if (type == 'profile_update') {
+        final profileImg = event['profileImage'];
+        final username = event['senderUsername'];
         if (profileImg != null && username != null && mounted) {
           setState(() {
             for (var chat in _conversations) {
@@ -79,6 +132,35 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     });
+  }
+
+  Future<String> _getOrDecryptSnippet(String msgId, String encryptedPayload, dynamic textFallback) async {
+    if (msgId.isNotEmpty) {
+      final cached = await SecureStorageService.read('local_msg_txt_$msgId');
+      if (cached != null && cached.isNotEmpty) return cached;
+    }
+    final fallbackStr = textFallback?.toString() ?? '';
+    if (fallbackStr.isNotEmpty && !fallbackStr.startsWith('[')) return fallbackStr;
+
+    if (encryptedPayload.isNotEmpty) {
+      try {
+        final userPriv = await SecureStorageService.read('user_private_key') ?? '';
+        final decrypted = await E2EECryptoService.decryptPayloadAsync(
+          encryptedPayload: encryptedPayload,
+          recipientPrivateKeyHex: userPriv,
+          senderPublicKey: '',
+          conversationId: '',
+          messageId: msgId,
+        );
+        if (decrypted.isNotEmpty && !decrypted.startsWith('[')) {
+          if (msgId.isNotEmpty) {
+            unawaited(SecureStorageService.write('local_msg_txt_$msgId', decrypted));
+          }
+          return decrypted;
+        }
+      } catch (_) {}
+    }
+    return '📩 New message';
   }
 
   Widget _buildAvatarImage(String? imageSource, {double size = 50, required String fallbackName}) {
@@ -1241,7 +1323,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final searchTxt = isDark ? Colors.white : const Color(0xFF0F172A);
     final searchHint = isDark ? const Color(0xFF6C727F) : const Color(0xFF94A3B8);
     final cardBg = isDark ? const Color(0xFF121317) : const Color(0xFFFFFFFF);
-    final itemSelectedBg = isDark ? const Color(0xFF1B1D23) : const Color(0xFFF1F5F9);
     final itemTxt = isDark ? Colors.white : const Color(0xFF0F172A);
     final itemSubtxt = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
     final avatarBg = isDark ? const Color(0xFF26282F) : const Color(0xFFE2E8F0);
@@ -1492,67 +1573,137 @@ class _HomeScreenState extends State<HomeScreen> {
                                             itemCount: filteredConvs.length,
                                             itemBuilder: (ctx, idx) {
                                               final item = filteredConvs[idx];
-                                              final unread = item['unread'] as int;
-                                              final isSelected = idx == 0;
+                                              final unread = (item['unread'] is int) ? item['unread'] as int : 0;
+                                              final bool hasUnread = unread > 0;
+
+                                              final cardBgColor = hasUnread
+                                                  ? (isDark ? const Color(0xFF7B2FBE).withValues(alpha: 0.18) : const Color(0xFFF3E8FF))
+                                                  : Colors.transparent;
+                                              final cardBorderColor = hasUnread
+                                                  ? (isDark ? const Color(0xFF7B2FBE).withValues(alpha: 0.4) : const Color(0xFFC084FC))
+                                                  : Colors.transparent;
 
                                               return Container(
                                                 margin: const EdgeInsets.only(bottom: 8),
                                                 decoration: BoxDecoration(
-                                                  color: isSelected ? itemSelectedBg : Colors.transparent,
+                                                  color: cardBgColor,
                                                   borderRadius: BorderRadius.circular(20),
+                                                  border: Border.all(
+                                                    color: cardBorderColor,
+                                                    width: hasUnread ? 1.5 : 0,
+                                                  ),
                                                 ),
                                                 child: ListTile(
                                                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                                                  onTap: () => widget.onOpenChat(item),
-                                                  leading: CircleAvatar(
-                                                    radius: 25,
-                                                    backgroundColor: avatarBg,
-                                                    child: ClipRRect(
-                                                      borderRadius: BorderRadius.circular(25),
-                                                      child: _buildAvatarImage(
-                                                        item['profileImage'],
-                                                        size: 50,
-                                                        fallbackName: item['username'].toString(),
+                                                  onTap: () {
+                                                    if (hasUnread) {
+                                                      setState(() {
+                                                        item['unread'] = 0;
+                                                      });
+                                                      unawaited(SecureStorageService.write('recent_chats', jsonEncode(_conversations)));
+                                                    }
+                                                    widget.onOpenChat(item);
+                                                  },
+                                                  leading: Stack(
+                                                    children: [
+                                                      CircleAvatar(
+                                                        radius: 25,
+                                                        backgroundColor: avatarBg,
+                                                        child: ClipRRect(
+                                                          borderRadius: BorderRadius.circular(25),
+                                                          child: _buildAvatarImage(
+                                                            item['profileImage'],
+                                                            size: 50,
+                                                            fallbackName: item['username'].toString(),
+                                                          ),
+                                                        ),
                                                       ),
-                                                    ),
+                                                      if (hasUnread)
+                                                        Positioned(
+                                                          right: 0,
+                                                          top: 0,
+                                                          child: Container(
+                                                            width: 13,
+                                                            height: 13,
+                                                            decoration: BoxDecoration(
+                                                              color: const Color(0xFF22C55E),
+                                                              shape: BoxShape.circle,
+                                                              border: Border.all(
+                                                                color: cardBgColor != Colors.transparent
+                                                                    ? cardBgColor
+                                                                    : (isDark ? const Color(0xFF0F172A) : Colors.white),
+                                                                width: 2,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                    ],
                                                   ),
                                                   title: Text(
-                                                    item['username'],
+                                                    item['username']?.toString() ?? '',
                                                     style: TextStyle(
                                                       color: itemTxt,
-                                                      fontWeight: FontWeight.bold,
+                                                      fontWeight: hasUnread ? FontWeight.w900 : FontWeight.bold,
                                                       fontSize: 15,
                                                     ),
                                                   ),
                                                   subtitle: Padding(
                                                     padding: const EdgeInsets.only(top: 4),
                                                     child: Text(
-                                                      item['lastMessage'],
+                                                      item['lastMessage']?.toString() ?? '',
                                                       maxLines: 1,
                                                       overflow: TextOverflow.ellipsis,
                                                       style: TextStyle(
-                                                        color: itemSubtxt,
+                                                        color: hasUnread
+                                                            ? (isDark ? Colors.white : const Color(0xFF0F172A))
+                                                            : itemSubtxt,
+                                                        fontWeight: hasUnread ? FontWeight.w700 : FontWeight.normal,
                                                         fontSize: 13,
                                                       ),
                                                     ),
                                                   ),
-                                                  trailing: unread > 0
-                                                      ? Container(
-                                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                  trailing: Column(
+                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                                    children: [
+                                                      Text(
+                                                        item['time']?.toString() ?? 'Just now',
+                                                        style: TextStyle(
+                                                          color: hasUnread ? const Color(0xFF7B2FBE) : Colors.grey,
+                                                          fontSize: 11,
+                                                          fontWeight: hasUnread ? FontWeight.bold : FontWeight.normal,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 4),
+                                                      if (hasUnread)
+                                                        Container(
+                                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                                           decoration: BoxDecoration(
-                                                            color: const Color(0xFF7B2FBE),
+                                                            gradient: const LinearGradient(
+                                                              colors: [Color(0xFF9333EA), Color(0xFF7B2FBE)],
+                                                            ),
                                                             borderRadius: BorderRadius.circular(12),
+                                                            boxShadow: [
+                                                              BoxShadow(
+                                                                color: const Color(0xFF7B2FBE).withValues(alpha: 0.4),
+                                                                blurRadius: 6,
+                                                                offset: const Offset(0, 2),
+                                                              ),
+                                                            ],
                                                           ),
                                                           child: Text(
                                                             '$unread',
                                                             style: const TextStyle(
                                                               color: Colors.white,
                                                               fontSize: 11,
-                                                              fontWeight: FontWeight.bold,
+                                                              fontWeight: FontWeight.w900,
                                                             ),
                                                           ),
                                                         )
-                                                      : null,
+                                                      else
+                                                        const SizedBox(height: 16),
+                                                    ],
+                                                  ),
                                                 ),
                                               );
                                             },
@@ -1599,6 +1750,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   label: 'Chat',
                   isSelected: _activeTab == 0,
                   onTap: () => setState(() => _activeTab = 0),
+                  badgeCount: _conversations.fold<int>(0, (sum, item) => sum + ((item['unread'] is int) ? item['unread'] as int : 0)),
                 ),
                 // 2. Calls Tab
                 _buildNavItem(
@@ -1639,6 +1791,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required String label,
     required bool isSelected,
     required VoidCallback onTap,
+    int badgeCount = 0,
   }) {
     final isDark = widget.isDarkMode;
     final unselectedNav = isDark ? const Color(0xFF8E95A5) : const Color(0xFF64748B);
@@ -1652,10 +1805,44 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              color: isSelected ? const Color(0xFF7B2FBE) : unselectedNav,
-              size: 24,
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  icon,
+                  color: isSelected ? const Color(0xFF7B2FBE) : unselectedNav,
+                  size: 24,
+                ),
+                if (badgeCount > 0)
+                  Positioned(
+                    right: -8,
+                    top: -4,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF9333EA), Color(0xFF7B2FBE)],
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF14161C) : Colors.white,
+                          width: 1.5,
+                        ),
+                      ),
+                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      child: Center(
+                        child: Text(
+                          '$badgeCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 3),
             Text(

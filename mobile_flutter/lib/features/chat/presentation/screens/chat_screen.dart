@@ -311,55 +311,94 @@ class _ChatScreenState extends State<ChatScreen> {
       final recipientId = widget.recipient['id']?.toString() ?? 'u2';
       final recipientUname = widget.recipient['username']?.toString() ?? '';
 
-      // 1. Fetch recipient's public key if missing or dummy
+      // Check if conversation ID is already available on recipient map
+      String? convId = widget.recipient['conversationId']?.toString();
+
+      // 1. Fetch recipient's public key concurrently if missing or dummy
       final currentPubKey = widget.recipient['publicKey']?.toString() ?? '';
+      Future<void>? pubKeyFuture;
       if (currentPubKey.isEmpty || !currentPubKey.startsWith('PUB_X25519:')) {
-        try {
-          final query = recipientUname.isNotEmpty ? recipientUname : recipientId;
-          final lookupRes = await ApiClient.get('/users/lookup?query=$query');
-          if (lookupRes['publicKey'] != null) {
-            widget.recipient['publicKey'] = lookupRes['publicKey'];
-          }
-        } catch (_) {}
+        pubKeyFuture = () async {
+          try {
+            final query = recipientUname.isNotEmpty ? recipientUname : recipientId;
+            final lookupRes = await ApiClient.get('/users/lookup?query=$query');
+            if (lookupRes['publicKey'] != null) {
+              widget.recipient['publicKey'] = lookupRes['publicKey'];
+            }
+          } catch (_) {}
+        }();
       }
 
-      // 2. Fetch conversation ID
-      final res = await ApiClient.post('/chat/conversation', {'recipientId': recipientId});
-      _conversationId = res['conversationId'];
+      // 2. Fetch conversation ID if not already available
+      if (convId == null || convId.isEmpty) {
+        final res = await ApiClient.post('/chat/conversation', {'recipientId': recipientId});
+        convId = res['conversationId'];
+      }
+
+      if (pubKeyFuture != null) {
+        await pubKeyFuture;
+      }
+
+      _conversationId = convId;
       if (_conversationId != null) {
+        widget.recipient['conversationId'] = _conversationId;
         _loadMessages(_conversationId!);
       }
     } catch (_) {}
   }
 
   Future<void> _loadMessages(String convId) async {
+    // 1. Instant local cache load for instant UI response
+    try {
+      final cachedJson = await SecureStorageService.read('conv_msgs_$convId');
+      if (cachedJson != null && cachedJson.isNotEmpty) {
+        final cachedList = List<Map<String, dynamic>>.from(jsonDecode(cachedJson));
+        if (mounted && _messages.isEmpty && cachedList.isNotEmpty) {
+          setState(() {
+            _messages.addAll(cachedList);
+          });
+          _scrollToBottom();
+        }
+      }
+    } catch (_) {}
+
+    // 2. Fetch latest messages from server & decrypt concurrently
     try {
       final res = await ApiClient.get('/chat/messages/$convId');
       final rawMsgs = res['messages'] as List<dynamic>;
       if (rawMsgs.isNotEmpty) {
-        final decryptedList = <Map<String, dynamic>>[];
         final currentUserId = widget.user['id']?.toString() ?? '';
+        final userPriv = await SecureStorageService.read('user_private_key') ?? '';
+        final recipientPubKey = widget.recipient['publicKey']?.toString() ?? '';
 
-        for (final msg in rawMsgs) {
+        final decryptedList = await Future.wait(rawMsgs.map((msg) async {
           final msgId = msg['id']?.toString() ?? '';
           final senderId = msg['senderId']?.toString() ?? '';
-          final cachedText = await SecureStorageService.read('local_msg_txt_$msgId');
-          
-          String text = cachedText ?? '';
+
+          // Trigger read receipt for unread incoming messages
+          if (senderId != currentUserId && msg['status'] != 'seen' && msgId.isNotEmpty) {
+            WebSocketClient().send({
+              'type': 'chat_read',
+              'messageId': msgId,
+              'senderId': senderId,
+              'recipientId': currentUserId,
+            });
+          }
+
+          String text = await SecureStorageService.read('local_msg_txt_$msgId') ?? '';
           if (text.isEmpty) {
             if (senderId == currentUserId) {
               text = msg['text'] ?? msg['decryptedText'] ?? '';
             } else {
-              final userPriv = await SecureStorageService.read('user_private_key') ?? '';
               text = await E2EECryptoService.decryptPayloadAsync(
                 encryptedPayload: msg['encryptedPayload'] ?? '',
                 recipientPrivateKeyHex: userPriv,
-                senderPublicKey: widget.recipient['publicKey'] ?? '',
+                senderPublicKey: recipientPubKey,
                 conversationId: convId,
                 messageId: msgId,
               );
               if (text.isNotEmpty && !text.startsWith('[Decryption Error') && !text.startsWith('[Replay Error') && msgId.isNotEmpty) {
-                await SecureStorageService.write('local_msg_txt_$msgId', text);
+                unawaited(SecureStorageService.write('local_msg_txt_$msgId', text));
               }
             }
           }
@@ -372,24 +411,14 @@ class _ChatScreenState extends State<ChatScreen> {
             } catch (_) {}
           }
 
-          // Trigger read receipt for unread incoming messages
-          if (senderId != currentUserId && msg['status'] != 'seen' && msgId.isNotEmpty) {
-            WebSocketClient().send({
-              'type': 'chat_read',
-              'messageId': msgId,
-              'senderId': senderId,
-              'recipientId': currentUserId,
-            });
-          }
-
           final cleanText = _cleanDisplayText(text, msg['text'] ?? msg['decryptedText']);
-          decryptedList.add({
+          return <String, dynamic>{
             ...msg,
             'decryptedText': cleanText,
             'time': timeStr,
             'isTyping': false
-          });
-        }
+          };
+        }));
 
         if (mounted) {
           setState(() {
@@ -409,6 +438,8 @@ class _ChatScreenState extends State<ChatScreen> {
             });
           });
           _scrollToBottom();
+          // Update persistent conversation message cache asynchronously
+          unawaited(SecureStorageService.write('conv_msgs_$convId', jsonEncode(_messages)));
         }
       }
     } catch (_) {}

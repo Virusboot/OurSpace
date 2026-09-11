@@ -54,9 +54,11 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
   bool _activeIsViewOnce = false;
   bool _isDarkMode = false;
   Map<String, dynamic>? _incomingCallData;
+  /// Remembers the screen the user was on before entering a call,
+  /// so we can return to it (e.g. chat) when the call ends.
+  String _screenBeforeCall = 'home';
 
   final GlobalKey _callScreenKey = GlobalKey();
-  final GlobalKey _pipCallScreenKey = GlobalKey();
   final _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
   StreamSubscription<Map<String, dynamic>>? _wsCallSubscription;
@@ -231,9 +233,9 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
         _incomingCallData = null;
         _currentScreen = 'home';
       });
-    } else if (_currentScreen == 'call' && _activeCallId == event['callId']) {
+    } else if ((_currentScreen == 'call' || _activeCallId != null) && _activeCallId == event['callId']) {
       setState(() {
-        _currentScreen = 'home';
+        _currentScreen = _screenBeforeCall;
         _activeCallId = null;
       });
     }
@@ -423,6 +425,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
           return;
         }
         setState(() {
+          _screenBeforeCall = _currentScreen;
           _activeCallType = res['callType'] ?? 'video';
           _activeCallId = res['callId'];
           _activeRecipient = {
@@ -718,62 +721,79 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
               child: _currentScreen == 'call' ? const SizedBox() : _buildScreen(),
             ),
           ),
-          if (_activeCallId != null && _currentScreen == 'call')
-            Positioned.fill(
-              child: CallScreen(
-                key: _callScreenKey,
-                callType: _activeCallType,
-                recipient: _activeRecipient,
-                callId: _activeCallId,
-                user: _user,
-                isDarkMode: _isDarkMode,
-                isPipMode: false,
-                isOutgoing: _activeIsOutgoing,
-                onMinimize: () => setState(() => _currentScreen = 'home'),
-                onCallEnded: (callType, duration) {
-                  // Send call log message to chat so it appears as call history
-                  if (_activeRecipient?['id'] != null && _user?['id'] != null) {
-                    WebSocketClient().send({
-                      'type': 'call_log',
-                      'callId': _activeCallId,
-                      'callType': callType,
-                      'durationSeconds': duration,
-                      'senderId': _user!['id'],
-                      'targetId': _activeRecipient!['id'],
-                      'senderUsername': _user!['username'],
-                    });
-                  }
-                },
-                onEndCall: () {
-                  WebSocketClient().send({'type': 'call_hangup', 'callId': _activeCallId});
-                  setState(() { _activeCallId = null; _currentScreen = 'home'; });
-                },
-              ),
-            ),
-          if (_activeCallId != null && _currentScreen != 'call' && _currentScreen != 'enter_pin' && _currentScreen != 'create_pin')
-            Positioned(
-              right: 20,
-              bottom: 100,
-              width: 120,
-              height: 180,
-              child: GestureDetector(
-                onTap: () => setState(() => _currentScreen = 'call'),
-                child: CallScreen(
-                  key: _pipCallScreenKey,
-                  callType: _activeCallType,
-                  recipient: _activeRecipient,
-                  callId: _activeCallId,
-                  user: _user,
-                  isDarkMode: _isDarkMode,
-                  isPipMode: true,
-                  isOutgoing: _activeIsOutgoing,
-                  onEndCall: () {
-                    WebSocketClient().send({'type': 'call_hangup', 'callId': _activeCallId});
-                    setState(() => _activeCallId = null);
-                  },
+          // Single CallScreen instance — stays alive across PiP ↔ fullscreen
+          // transitions so that call timer, WebRTC connection, and all state
+          // are preserved (no dispose/recreate cycle).
+          if (_activeCallId != null && _currentScreen != 'enter_pin' && _currentScreen != 'create_pin')
+            _currentScreen == 'call'
+              ? Positioned.fill(
+                  child: CallScreen(
+                    key: _callScreenKey,
+                    callType: _activeCallType,
+                    recipient: _activeRecipient,
+                    callId: _activeCallId,
+                    user: _user,
+                    isDarkMode: _isDarkMode,
+                    isPipMode: false,
+                    isOutgoing: _activeIsOutgoing,
+                    onMinimize: () => setState(() => _currentScreen = 'home'),
+                    onCallEnded: (callType, duration) {
+                      // Send call log message to chat so it appears as call history
+                      if (_activeRecipient?['id'] != null && _user?['id'] != null) {
+                        WebSocketClient().send({
+                          'type': 'call_log',
+                          'callId': _activeCallId,
+                          'callType': callType,
+                          'durationSeconds': duration,
+                          'senderId': _user!['id'],
+                          'targetId': _activeRecipient!['id'],
+                          'senderUsername': _user!['username'],
+                        });
+                      }
+                    },
+                    onEndCall: () {
+                      WebSocketClient().send({'type': 'call_hangup', 'callId': _activeCallId});
+                      setState(() { _activeCallId = null; _currentScreen = _screenBeforeCall; });
+                    },
+                  ),
+                )
+              : Positioned(
+                  right: 20,
+                  bottom: 100,
+                  width: 120,
+                  height: 180,
+                  child: GestureDetector(
+                    onTap: () => setState(() => _currentScreen = 'call'),
+                    child: CallScreen(
+                      key: _callScreenKey,
+                      callType: _activeCallType,
+                      recipient: _activeRecipient,
+                      callId: _activeCallId,
+                      user: _user,
+                      isDarkMode: _isDarkMode,
+                      isPipMode: true,
+                      isOutgoing: _activeIsOutgoing,
+                      onMinimize: () => setState(() => _currentScreen = 'home'),
+                      onCallEnded: (callType, duration) {
+                        if (_activeRecipient?['id'] != null && _user?['id'] != null) {
+                          WebSocketClient().send({
+                            'type': 'call_log',
+                            'callId': _activeCallId,
+                            'callType': callType,
+                            'durationSeconds': duration,
+                            'senderId': _user!['id'],
+                            'targetId': _activeRecipient!['id'],
+                            'senderUsername': _user!['username'],
+                          });
+                        }
+                      },
+                      onEndCall: () {
+                        WebSocketClient().send({'type': 'call_hangup', 'callId': _activeCallId});
+                        setState(() { _activeCallId = null; _currentScreen = _screenBeforeCall; });
+                      },
+                    ),
+                  ),
                 ),
-              ),
-            ),
         ],
       ),
     );
@@ -824,6 +844,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
             // If a callId was given directly (incoming call), use it
             if (callId != null) {
               setState(() {
+                _screenBeforeCall = _currentScreen;
                 _activeCallType = type;
                 _activeCallId = callId;
                 _activeRecipient = recipient ?? {'username': '@user'};
@@ -842,6 +863,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
               final generatedCallId = res['callId'] ?? 'call_${DateTime.now().millisecondsSinceEpoch}';
               if (mounted) {
                 setState(() {
+                  _screenBeforeCall = _currentScreen;
                   _activeCallType = type;
                   _activeCallId = generatedCallId;
                   _activeRecipient = recipient ?? {'username': '@user'};
@@ -869,6 +891,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
               final fallbackId = 'call_${DateTime.now().millisecondsSinceEpoch}';
               if (mounted) {
                 setState(() {
+                  _screenBeforeCall = _currentScreen;
                   _activeCallType = type;
                   _activeCallId = fallbackId;
                   _activeRecipient = recipient ?? {'username': '@user'};
@@ -905,6 +928,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
 
             if (callId != null) {
               setState(() {
+                _screenBeforeCall = _currentScreen;
                 _activeCallType = type;
                 _activeCallId = callId;
                 _activeRecipient = recipient;
@@ -921,6 +945,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
               final generatedCallId = res['callId'] ?? 'call_${DateTime.now().millisecondsSinceEpoch}';
               if (mounted) {
                 setState(() {
+                  _screenBeforeCall = _currentScreen;
                   _activeCallType = type;
                   _activeCallId = generatedCallId;
                   _activeRecipient = recipient;
@@ -943,6 +968,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
               final fallbackId = 'call_${DateTime.now().millisecondsSinceEpoch}';
               if (mounted) {
                 setState(() {
+                  _screenBeforeCall = _currentScreen;
                   _activeCallType = type;
                   _activeCallId = fallbackId;
                   _activeRecipient = recipient;
@@ -1001,6 +1027,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
           senderProfileImage: _incomingCallData!['senderProfileImage'],
           onAccept: () {
             setState(() {
+              _screenBeforeCall = _currentScreen;
               _activeCallType = _incomingCallData!['callType'] ?? 'video';
               _activeCallId = _incomingCallData!['callId'];
               _activeRecipient = {
