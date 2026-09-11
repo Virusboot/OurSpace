@@ -636,14 +636,14 @@ class _CallScreenState extends State<CallScreen> {
               Positioned.fill(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(14),
-                  child: RTCVideoView(_remoteRenderer, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
+                  child: RTCVideoView(_remoteRenderer, key: const ValueKey('pip_remote_renderer'), objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
                 ),
               )
             else if (showLocalPreviewFullscreen)
               Positioned.fill(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(14),
-                  child: RTCVideoView(_localRenderer, mirror: true, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
+                  child: RTCVideoView(_localRenderer, key: const ValueKey('pip_local_renderer'), mirror: true, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
                 ),
               )
             else
@@ -685,6 +685,7 @@ class _CallScreenState extends State<CallScreen> {
                 Positioned.fill(
                   child: RTCVideoView(
                     _remoteRenderer,
+                    key: const ValueKey('full_remote_renderer'),
                     objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
                   ),
                 )
@@ -692,6 +693,7 @@ class _CallScreenState extends State<CallScreen> {
                 Positioned.fill(
                   child: RTCVideoView(
                     _localRenderer,
+                    key: const ValueKey('full_local_renderer'),
                     mirror: true,
                     objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
                   ),
@@ -720,6 +722,7 @@ class _CallScreenState extends State<CallScreen> {
                       borderRadius: BorderRadius.circular(14),
                       child: RTCVideoView(
                         _localRenderer,
+                        key: const ValueKey('pip_overlay_local_renderer'),
                         mirror: true,
                         objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
                       ),
@@ -992,6 +995,7 @@ class _CallScreenState extends State<CallScreen> {
                       borderRadius: BorderRadius.circular(14),
                       child: RTCVideoView(
                         _localRenderer,
+                        key: const ValueKey('guest_overlay_local_renderer'),
                         mirror: true,
                         objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
                       ),
