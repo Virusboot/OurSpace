@@ -81,23 +81,11 @@ router.get('/', authenticateToken, turnRateLimiter, (req: Request, res: Response
       });
     }
 
-    // Fallback TURN config for when TURN_URL is not yet configured
+    // Fallback STUN config for when TURN_URL is not yet configured
     if (!turnUrl || !turnUrl.startsWith('turn:')) {
-      iceServers.push({
-        urls: 'turn:turn.kittuvirusstudio.in:3478',
-        username,
-        credential,
-      });
-      iceServers.push({
-        urls: 'turn:turn.kittuvirusstudio.in:3478?transport=tcp',
-        username,
-        credential,
-      });
-      iceServers.push({
-        urls: 'turns:turn.kittuvirusstudio.in:5349',
-        username,
-        credential,
-      });
+      iceServers.push({ urls: 'stun:stun2.l.google.com:19302' });
+      iceServers.push({ urls: 'stun:stun3.l.google.com:19302' });
+      iceServers.push({ urls: 'stun:stun4.l.google.com:19302' });
     }
 
     // Return ICE config — credential and secret are safe (credential is HMAC output, not the secret itself)

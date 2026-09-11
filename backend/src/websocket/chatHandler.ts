@@ -41,7 +41,9 @@ export async function handleChatMessage(
         ...msg,
         senderUsername: payload.senderUsername || payload.senderId || 'Someone',
         senderProfileImage: payload.senderProfileImage,
-        text: payload.text
+        text: payload.text,
+        mediaPath: payload.mediaPath,
+        isViewOnce: payload.isViewOnce
       }
     };
 
@@ -121,7 +123,12 @@ export async function handleChatMessage(
     }
   } else if (type === 'chat_read') {
     if (clientMsgId) {
-      const updated = await markMessageRead(clientMsgId, readTtlSeconds);
+      let requestingUserId = recipientId;
+      if (requestingUserId && !requestingUserId.startsWith('usr_')) {
+        const u = await getUserByUsername(payload.recipientUsername || requestingUserId) || await getUserByPrivateId(payload.recipientPrivateId || requestingUserId);
+        if (u) requestingUserId = u.id;
+      }
+      const updated = await markMessageRead(clientMsgId, requestingUserId || undefined, readTtlSeconds);
       const ackPayload = {
         type: 'chat_read_ack',
         messageId: clientMsgId,
@@ -129,7 +136,7 @@ export async function handleChatMessage(
         readAt: updated?.readAt,
         expiresAt: updated?.expiresAt
       };
-      let targetSenderId = senderId;
+      let targetSenderId = updated?.senderId || senderId;
       if (targetSenderId && !targetSenderId.startsWith('usr_')) {
         const u = await getUserByUsername(payload.senderUsername || targetSenderId) || await getUserByPrivateId(payload.senderPrivateId || targetSenderId);
         if (u) targetSenderId = u.id;

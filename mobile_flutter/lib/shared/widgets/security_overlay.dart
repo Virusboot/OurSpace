@@ -37,7 +37,11 @@ class _SecurityOverlayState extends State<SecurityOverlay> with WidgetsBindingOb
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (widget.isSensitive) {
       setState(() {
-        _isBackground = state == AppLifecycleState.paused || state == AppLifecycleState.inactive;
+        if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+          _isBackground = true;
+        } else {
+          _isBackground = false;
+        }
       });
     }
   }

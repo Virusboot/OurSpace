@@ -156,4 +156,15 @@ router.get('/lookup', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
+router.get('/by-id/:id', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const targetId = req.params.id;
+    const user = await getUserById(targetId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    return res.json({ id: user.id, privateId: user.privateId, username: user.username, publicKey: user.publicKey });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

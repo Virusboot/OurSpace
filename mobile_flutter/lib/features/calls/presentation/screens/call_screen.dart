@@ -89,7 +89,20 @@ class _CallScreenState extends State<CallScreen> {
     try {
       final res = await ApiClient.get('/turn-credentials');
       if (res['iceServers'] != null && res['iceServers'] is List) {
-        _iceConfig['iceServers'] = res['iceServers'];
+        final List rawServers = res['iceServers'];
+        final validServers = <Map<String, dynamic>>[];
+        for (final s in rawServers) {
+          if (s is Map) {
+            final urlVal = s['urls'];
+            final urlStr = urlVal is List ? urlVal.join(',') : urlVal?.toString() ?? '';
+            if (urlStr.isNotEmpty && !urlStr.contains('kittuvirusstudio.in')) {
+              validServers.add(Map<String, dynamic>.from(s));
+            }
+          }
+        }
+        if (validServers.isNotEmpty) {
+          _iceConfig['iceServers'] = validServers;
+        }
       }
     } catch (_) {}
   }
@@ -326,6 +339,10 @@ class _CallScreenState extends State<CallScreen> {
       await _setupLocalMedia();
     }
 
+    try {
+      _remoteStream ??= await createLocalMediaStream('remote_stream_${widget.callId ?? DateTime.now().millisecondsSinceEpoch}');
+    } catch (_) {}
+
     _peerConnection = await createPeerConnection(_iceConfig);
 
     _peerConnection!.onIceCandidate = (candidate) {
@@ -349,7 +366,7 @@ class _CallScreenState extends State<CallScreen> {
       }
     };
 
-    _peerConnection!.onTrack = (event) async {
+    _peerConnection!.onTrack = (event) {
       if (!mounted) return;
       if (event.streams.isNotEmpty) {
         setState(() {
@@ -359,14 +376,14 @@ class _CallScreenState extends State<CallScreen> {
           }
           _isConnected = true;
         });
-      } else {
-        final stream = await createLocalMediaStream('remote_stream_${DateTime.now().millisecondsSinceEpoch}');
-        stream.addTrack(event.track);
+      } else if (event.track != null) {
+        try {
+          _remoteStream?.addTrack(event.track);
+        } catch (_) {}
         if (!mounted) return;
         setState(() {
-          _remoteStream = stream;
-          if (widget.callType == 'video') {
-            _remoteRenderer.srcObject = stream;
+          if (widget.callType == 'video' && _remoteStream != null) {
+            _remoteRenderer.srcObject = _remoteStream;
           }
           _isConnected = true;
         });
@@ -525,11 +542,30 @@ class _CallScreenState extends State<CallScreen> {
     _timer?.cancel();
     _wsCallSubscription?.cancel();
     
-    _localStream?.getTracks().forEach((track) => track.stop());
-    _localStream?.dispose();
-    _remoteStream?.dispose();
-    _peerConnection?.close();
-    _peerConnection?.dispose();
+    if (_peerConnection != null) {
+      try {
+        _peerConnection!.onIceCandidate = null;
+        _peerConnection!.onTrack = null;
+        _peerConnection!.onAddStream = null;
+        _peerConnection!.onConnectionState = null;
+        _peerConnection!.onIceConnectionState = null;
+      } catch (_) {}
+    }
+
+    try {
+      _localStream?.getTracks().forEach((track) => track.stop());
+      _localStream?.dispose();
+    } catch (_) {}
+
+    try {
+      _remoteStream?.getTracks().forEach((track) => track.stop());
+      _remoteStream?.dispose();
+    } catch (_) {}
+
+    try {
+      _peerConnection?.close();
+      _peerConnection?.dispose();
+    } catch (_) {}
     
     if (widget.callType == 'video') {
       try {

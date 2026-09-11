@@ -147,18 +147,22 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
   }
 
   void _handleIncomingCall(Map<String, dynamic> event) {
-    final incomingCallId = event['callId'];
+    final incomingCallId = event['callId']?.toString();
 
     // If this signaling event belongs to an active call we are currently in, ignore it here (CallScreen will process the WebRTC offer/SDP)
-    if (_activeCallId != null && _activeCallId == incomingCallId) {
+    if (_activeCallId != null && _activeCallId.toString() == incomingCallId) {
       return;
     }
     // If this signal belongs to an incoming call we are currently displaying/answering, do not hang up
-    if (_incomingCallData != null && _incomingCallData!['callId'] == incomingCallId) {
+    if (_incomingCallData != null && _incomingCallData!['callId']?.toString() == incomingCallId) {
       return;
     }
 
     if (_currentScreen == 'call' || _currentScreen == 'incoming_call') {
+      // If the incoming signal is an offer/invite for the current active call, ignore it so CallScreen can handle it
+      if (incomingCallId != null && (_activeCallId?.toString() == incomingCallId || _incomingCallData?['callId']?.toString() == incomingCallId)) {
+        return;
+      }
       WebSocketClient().send({
         'type': 'call_hangup',
         'callId': event['callId'],

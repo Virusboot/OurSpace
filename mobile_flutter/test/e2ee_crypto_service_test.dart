@@ -137,6 +137,27 @@ void main() {
       expect(decrypted.contains('signature verification failed') || decrypted.contains('Authentication failed'), isTrue);
     });
 
+    test('6b. Fallback Conversation HKDF & Signature: Message encrypted without conversationId decrypts cleanly', () async {
+      final aliceKeys = await E2EECryptoService.generateIdentityKeys();
+      final bobKeys = await E2EECryptoService.generateIdentityKeys();
+
+      final ciphertext = await E2EECryptoService.encryptPayloadAsync(
+        plaintext: 'Fallback Decryption Text',
+        recipientPublicKey: bobKeys['publicKey']!,
+        senderPrivateKeyHex: aliceKeys['privateKey']!,
+        senderEd25519PrivateKeyHex: aliceKeys['ed25519PrivateKeyHex']!,
+        conversationId: null,
+      );
+
+      final decrypted = await E2EECryptoService.decryptPayloadAsync(
+        encryptedPayload: ciphertext,
+        recipientPrivateKeyHex: bobKeys['privateKey']!,
+        conversationId: 'conv_AFTER_ASSIGNED',
+      );
+
+      expect(decrypted, equals('Fallback Decryption Text'));
+    });
+
     test('7. Envelope Replay Protection: Replaying identical signature envelope is rejected', () async {
       final aliceKeys = await E2EECryptoService.generateIdentityKeys();
       final bobKeys = await E2EECryptoService.generateIdentityKeys();

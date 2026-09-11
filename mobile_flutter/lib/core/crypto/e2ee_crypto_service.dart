@@ -14,8 +14,9 @@ class E2EECryptoService {
   static final Hkdf _hkdf = Hkdf(hmac: Hmac.sha256(), outputLength: 32);
   static final Ed25519 _ed25519 = Ed25519();
 
-  // Bounded replay cache (max 1000 signature hashes mapped to messageId)
+  // Bounded replay cache (max 1000 signature hashes mapped to messageId & decrypted text)
   static final Map<String, String> _seenEnvelopeSignatures = <String, String>{};
+  static final Map<String, String> _seenEnvelopeTexts = <String, String>{};
 
   static String generateRandomHex(int length) {
     final values = List<int>.generate(length, (_) => _random.nextInt(256));
@@ -185,12 +186,29 @@ class E2EECryptoService {
         if (senderEdPubHex.isNotEmpty && sigHex.isNotEmpty) {
           final edPubBytes = _hexToBytes(senderEdPubHex);
           final edPubKey = SimplePublicKey(edPubBytes, type: KeyPairType.ed25519);
-          final payloadToVerify = utf8.encode('V3:$senderEdPubHex:$ephemeralPubKeyHex:$nonceHex:$ciphertextBase64:$tagBase64:${conversationId ?? ""}');
           final sigBytes = _hexToBytes(sigHex);
-          final isValidSig = await _ed25519.verify(
-            payloadToVerify,
-            signature: Signature(sigBytes, publicKey: edPubKey),
-          );
+
+          // Try candidate payloads to verify signature: with conversationId, empty conversationId, and "default_conv"
+          final candidatePayloads = <List<int>>[
+            utf8.encode('V3:$senderEdPubHex:$ephemeralPubKeyHex:$nonceHex:$ciphertextBase64:$tagBase64:${conversationId ?? ""}'),
+            if (conversationId != null && conversationId.isNotEmpty) ...[
+              utf8.encode('V3:$senderEdPubHex:$ephemeralPubKeyHex:$nonceHex:$ciphertextBase64:$tagBase64:'),
+              utf8.encode('V3:$senderEdPubHex:$ephemeralPubKeyHex:$nonceHex:$ciphertextBase64:$tagBase64:default_conv'),
+            ],
+          ];
+
+          bool isValidSig = false;
+          for (final payload in candidatePayloads) {
+            final valid = await _ed25519.verify(
+              payload,
+              signature: Signature(sigBytes, publicKey: edPubKey),
+            );
+            if (valid) {
+              isValidSig = true;
+              break;
+            }
+          }
+
           if (!isValidSig) {
             return '[Decryption Error: Ed25519 signature verification failed]';
           }
@@ -208,29 +226,47 @@ class E2EECryptoService {
           remotePublicKey: ephemeralSimplePubKey,
         );
 
-        // Derive 256-bit symmetric key via HKDF with domain separation
-        final contextSalt = utf8.encode('OurSpace_E2EE_V3_HKDF:${conversationId ?? "default_conv"}');
-        final derivedKey = await _hkdf.deriveKey(
-          secretKey: sharedSecret,
-          nonce: contextSalt,
-        );
+        // Candidate salts for HKDF derivation: specific conversationId, default_conv, and legacy salt
+        final candidateSalts = <List<int>>[
+          utf8.encode('OurSpace_E2EE_V3_HKDF:${conversationId ?? "default_conv"}'),
+          if (conversationId != null && conversationId.isNotEmpty)
+            utf8.encode('OurSpace_E2EE_V3_HKDF:default_conv'),
+          utf8.encode('OurSpace_E2EE_V2_HKDF_Salt'),
+        ];
 
         final nonce = _hexToBytes(nonceHex);
         final cipherText = base64.decode(ciphertextBase64);
         final macBytes = base64.decode(tagBase64);
-
         final secretBox = SecretBox(
           cipherText,
           nonce: nonce,
           mac: Mac(macBytes),
         );
 
-        final decryptedBytes = await _aesGcm.decrypt(
-          secretBox,
-          secretKey: derivedKey,
-        );
+        List<int>? decryptedBytes;
+        for (final contextSalt in candidateSalts) {
+          try {
+            final derivedKey = await _hkdf.deriveKey(
+              secretKey: sharedSecret,
+              nonce: contextSalt,
+            );
+            decryptedBytes = await _aesGcm.decrypt(
+              secretBox,
+              secretKey: derivedKey,
+            );
+            break;
+          } catch (_) {}
+        }
 
-        return utf8.decode(decryptedBytes);
+        if (decryptedBytes != null) {
+          final decoded = utf8.decode(decryptedBytes);
+          if (sigHex.isNotEmpty) {
+            _seenEnvelopeTexts[sigHex] = decoded;
+          }
+          return decoded;
+        }
+
+        return '[Decryption Error: Authentication failed or tampered payload]';
       } catch (e) {
         return '[Decryption Error: Authentication failed or tampered payload]';
       }
@@ -287,7 +323,7 @@ class E2EECryptoService {
         try {
           final base64Content = parts[2];
           final bytes = base64.decode(base64Content);
-          return '[Legacy Unauthenticated] ${utf8.decode(bytes)}';
+          return utf8.decode(bytes);
         } catch (_) {}
       }
     }
@@ -307,7 +343,7 @@ class E2EECryptoService {
   static String decryptPayload(String encryptedPayload, String senderPublicKey) {
     if (!encryptedPayload.startsWith('E2EE_GCM:')) {
       if (encryptedPayload.startsWith('E2EE_V3_AES_GCM:') || encryptedPayload.startsWith('E2EE_V2_AES_GCM:')) {
-        return '[Processing E2EE Message...]';
+        return 'Processing message...';
       }
       return encryptedPayload;
     }
@@ -317,7 +353,7 @@ class E2EECryptoService {
     try {
       final base64Content = parts[2];
       final bytes = base64.decode(base64Content);
-      return '[Legacy Unauthenticated] ${utf8.decode(bytes)}';
+      return utf8.decode(bytes);
     } catch (_) {
       return '[Decryption Error: Unreadable message payload]';
     }

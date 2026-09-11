@@ -138,6 +138,25 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
+  String _cleanDisplayText(String text, dynamic fallback) {
+    if (text.isEmpty) {
+      final fbStr = fallback?.toString() ?? '';
+      return (fbStr.isNotEmpty && !fbStr.startsWith('[')) ? fbStr : 'Encrypted message';
+    }
+    String clean = text.trim();
+    if (clean.startsWith('[Legacy Unauthenticated] ')) {
+      clean = clean.substring('[Legacy Unauthenticated] '.length);
+    }
+    if (clean.startsWith('[Replay Error') || clean.startsWith('[Decryption Error')) {
+      final fbStr = fallback?.toString() ?? '';
+      if (fbStr.isNotEmpty && !fbStr.startsWith('[')) {
+        return fbStr;
+      }
+      return 'Encrypted message';
+    }
+    return clean;
+  }
+
   void _listenToWebSockets() {
     WebSocketClient().connect();
     _wsSubscription = WebSocketClient().stream.listen((event) {
@@ -169,16 +188,27 @@ class _ChatScreenState extends State<ChatScreen> {
             }
           }
 
+          final cleanText = _cleanDisplayText(text, msg['text'] ?? msg['decryptedText']);
+          final existingIdx = _messages.indexWhere((m) => m['id'] == msgId);
+          final existingMsg = existingIdx >= 0 ? _messages[existingIdx] : null;
+
           final newMsg = {
             'id': msgId,
             'conversationId': msg['conversationId'] ?? _conversationId ?? '',
             'senderId': msg['senderId'] ?? widget.recipient['id'],
             'encryptedPayload': encrypted,
-            'decryptedText': text.isNotEmpty ? text : (msg['text'] ?? 'Encrypted message'),
-            'status': msg['status'] ?? 'delivered',
-            'time': 'Just now',
+            'decryptedText': cleanText,
+            'messageType': msg['messageType'] ?? existingMsg?['messageType'] ?? 'text',
+            'mediaPath': (msg['mediaPath'] != null && msg['mediaPath'].toString().isNotEmpty)
+                ? msg['mediaPath']
+                : (existingMsg?['mediaPath'] ?? ''),
+            'isViewOnce': msg['isViewOnce'] == true ||
+                msg['messageType'] == 'view_once_image' ||
+                existingMsg?['isViewOnce'] == true,
+            'status': msg['status'] ?? existingMsg?['status'] ?? 'delivered',
+            'time': existingMsg?['time'] ?? 'Just now',
             'isTyping': false,
-            'createdAt': msg['createdAt'] ?? DateTime.now().toIso8601String(),
+            'createdAt': msg['createdAt'] ?? existingMsg?['createdAt'] ?? DateTime.now().toIso8601String(),
           };
 
           // Confirm read receipt if user is actively on this chat screen
@@ -258,9 +288,27 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _initChat() async {
     try {
-      final res = await ApiClient.post('/chat/conversation', {'recipientId': widget.recipient['id'] ?? 'u2'});
+      final recipientId = widget.recipient['id']?.toString() ?? 'u2';
+      final recipientUname = widget.recipient['username']?.toString() ?? '';
+
+      // 1. Fetch recipient's public key if missing or dummy
+      final currentPubKey = widget.recipient['publicKey']?.toString() ?? '';
+      if (currentPubKey.isEmpty || !currentPubKey.startsWith('PUB_X25519:')) {
+        try {
+          final query = recipientUname.isNotEmpty ? recipientUname : recipientId;
+          final lookupRes = await ApiClient.get('/users/lookup?query=$query');
+          if (lookupRes != null && lookupRes['publicKey'] != null) {
+            widget.recipient['publicKey'] = lookupRes['publicKey'];
+          }
+        } catch (_) {}
+      }
+
+      // 2. Fetch conversation ID
+      final res = await ApiClient.post('/chat/conversation', {'recipientId': recipientId});
       _conversationId = res['conversationId'];
-      _loadMessages(_conversationId!);
+      if (_conversationId != null) {
+        _loadMessages(_conversationId!);
+      }
     } catch (_) {}
   }
 
@@ -314,9 +362,10 @@ class _ChatScreenState extends State<ChatScreen> {
             });
           }
 
+          final cleanText = _cleanDisplayText(text, msg['text'] ?? msg['decryptedText']);
           decryptedList.add({
             ...msg,
-            'decryptedText': text.isNotEmpty ? text : 'Encrypted message',
+            'decryptedText': cleanText,
             'time': timeStr,
             'isTyping': false
           });
@@ -348,6 +397,29 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _handleSend() async {
     final text = _inputCtrl.text.trim();
     if (text.isEmpty) return;
+
+    // Ensure conversation ID is created
+    if (_conversationId == null || _conversationId!.isEmpty) {
+      try {
+        final res = await ApiClient.post('/chat/conversation', {'recipientId': widget.recipient['id'] ?? 'u2'});
+        _conversationId = res['conversationId'];
+      } catch (_) {}
+    }
+
+    // Ensure recipient public key is fetched if missing/dummy
+    final currentPubKey = widget.recipient['publicKey']?.toString() ?? '';
+    if (currentPubKey.isEmpty || !currentPubKey.startsWith('PUB_X25519:')) {
+      try {
+        final recipientUname = widget.recipient['username']?.toString() ?? '';
+        final recipientId = widget.recipient['id']?.toString() ?? '';
+        final query = recipientUname.isNotEmpty ? recipientUname : recipientId;
+        final lookupRes = await ApiClient.get('/users/lookup?query=$query');
+        if (lookupRes != null && lookupRes['publicKey'] != null) {
+          widget.recipient['publicKey'] = lookupRes['publicKey'];
+        }
+      } catch (_) {}
+    }
+
     _inputCtrl.clear();
 
     final clientMsgId = 'msg_${DateTime.now().millisecondsSinceEpoch}_${(_messages.length + 1)}';
@@ -462,15 +534,10 @@ class _ChatScreenState extends State<ChatScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (mediaPath.isNotEmpty && File(mediaPath).existsSync())
+              if (mediaPath.isNotEmpty)
                 Stack(
                   children: [
-                    Image.file(
-                      File(mediaPath),
-                      height: 180,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
+                    _renderImageWidget(mediaPath, 180),
                     if (isViewOnce)
                       Positioned.fill(
                         child: Container(
@@ -570,7 +637,7 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       final picker = ImagePicker();
       final picked = await picker.pickImage(source: source, maxWidth: 1000, maxHeight: 1000, imageQuality: 85);
-      if (picked != null) {
+      if (picked != null && mounted) {
         _showSendImagePreviewDialog(picked.path, isViewOnce: isViewOnce);
       }
     } catch (e) {
@@ -584,6 +651,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (ctx) => AlertDialog(
         backgroundColor: isDark ? const Color(0xFF14161C) : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -597,12 +665,18 @@ class _ChatScreenState extends State<ChatScreen> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(14),
-                child: Image.file(
-                  File(imagePath),
-                  height: 220,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
+                child: File(imagePath).existsSync()
+                    ? Image.file(
+                        File(imagePath),
+                        height: 220,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      )
+                    : Container(
+                        height: 180,
+                        color: Colors.black12,
+                        child: const Center(child: Icon(Icons.image_rounded, size: 48, color: Colors.grey)),
+                      ),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -622,7 +696,9 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () {
+              Navigator.pop(ctx);
+            },
             child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton.icon(
@@ -673,8 +749,88 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Widget _renderImageWidget(String mediaPath, double height) {
+    if (mediaPath.isEmpty) return const SizedBox.shrink();
+    if (File(mediaPath).existsSync()) {
+      return Image.file(
+        File(mediaPath),
+        height: height,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
+    }
+    if (mediaPath.startsWith('data:image')) {
+      try {
+        final commaIdx = mediaPath.indexOf(',');
+        final base64Str = commaIdx != -1 ? mediaPath.substring(commaIdx + 1) : mediaPath;
+        final bytes = base64Decode(base64Str.trim());
+        return Image.memory(
+          bytes,
+          height: height,
+          width: double.infinity,
+          fit: BoxFit.cover,
+        );
+      } catch (_) {}
+    } else if (mediaPath.length > 100 && !mediaPath.contains('/')) {
+      try {
+        final bytes = base64Decode(mediaPath.trim());
+        return Image.memory(
+          bytes,
+          height: height,
+          width: double.infinity,
+          fit: BoxFit.cover,
+        );
+      } catch (_) {}
+    } else if (mediaPath.startsWith('http')) {
+      return Image.network(
+        mediaPath,
+        height: height,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
+    }
+    return Container(
+      height: height,
+      width: double.infinity,
+      color: Colors.black12,
+      child: const Center(child: Icon(Icons.image_rounded, color: Colors.grey)),
+    );
+  }
+
   void _sendImageMessage(String imagePath, {bool isViewOnce = false, String caption = ''}) async {
     final text = caption.isNotEmpty ? caption : (isViewOnce ? '📷 View-once photo' : '📷 Photo');
+
+    // 1. Ensure conversation ID is created
+    if (_conversationId == null || _conversationId!.isEmpty) {
+      try {
+        final res = await ApiClient.post('/chat/conversation', {'recipientId': widget.recipient['id'] ?? 'u2'});
+        _conversationId = res['conversationId'];
+      } catch (_) {}
+    }
+
+    // 2. Ensure recipient public key is fetched if missing/dummy
+    final currentPubKey = widget.recipient['publicKey']?.toString() ?? '';
+    if (currentPubKey.isEmpty || !currentPubKey.startsWith('PUB_X25519:')) {
+      try {
+        final recipientUname = widget.recipient['username']?.toString() ?? '';
+        final recipientId = widget.recipient['id']?.toString() ?? '';
+        final query = recipientUname.isNotEmpty ? recipientUname : recipientId;
+        final lookupRes = await ApiClient.get('/users/lookup?query=$query');
+        if (lookupRes != null && lookupRes['publicKey'] != null) {
+          widget.recipient['publicKey'] = lookupRes['publicKey'];
+        }
+      } catch (_) {}
+    }
+
+    // 3. Encode image file as base64 string for cross-device transmission
+    String base64Media = imagePath;
+    try {
+      if (File(imagePath).existsSync()) {
+        final bytes = await File(imagePath).readAsBytes();
+        base64Media = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+      }
+    } catch (_) {}
+
     final userPriv = await SecureStorageService.read('user_private_key') ?? '';
     String edPriv = '';
     if (userPriv.contains(':')) {
@@ -689,8 +845,9 @@ class _ChatScreenState extends State<ChatScreen> {
       conversationId: _conversationId,
     );
     
+    final clientMsgId = 'img_${DateTime.now().millisecondsSinceEpoch}_${(_messages.length + 1)}';
     final localMsg = {
-      'id': 'img_${DateTime.now().millisecondsSinceEpoch}',
+      'id': clientMsgId,
       'conversationId': _conversationId ?? 'c1',
       'senderId': widget.user['id'] ?? 'u1',
       'encryptedPayload': encrypted,
@@ -698,6 +855,7 @@ class _ChatScreenState extends State<ChatScreen> {
       'messageType': isViewOnce ? 'view_once_image' : 'image',
       'mediaPath': imagePath,
       'isViewOnce': isViewOnce,
+      'status': 'sending',
       'time': '${DateTime.now().hour > 12 ? DateTime.now().hour - 12 : DateTime.now().hour == 0 ? 12 : DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')} ${DateTime.now().hour >= 12 ? 'PM' : 'AM'}',
       'isTyping': false,
       'createdAt': DateTime.now().toIso8601String(),
@@ -712,13 +870,19 @@ class _ChatScreenState extends State<ChatScreen> {
     if (_conversationId != null) {
       WebSocketClient().send({
         'type': 'chat_send',
+        'messageId': clientMsgId,
         'conversationId': _conversationId,
         'senderId': widget.user['id'] ?? 'u1',
+        'senderUsername': widget.user['username'],
+        'senderProfileImage': widget.user['profileImage'],
         'recipientId': widget.recipient['id'] ?? 'u2',
+        'recipientUsername': widget.recipient['username'],
+        'recipientPrivateId': widget.recipient['privateId'],
         'encryptedPayload': encrypted,
         'messageType': isViewOnce ? 'view_once_image' : 'image',
-        'mediaPath': imagePath,
+        'mediaPath': base64Media,
         'isViewOnce': isViewOnce,
+        'ttlSeconds': _ttlSeconds,
       });
     }
   }
@@ -749,26 +913,29 @@ class _ChatScreenState extends State<ChatScreen> {
               ListTile(
                 leading: const CircleAvatar(backgroundColor: Color(0xFF7B2FBE), child: Icon(Icons.camera_alt_rounded, color: Colors.white, size: 20)),
                 title: Text('Take Camera Photo', style: TextStyle(color: txtColor, fontWeight: FontWeight.w600)),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(ctx);
-                  _pickAttachmentImage(ImageSource.camera);
+                  await Future.delayed(const Duration(milliseconds: 100));
+                  if (mounted) _pickAttachmentImage(ImageSource.camera);
                 },
               ),
               ListTile(
                 leading: const CircleAvatar(backgroundColor: Color(0xFF7B2FBE), child: Icon(Icons.photo_library_rounded, color: Colors.white, size: 20)),
                 title: Text('Choose Gallery Image', style: TextStyle(color: txtColor, fontWeight: FontWeight.w600)),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(ctx);
-                  _pickAttachmentImage(ImageSource.gallery);
+                  await Future.delayed(const Duration(milliseconds: 100));
+                  if (mounted) _pickAttachmentImage(ImageSource.gallery);
                 },
               ),
               ListTile(
                 leading: const CircleAvatar(backgroundColor: Color(0xFFF43F5E), child: Icon(Icons.visibility_off_rounded, color: Colors.white, size: 20)),
                 title: const Text('Send View-Once Media', style: TextStyle(color: Color(0xFFF43F5E), fontWeight: FontWeight.w600)),
                 subtitle: const Text('Recipient can view photo only once before auto-destruction', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(ctx);
-                  _pickAttachmentImage(ImageSource.gallery, isViewOnce: true);
+                  await Future.delayed(const Duration(milliseconds: 100));
+                  if (mounted) _pickAttachmentImage(ImageSource.gallery, isViewOnce: true);
                 },
               ),
             ],
