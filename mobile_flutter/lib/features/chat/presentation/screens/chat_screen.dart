@@ -282,6 +282,26 @@ class _ChatScreenState extends State<ChatScreen> {
             });
           }
         }
+      } else if (type == 'call_log') {
+        // Show call ended message as a chat bubble
+        final callType = event['callType'] ?? 'audio';
+        final durationSeconds = (event['durationSeconds'] ?? 0) as int;
+        final logText = event['text'] ?? (callType == 'video' ? '📹 Video Call' : '📞 Voice Call');
+        final isMine = event['senderId'] == widget.user['id'];
+        setState(() {
+          _messages.add({
+            'id': 'call_${event['callId'] ?? DateTime.now().millisecondsSinceEpoch}',
+            'senderId': event['senderId'],
+            'decryptedText': logText,
+            'time': '${DateTime.now().hour > 12 ? DateTime.now().hour - 12 : DateTime.now().hour == 0 ? 12 : DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')} ${DateTime.now().hour >= 12 ? 'PM' : 'AM'}',
+            'isCallLog': true,
+            'callType': callType,
+            'durationSeconds': durationSeconds,
+            'isMine': isMine,
+            'status': 'delivered',
+          });
+        });
+        _scrollToBottom();
       }
     });
   }
@@ -1544,6 +1564,50 @@ class _ChatScreenState extends State<ChatScreen> {
                         );
                       }
 
+                      // Call log bubble (centered, like WhatsApp)
+                      final isCallLog = item['isCallLog'] == true;
+                      if (isCallLog) {
+                        final cType = item['callType'] ?? 'audio';
+                        final cIcon = cType == 'video' ? Icons.videocam_rounded : Icons.call_rounded;
+                        final cColor = cType == 'video' ? const Color(0xFF7B2FBE) : const Color(0xFF0052CC);
+                        final cText = item['decryptedText'] ?? '📞 Voice Call';
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: isDark ? Colors.white.withValues(alpha: 0.07) : const Color(0xFFEEF2FF),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: cColor.withValues(alpha: 0.25)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(cIcon, size: 16, color: cColor),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    cText,
+                                    style: TextStyle(
+                                      color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    timeStr,
+                                    style: TextStyle(
+                                      color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 18),
                         child: Column(

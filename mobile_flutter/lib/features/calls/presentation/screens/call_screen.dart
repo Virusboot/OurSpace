@@ -18,6 +18,8 @@ class CallScreen extends StatefulWidget {
   final VoidCallback? onMinimize;
   /// True if this user initiated the call (caller). False if this user is receiving (callee).
   final bool isOutgoing;
+  /// Called when call ends — passes call type and duration in seconds for chat log
+  final void Function(String callType, int durationSeconds)? onCallEnded;
 
   const CallScreen({
     Key? key,
@@ -30,6 +32,7 @@ class CallScreen extends StatefulWidget {
     this.isPipMode = false,
     this.onMinimize,
     this.isOutgoing = true,
+    this.onCallEnded,
   }) : super(key: key);
 
   @override
@@ -353,7 +356,7 @@ class _CallScreenState extends State<CallScreen> {
 
         case 'call_ended':
         case 'call_hangup':
-          widget.onEndCall();
+          _endCallWithLog();
           break;
       }
     });
@@ -402,17 +405,17 @@ class _CallScreenState extends State<CallScreen> {
 
     _peerConnection!.onTrack = (event) {
       if (!mounted) return;
+      // Accept stream from any track (audio or video)
       final stream = event.streams.isNotEmpty ? event.streams[0] : null;
       if (stream != null && _remoteStream != stream) {
         _remoteStream = stream;
+        // Bind remote video renderer for video calls
         if (widget.callType == 'video' && _remoteRenderer.srcObject != stream) {
           _remoteRenderer.srcObject = stream;
         }
       }
       if (mounted) {
-        setState(() {
-          _isConnected = true;
-        });
+        setState(() => _isConnected = true);
       }
       _applySpeakerphone();
     };
@@ -426,9 +429,7 @@ class _CallScreenState extends State<CallScreen> {
         }
       }
       if (mounted) {
-        setState(() {
-          _isConnected = true;
-        });
+        setState(() => _isConnected = true);
       }
       _applySpeakerphone();
     };
@@ -436,15 +437,11 @@ class _CallScreenState extends State<CallScreen> {
     _peerConnection!.onConnectionState = (state) {
       if (!mounted) return;
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
-        setState(() {
-          _isConnected = true;
-        });
+        setState(() => _isConnected = true);
       } else if (state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
                  state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
                  state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
-        setState(() {
-          _isConnected = false;
-        });
+        if (_isConnected) setState(() => _isConnected = false);
       }
     };
 
@@ -452,9 +449,8 @@ class _CallScreenState extends State<CallScreen> {
       if (!mounted) return;
       if (state == RTCIceConnectionState.RTCIceConnectionStateConnected ||
           state == RTCIceConnectionState.RTCIceConnectionStateCompleted) {
-        setState(() {
-          _isConnected = true;
-        });
+        // ICE connected — mark call as active even before media tracks arrive
+        if (!_isConnected && mounted) setState(() => _isConnected = true);
       }
     };
 
@@ -566,6 +562,12 @@ class _CallScreenState extends State<CallScreen> {
     }
   }
 
+  /// End the call: notify parent with duration for chat log, then clean up
+  void _endCallWithLog() {
+    widget.onCallEnded?.call(widget.callType, _secondsElapsed);
+    widget.onEndCall();
+  }
+
   @override
   void dispose() {
     NativeSecurityService.disableFlagSecure();
@@ -632,7 +634,47 @@ class _CallScreenState extends State<CallScreen> {
     // Show own camera as fullscreen while waiting (before guest joins)
     final showLocalPreviewFullscreen = widget.callType == 'video' && !showRemoteVideo && _localStream != null;
 
+    // PiP mode: audio calls show compact floating bar, video calls show video preview
     if (widget.isPipMode) {
+      if (widget.callType == 'audio') {
+        // WhatsApp-style compact audio call bar
+        return GestureDetector(
+          onTap: widget.onMinimize,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF7B2FBE), Color(0xFF0052CC)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF7B2FBE), width: 2),
+              boxShadow: [
+                BoxShadow(color: const Color(0xFF7B2FBE).withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 4)),
+              ],
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.phone_in_talk_rounded, color: Colors.white, size: 28),
+                const SizedBox(height: 6),
+                Text(
+                  widget.recipient?['username'] ?? '@peer',
+                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _isConnected ? _formatTimer(_secondsElapsed) : 'Connecting...',
+                  style: const TextStyle(color: Colors.white70, fontSize: 10, fontFamily: 'monospace'),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      // Video PiP
       return Container(
         decoration: BoxDecoration(
           color: Colors.black,
@@ -679,7 +721,8 @@ class _CallScreenState extends State<CallScreen> {
         if (widget.onMinimize != null) {
           widget.onMinimize!();
         } else {
-          widget.onEndCall();
+          WebSocketClient().send({'type': 'call_hangup', 'callId': widget.callId});
+          _endCallWithLog();
         }
       },
       child: SecurityOverlay(
@@ -953,7 +996,10 @@ class _CallScreenState extends State<CallScreen> {
                             ),
                           ],
                           GestureDetector(
-                            onTap: widget.onEndCall,
+                            onTap: () {
+                              WebSocketClient().send({'type': 'call_hangup', 'callId': widget.callId});
+                              _endCallWithLog();
+                            },
                             child: Container(
                               width: 58,
                               height: 58,

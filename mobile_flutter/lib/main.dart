@@ -730,6 +730,20 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                 isPipMode: false,
                 isOutgoing: _activeIsOutgoing,
                 onMinimize: () => setState(() => _currentScreen = 'home'),
+                onCallEnded: (callType, duration) {
+                  // Send call log message to chat so it appears as call history
+                  if (_activeRecipient?['id'] != null && _user?['id'] != null) {
+                    WebSocketClient().send({
+                      'type': 'call_log',
+                      'callId': _activeCallId,
+                      'callType': callType,
+                      'durationSeconds': duration,
+                      'senderId': _user!['id'],
+                      'targetId': _activeRecipient!['id'],
+                      'senderUsername': _user!['username'],
+                    });
+                  }
+                },
                 onEndCall: () {
                   WebSocketClient().send({'type': 'call_hangup', 'callId': _activeCallId});
                   setState(() { _activeCallId = null; _currentScreen = 'home'; });

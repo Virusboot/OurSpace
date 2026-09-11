@@ -132,6 +132,36 @@ export function handleSignaling(
         reason: 'Call declined or ended'
       });
     }
+  } else if (type === 'call_log') {
+    // Route call ended notification to the other participant so it shows in chat
+    const durationSeconds: number = payload.durationSeconds || 0;
+    const mins = Math.floor(durationSeconds / 60).toString().padStart(2, '0');
+    const secs = (durationSeconds % 60).toString().padStart(2, '0');
+    const durationStr = `${mins}:${secs}`;
+    const callLabel = payload.callType === 'video' ? '📹 Video Call' : '📞 Voice Call';
+    const logText = durationSeconds > 0
+      ? `${callLabel} • ${durationStr}`
+      : `${callLabel} • Missed`;
+
+    const logMessage = {
+      type: 'call_log',
+      callId,
+      callType: payload.callType,
+      durationSeconds,
+      durationStr,
+      text: logText,
+      senderId,
+      senderUsername: payload.senderUsername,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Send to the other user
+    if (payload.targetId) {
+      sendToUserConnections(payload.targetId, logMessage);
+    }
+    // Also echo back to sender (so both chat screens show the call log)
+    ws.send(JSON.stringify(logMessage));
+
   } else if (type === 'security_event') {
     // Screenshot / screen recording alert during active call
     const room = activeCallRooms.get(callId);
