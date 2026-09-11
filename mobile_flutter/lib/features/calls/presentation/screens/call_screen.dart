@@ -385,7 +385,7 @@ class _CallScreenState extends State<CallScreen> {
           }
           _isConnected = true;
         });
-      } else if (event.track != null) {
+      } else {
         if (!mounted) return;
         setState(() {
           _isConnected = true;

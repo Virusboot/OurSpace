@@ -297,7 +297,7 @@ class _ChatScreenState extends State<ChatScreen> {
         try {
           final query = recipientUname.isNotEmpty ? recipientUname : recipientId;
           final lookupRes = await ApiClient.get('/users/lookup?query=$query');
-          if (lookupRes != null && lookupRes['publicKey'] != null) {
+          if (lookupRes['publicKey'] != null) {
             widget.recipient['publicKey'] = lookupRes['publicKey'];
           }
         } catch (_) {}
@@ -414,7 +414,7 @@ class _ChatScreenState extends State<ChatScreen> {
         final recipientId = widget.recipient['id']?.toString() ?? '';
         final query = recipientUname.isNotEmpty ? recipientUname : recipientId;
         final lookupRes = await ApiClient.get('/users/lookup?query=$query');
-        if (lookupRes != null && lookupRes['publicKey'] != null) {
+        if (lookupRes['publicKey'] != null) {
           widget.recipient['publicKey'] = lookupRes['publicKey'];
         }
       } catch (_) {}
@@ -816,7 +816,7 @@ class _ChatScreenState extends State<ChatScreen> {
         final recipientId = widget.recipient['id']?.toString() ?? '';
         final query = recipientUname.isNotEmpty ? recipientUname : recipientId;
         final lookupRes = await ApiClient.get('/users/lookup?query=$query');
-        if (lookupRes != null && lookupRes['publicKey'] != null) {
+        if (lookupRes['publicKey'] != null) {
           widget.recipient['publicKey'] = lookupRes['publicKey'];
         }
       } catch (_) {}
