@@ -299,7 +299,7 @@ class _CallScreenState extends State<CallScreen> {
           if (candidateMap != null && candidateMap['candidate'] != null) {
             final candStr = candidateMap['candidate'].toString();
             // Ignore QEMU self-loopback candidate on Android Emulator to prevent libjingle SIGABRT socket crash
-            if (candStr.contains(' 10.0.2.15 ') || candStr.contains(' 127.0.0.1 ')) {
+            if (candStr.contains('10.0.2.') || candStr.contains('127.0.0.')) {
               break;
             }
             final candidate = RTCIceCandidate(
@@ -353,7 +353,7 @@ class _CallScreenState extends State<CallScreen> {
     _peerConnection!.onIceCandidate = (candidate) {
       if (candidate.candidate != null && candidate.candidate!.isNotEmpty) {
         final candStr = candidate.candidate!;
-        if (candStr.contains(' 10.0.2.15 ') || candStr.contains(' 127.0.0.1 ')) {
+        if (candStr.contains('10.0.2.') || candStr.contains('127.0.0.')) {
           return;
         }
         final payload = {
