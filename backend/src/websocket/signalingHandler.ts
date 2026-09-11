@@ -81,38 +81,34 @@ export function handleSignaling(
       }
     }
   } else if (type === 'call_offer' || type === 'call_answer' || type === 'ice_candidate' || type === 'media_toggle') {
-    const room = activeCallRooms.get(callId);
-    if (!room || (senderId && !room.has(senderId))) {
-      console.warn(`[Signaling] Unauthorized ${type} attempt for callId ${callId} from ${senderId}`);
-      return;
+    let room = activeCallRooms.get(callId);
+    if (!room) {
+      room = new Map();
+      activeCallRooms.set(callId, room);
+    }
+    if (senderId && !room.has(senderId)) {
+      room.set(senderId, { ws, role: 'user', nickname: payload.senderUsername });
     }
 
     let routed = false;
     if (targetId) {
-      const targetWs = activeConnections.get(targetId);
-      if (targetWs && targetWs.readyState === WebSocket.OPEN) {
-        targetWs.send(JSON.stringify(payload));
-        routed = true;
-      } else {
-        if (room && room.has(targetId)) {
-          const targetObj = room.get(targetId)!;
-          if (targetObj.ws.readyState === WebSocket.OPEN) {
-            targetObj.ws.send(JSON.stringify(payload));
-            routed = true;
-          }
+      routed = sendToUserConnections(targetId, payload);
+      if (!routed && room.has(targetId)) {
+        const targetObj = room.get(targetId)!;
+        if (targetObj.ws.readyState === WebSocket.OPEN) {
+          targetObj.ws.send(JSON.stringify(payload));
+          routed = true;
         }
       }
     }
     
-    if (!routed) {
+    if (!routed && room) {
       // Broadcast to room members except sender
-      if (room) {
-        room.forEach((participant) => {
-          if (participant.ws !== ws && participant.ws.readyState === WebSocket.OPEN) {
-            participant.ws.send(JSON.stringify(payload));
-          }
-        });
-      }
+      room.forEach((participant) => {
+        if (participant.ws !== ws && participant.ws.readyState === WebSocket.OPEN) {
+          participant.ws.send(JSON.stringify(payload));
+        }
+      });
     }
   } else if (type === 'call_hangup' || type === 'call_decline' || type === 'call_reject') {
     const room = activeCallRooms.get(callId);

@@ -237,6 +237,10 @@ class _CallScreenState extends State<CallScreen> {
           if (existing != null && existing.isNotEmpty) {
             _remoteParticipantId = existing.first.toString();
             _flushLocalCandidates();
+            if (_peerConnection == null) {
+              await _createPeerConnection();
+              await _sendOffer();
+            }
           }
           break;
 
