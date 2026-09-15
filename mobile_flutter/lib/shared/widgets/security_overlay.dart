@@ -52,25 +52,9 @@ class _SecurityOverlayState extends State<SecurityOverlay> with WidgetsBindingOb
       children: [
         widget.child,
         if (_isBackground)
-          Container(
-            color: const Color(0xFF090A0F),
-            child: const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.security, size: 54, color: Color(0xFF7B2FBE)),
-                  SizedBox(height: 16),
-                  Text(
-                    'Protected View',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFFFFFFFF)),
-                  ),
-                  SizedBox(height: 6),
-                  Text(
-                    'Privacy lock active while app is in background.',
-                    style: TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
-                  ),
-                ],
-              ),
+          const Positioned.fill(
+            child: ColoredBox(
+              color: Colors.black,
             ),
           ),
       ],

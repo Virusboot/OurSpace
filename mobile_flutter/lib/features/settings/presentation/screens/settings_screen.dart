@@ -766,7 +766,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final username = widget.user?['username'] ?? '@harsh01';
-    final privateId = widget.user?['privateId'] ?? 'USER-7XK92P';
     final isDark = widget.isDarkMode;
 
     final bgCol = isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC);
@@ -779,195 +778,200 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return Scaffold(
       backgroundColor: bgCol,
-      appBar: AppBar(
-        backgroundColor: bgCol,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: txtCol, size: 20),
-          onPressed: widget.onBack,
-        ),
-        title: Text(
-          'Profile & Settings',
-          style: TextStyle(color: txtCol, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: -0.2),
-        ),
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Sleek Profile User Section (Seamless Flat Background, No Outer Box/Shadow)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            // Top Action Header Bar (Back button on Left, QR + Edit Pill on Right)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.arrow_back_ios_new_rounded, color: txtCol, size: 20),
+                  onPressed: widget.onBack,
+                ),
+                Container(
+                  height: 38,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E2028) : const Color(0xFFE2E8F0),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                        icon: Icon(Icons.qr_code_rounded, color: isDark ? Colors.white70 : const Color(0xFF475569), size: 19),
+                        onPressed: () => _showQrCodeModal(username),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 14,
+                        color: isDark ? Colors.white24 : const Color(0xFFCBD5E1),
+                      ),
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                        icon: Icon(Icons.edit_outlined, color: isDark ? Colors.white70 : const Color(0xFF475569), size: 19),
+                        onPressed: _showEditProfileModal,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // WhatsApp-style Centered Profile User Section
+            Center(
               child: Column(
                 children: [
-                  Row(
-                    children: [
-                      GestureDetector(
-                        onTap: _showImagePickerOptions,
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Container(
-                              width: 76,
-                              height: 76,
-                              padding: const EdgeInsets.all(3),
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: LinearGradient(
-                                  colors: [Color(0xFF7B2FBE), Color(0xFFE91E8C), Color(0xFFBB3FDE)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
+                  // Speech bubble status container positioned ABOVE avatar
+                  GestureDetector(
+                    onTap: _showEditProfileModal,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E2028) : const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              widget.user?['bio'] ?? 'Available | End-to-End Encrypted',
+                              style: TextStyle(
+                                color: isDark ? Colors.white70 : const Color(0xFF334155),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
                               ),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: bgCol,
-                                  border: Border.all(color: bgCol, width: 2),
-                                ),
-                                child: ClipOval(
-                                  child: _profileImage != null
-                                      ? Image.file(
-                                          File(_profileImage!.path),
-                                          width: 68,
-                                          height: 68,
-                                          fit: BoxFit.cover,
-                                        )
-                                      : Container(
-                                          width: 68,
-                                          height: 68,
-                                          decoration: const BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            gradient: LinearGradient(
-                                              colors: [Color(0xFF7B2FBE), Color(0xFFBB3FDE)],
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                            ),
-                                          ),
-                                          child: Center(
-                                            child: Text(
-                                              username.replaceAll('@', '').substring(0, 1).toUpperCase(),
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 30,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Centered Avatar
+                  GestureDetector(
+                    onTap: _showImagePickerOptions,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 92,
+                          height: 92,
+                          padding: const EdgeInsets.all(3),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [Color(0xFF7B2FBE), Color(0xFFE91E8C), Color(0xFFBB3FDE)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: bgCol,
+                              border: Border.all(color: bgCol, width: 2),
+                            ),
+                            child: ClipOval(
+                              child: _profileImage != null
+                                  ? Image.file(
+                                      File(_profileImage!.path),
+                                      width: 82,
+                                      height: 82,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Container(
+                                      width: 82,
+                                      height: 82,
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: LinearGradient(
+                                          colors: [Color(0xFF7B2FBE), Color(0xFFBB3FDE)],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          username.replaceAll('@', '').substring(0, 1).toUpperCase(),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 36,
+                                            fontWeight: FontWeight.bold,
                                           ),
                                         ),
-                                ),
-                              ),
+                                      ),
+                                    ),
                             ),
-                            Positioned(
-                              right: 0,
-                              bottom: 0,
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF7B2FBE),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: bgCol, width: 2.5),
-                                ),
-                                child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 13),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.user?['name'] ?? username,
-                              style: TextStyle(color: txtCol, fontWeight: FontWeight.bold, fontSize: 18, letterSpacing: -0.3),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              username,
-                              style: const TextStyle(color: Color(0xFF7B2FBE), fontSize: 13, fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              privateId,
-                              style: TextStyle(color: subtxtCol, fontSize: 12, fontWeight: FontWeight.w500),
-                            ),
-                            const SizedBox(height: 6),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.white.withValues(alpha: 0.04) : const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      widget.user?['bio'] ?? 'Available | End-to-End Encrypted',
-                      style: TextStyle(color: subtxtCol, fontSize: 12, fontStyle: FontStyle.italic),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            side: BorderSide(color: isDark ? Colors.white24 : const Color(0xFFCBD5E1)),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          icon: const Icon(Icons.edit_outlined, color: Color(0xFF7B2FBE), size: 16),
-                          label: const Text('Edit Profile', style: TextStyle(color: Color(0xFF7B2FBE), fontWeight: FontWeight.bold, fontSize: 13)),
-                          onPressed: _showEditProfileModal,
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => _showQrCodeModal(username),
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
                           child: Container(
-                            height: 40,
+                            padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF7B2FBE), Color(0xFFE91E8C)],
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF7B2FBE).withValues(alpha: 0.3),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
+                              color: const Color(0xFF7B2FBE),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: bgCol, width: 2.5),
                             ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.qr_code_rounded, color: Colors.white, size: 18),
-                                SizedBox(width: 6),
-                                Text('My QR Code', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                              ],
-                            ),
+                            child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 14),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Centered Display Name with down arrow dropdown
+                  GestureDetector(
+                    onTap: _showEditProfileModal,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          widget.user?['name'] ?? username,
+                          style: TextStyle(
+                            color: txtCol,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 22,
+                            letterSpacing: -0.4,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: subtxtCol,
+                          size: 24,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    username.startsWith('@') ? username : '@$username',
+                    style: const TextStyle(
+                      color: Color(0xFF7B2FBE),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
             // 2. Ultra-Sleek Ghost Mode Privacy Card
             Container(

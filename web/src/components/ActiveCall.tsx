@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, ShieldAlert, Volume2, ShieldCheck, Lock } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, ShieldAlert, Volume2, VolumeX, ShieldCheck, Lock } from 'lucide-react';
 
 interface ActiveCallProps {
   callType: 'audio' | 'video';
@@ -28,8 +28,11 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
 }) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null);
+
   const [micEnabled, setMicEnabled] = useState(true);
   const [camEnabled, setCamEnabled] = useState(callType === 'video');
+  const [speakerEnabled, setSpeakerEnabled] = useState(true);
   const [secondsElapsed, setSecondsElapsed] = useState(0);
   const [privacyShieldActive, setPrivacyShieldActive] = useState(false);
   const [privacyNotice, setPrivacyNotice] = useState<string | null>(null);
@@ -43,6 +46,11 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.play().catch(() => {});
+    }
+    if (remoteAudioRef.current && remoteStream) {
+      remoteAudioRef.current.srcObject = remoteStream;
+      remoteAudioRef.current.play().catch(() => {});
     }
   }, [remoteStream]);
 
@@ -56,7 +64,6 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
   // 🛡️ Web Anti-Screenshot & Screen Recording Privacy Protection Listeners
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Detect PrintScreen, Cmd+Shift+3/4/5 (macOS screenshot), Ctrl+Shift+S (Snipping tool), F12, Ctrl+P
       const key = e.key.toLowerCase();
       const isMacScreenshot = (e.metaKey || e.ctrlKey) && e.shiftKey && (key === '3' || key === '4' || key === '5' || key === 's');
       const isPrintScreen = key === 'printscreen' || key === 'prtscr' || key === 'sysreq';
@@ -72,7 +79,6 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
       if (document.hidden) {
         triggerPrivacyShield('Tab switched / backgrounded (Screen capture prevention)');
       } else {
-        // Auto-restore when returning to tab
         setTimeout(() => setPrivacyShieldActive(false), 1500);
       }
     };
@@ -125,8 +131,24 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
     onToggleCam(next);
   };
 
+  const handleSpeakerClick = () => {
+    const next = !speakerEnabled;
+    setSpeakerEnabled(next);
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.muted = !next;
+      remoteAudioRef.current.volume = next ? 1.0 : 0.0;
+    }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.muted = !next;
+      remoteVideoRef.current.volume = next ? 1.0 : 0.0;
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black text-white flex flex-col justify-between p-4 sm:p-6 overflow-hidden select-none">
+      {/* Dedicated Hidden Remote Audio Playback Element */}
+      <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
+
       {/* Top Bar */}
       <div className="flex items-center justify-between z-20">
         <div className="flex items-center space-x-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
@@ -164,15 +186,7 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
         
         {/* Anti-Screenshot / Privacy Shield Overlay */}
         {privacyShieldActive && (
-          <div className="absolute inset-0 z-40 bg-black/95 backdrop-blur-3xl flex flex-col items-center justify-center p-6 text-center animate-fade-in">
-            <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center mb-4 shadow-2xl">
-              <Lock className="w-8 h-8 text-purple-400" />
-            </div>
-            <h3 className="text-lg font-bold text-white mb-1">Privacy Protection Active</h3>
-            <p className="text-xs text-gray-400 max-w-xs leading-relaxed">
-              Video stream obscured to prevent screenshot or screen recording capture. Return focus to window to resume.
-            </p>
-          </div>
+          <div className="absolute inset-0 z-50 bg-black" />
         )}
 
         {callType === 'video' ? (
@@ -233,6 +247,7 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
 
       {/* Bottom Call Control Action Bar */}
       <div className="flex items-center justify-center space-x-6 py-2 z-20">
+        {/* Mic Control */}
         <button
           onClick={handleMicClick}
           className={`btn-control ${!micEnabled ? 'active-off' : ''}`}
@@ -241,6 +256,16 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
           {micEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
         </button>
 
+        {/* Speaker / Audio Output Control */}
+        <button
+          onClick={handleSpeakerClick}
+          className={`btn-control ${!speakerEnabled ? 'active-off' : ''}`}
+          title={speakerEnabled ? 'Speaker On (Mute Audio)' : 'Speaker Off (Enable Audio)'}
+        >
+          {speakerEnabled ? <Volume2 className="w-5 h-5 text-emerald-400" /> : <VolumeX className="w-5 h-5 text-rose-400" />}
+        </button>
+
+        {/* Camera Control (If Video Call) */}
         {callType === 'video' && (
           <button
             onClick={handleCamClick}
@@ -251,6 +276,7 @@ export const ActiveCall: React.FC<ActiveCallProps> = ({
           </button>
         )}
 
+        {/* End Call Button */}
         <button
           onClick={onLeaveCall}
           className="btn-control btn-end"

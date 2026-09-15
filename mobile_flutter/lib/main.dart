@@ -19,6 +19,7 @@ import 'features/calls/presentation/screens/call_screen.dart';
 import 'features/calls/presentation/screens/incoming_call_screen.dart';
 import 'features/settings/presentation/screens/settings_screen.dart';
 import 'core/notifications/notification_service.dart';
+import 'core/notifications/push_notification_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
@@ -107,6 +108,9 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
         }
       },
     );
+
+    // Initialize FCM Push Notifications for closed-app calls
+    await PushNotificationService().initialize();
   }
 
   void _wakeUpServer() async {
@@ -125,7 +129,11 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
         _handleForceLogout(reason: 'Account deleted from server. Please create a new account.');
       } else if (type == 'chat_receive') {
         _handleIncomingChatMessage(event);
-      } else if (type == 'call_offer' || type == 'call_invite') {
+      } else if (type == 'call_invite') {
+        // IMPORTANT: Only 'call_invite' triggers the incoming call UI.
+        // 'call_offer' is a WebRTC SDP signaling message handled exclusively
+        // by CallScreen._listenToSignaling() — routing it here would cause
+        // main.dart to send call_hangup and instantly kill the active call.
         _handleIncomingCall(event);
       } else if (type == 'call_ended' || type == 'call_hangup') {
         _handleCallEndedByRemote(event);
@@ -157,33 +165,33 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
 
   void _handleIncomingCall(Map<String, dynamic> event) {
     final incomingCallId = event['callId']?.toString();
+    final senderId = event['senderId']?.toString() ?? '';
+    final senderUname = (event['senderUsername'] ?? event['callerUsername'] ?? '').toString().replaceAll('@', '').toLowerCase();
+    final myId = _user?['id']?.toString() ?? '';
+    final myUname = (_user?['username'] ?? '').toString().replaceAll('@', '').toLowerCase();
+
+    // Ignore self-echoed call signals
+    if ((senderId.isNotEmpty && senderId == myId) || (senderUname.isNotEmpty && senderUname == myUname)) {
+      return;
+    }
 
     // If this signaling event belongs to an active call we are currently in, ignore it here (CallScreen will process the WebRTC offer/SDP)
-    if (_activeCallId != null && _activeCallId.toString() == incomingCallId) {
+    if (_activeCallId != null && incomingCallId != null && _activeCallId.toString() == incomingCallId) {
       return;
     }
     // If this signal belongs to an incoming call we are currently displaying/answering, do not hang up
-    if (_incomingCallData != null && _incomingCallData!['callId']?.toString() == incomingCallId) {
+    if (_incomingCallData != null && incomingCallId != null && _incomingCallData!['callId']?.toString() == incomingCallId) {
       return;
     }
 
     if (_currentScreen == 'call' || _currentScreen == 'incoming_call') {
-      // If the incoming signal is an offer/invite for the current active call, ignore it so CallScreen can handle it
-      if (incomingCallId != null && (_activeCallId?.toString() == incomingCallId || _incomingCallData?['callId']?.toString() == incomingCallId)) {
-        return;
-      }
-      WebSocketClient().send({
-        'type': 'call_hangup',
-        'callId': event['callId'],
-        'targetId': event['senderId'],
-      });
+      // If user is already in an active or incoming call, ignore secondary invites/signals silently
       return;
     }
 
     final callId = event['callId'] ?? 'call_${DateTime.now().millisecondsSinceEpoch}';
     final senderUsername = event['senderUsername'] ?? '@peer';
     final callType = event['callType'] ?? 'video';
-    final senderId = event['senderId'] ?? '';
 
     // Trigger high-priority call notification
     NotificationService().showIncomingCallNotification(
@@ -209,7 +217,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
     NotificationService().cancelNotification(999);
     if (_currentScreen == 'call' && _activeCallId == event['callId']) {
       setState(() {
-        _currentScreen = 'home';
+        _currentScreen = _screenBeforeCall.isNotEmpty ? _screenBeforeCall : 'home';
         _activeCallId = null;
       });
       final target = event['targetUsername'] ?? 'User';
@@ -224,18 +232,29 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
   }
 
   void _handleCallEndedByRemote(Map<String, dynamic> event) {
+    final eventCallId = event['callId']?.toString();
+    final eventSenderId = event['senderId']?.toString() ?? '';
+    final myId = _user?['id']?.toString() ?? '';
+
+    // Ignore self-originated call_ended echoes
+    if (eventSenderId.isNotEmpty && eventSenderId == myId) {
+      return;
+    }
+
     NotificationService().cancelNotification(999);
 
     if (_currentScreen == 'incoming_call' &&
         _incomingCallData != null &&
-        _incomingCallData!['callId'] == event['callId']) {
+        _incomingCallData!['callId']?.toString() == eventCallId) {
       setState(() {
         _incomingCallData = null;
         _currentScreen = 'home';
       });
-    } else if ((_currentScreen == 'call' || _activeCallId != null) && _activeCallId == event['callId']) {
+    } else if ((_currentScreen == 'call' || _activeCallId != null) && _activeCallId?.toString() == eventCallId) {
+      // Remote ended the call — just clean up UI, do NOT send another call_hangup
+      // (CallScreen will also receive this event and clean up WebRTC resources)
       setState(() {
-        _currentScreen = _screenBeforeCall;
+        _currentScreen = _screenBeforeCall.isNotEmpty ? _screenBeforeCall : 'home';
         _activeCallId = null;
       });
     }
@@ -298,6 +317,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
   Future<void> _checkStoredUser() async {
     final startTime = DateTime.now();
     final stored = await SecureStorageService.read('user_info');
+    final savedBase64 = await SecureStorageService.read('profile_image_base64');
     final savedImg = await SecureStorageService.read('profile_image_path');
     final appLock = await SecureStorageService.read('app_lock_enabled');
 
@@ -307,13 +327,12 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
       await Future.delayed(Duration(milliseconds: 600 - elapsed));
     }
 
-    // Remove native splash screen smoothly
-    FlutterNativeSplash.remove();
-
     if (stored != null) {
       try {
         final parsed = jsonDecode(stored) as Map<String, dynamic>;
-        if (savedImg != null) {
+        if (savedBase64 != null && savedBase64.isNotEmpty) {
+          parsed['profileImage'] = savedBase64;
+        } else if (savedImg != null && savedImg.isNotEmpty) {
           parsed['profileImage'] = savedImg;
         }
 
@@ -336,6 +355,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
             setState(() {
               _currentScreen = 'enter_pin';
             });
+            FlutterNativeSplash.remove();
             _validateSessionWithBackend();
             return;
           }
@@ -344,6 +364,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
         setState(() {
           _currentScreen = 'home';
         });
+        FlutterNativeSplash.remove();
         WebSocketClient().connect();
         _validateSessionWithBackend();
         return;
@@ -354,6 +375,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
     setState(() {
       _currentScreen = 'onboarding';
     });
+    FlutterNativeSplash.remove();
   }
 
   void _initDeepLinking() async {
@@ -717,8 +739,8 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
               );
             },
             child: KeyedSubtree(
-              key: ValueKey<String>(_currentScreen == 'call' ? 'home' : _currentScreen),
-              child: _currentScreen == 'call' ? const SizedBox() : _buildScreen(),
+              key: ValueKey<String>(_currentScreen == 'call' ? (_screenBeforeCall.isNotEmpty ? _screenBeforeCall : 'home') : _currentScreen),
+              child: _buildScreen(),
             ),
           ),
           // Single CallScreen instance — stays alive across PiP ↔ fullscreen
@@ -736,7 +758,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                     isDarkMode: _isDarkMode,
                     isPipMode: false,
                     isOutgoing: _activeIsOutgoing,
-                    onMinimize: () => setState(() => _currentScreen = 'home'),
+                    onMinimize: () => setState(() => _currentScreen = _screenBeforeCall),
                     onCallEnded: (callType, duration) {
                       // Send call log message to chat so it appears as call history
                       if (_activeRecipient?['id'] != null && _user?['id'] != null) {
@@ -773,7 +795,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                       isDarkMode: _isDarkMode,
                       isPipMode: true,
                       isOutgoing: _activeIsOutgoing,
-                      onMinimize: () => setState(() => _currentScreen = 'home'),
+                      onMinimize: () => setState(() => _currentScreen = _screenBeforeCall),
                       onCallEnded: (callType, duration) {
                         if (_activeRecipient?['id'] != null && _user?['id'] != null) {
                           WebSocketClient().send({
@@ -799,8 +821,85 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
     );
   }
 
+  Future<void> _handleStartCall(String type, Map<String, dynamic>? recipient, {String? callId}) async {
+    final hasPerm = await _ensureCallPermissions(type);
+    if (!hasPerm) return;
+
+    final targetRecipient = recipient ?? _activeRecipient ?? {'username': '@user'};
+    final targetUnameClean = (targetRecipient['username'] ?? '').toString().replaceAll('@', '').toLowerCase();
+    final targetId = (targetRecipient['id'] ?? targetRecipient['recipientId'] ?? targetRecipient['userId'])?.toString() ?? '';
+    final myUnameClean = (_user?['username'] ?? '').toString().replaceAll('@', '').toLowerCase();
+    final myId = _user?['id']?.toString() ?? '';
+
+    if ((targetUnameClean.isNotEmpty && targetUnameClean == myUnameClean) ||
+        (targetId.isNotEmpty && targetId == myId)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cannot initiate a call to yourself.'),
+            backgroundColor: Color(0xFFF43F5E),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    final generatedCallId = callId ?? 'call_${DateTime.now().millisecondsSinceEpoch}';
+
+    if (mounted) {
+      setState(() {
+        if (_currentScreen != 'call') {
+          _screenBeforeCall = _currentScreen;
+        }
+        _activeCallType = type;
+        _activeCallId = generatedCallId;
+        _activeRecipient = targetRecipient;
+        _activeIsOutgoing = true;
+        _currentScreen = 'call';
+      });
+    }
+
+    try {
+      final res = await ApiClient.post('/call-links/create', {
+        'callType': type,
+        'durationMinutes': 60,
+      });
+      final token = res['token'] ?? generatedCallId;
+      WebSocketClient().send({
+        'type': 'call_invite',
+        'callId': generatedCallId,
+        'callType': type,
+        'token': token,
+        'targetUserId': targetId.isNotEmpty ? targetId : targetRecipient['username'],
+        'targetUsername': targetRecipient['username'],
+        'targetPrivateId': targetRecipient['privateId'],
+        'callerUsername': _user?['username'] ?? '@user',
+        'senderId': _user?['id'],
+        'senderProfileImage': _user?['profileImage'],
+      });
+    } catch (_) {
+      WebSocketClient().send({
+        'type': 'call_invite',
+        'callId': generatedCallId,
+        'callType': type,
+        'targetUserId': targetId.isNotEmpty ? targetId : targetRecipient['username'],
+        'targetUsername': targetRecipient['username'],
+        'targetPrivateId': targetRecipient['privateId'],
+        'callerUsername': _user?['username'] ?? '@user',
+        'senderId': _user?['id'],
+        'senderProfileImage': _user?['profileImage'],
+      });
+    }
+  }
+
   Widget _buildScreen() {
-    switch (_currentScreen) {
+    final activeScreenName = _currentScreen == 'call' ? (_screenBeforeCall.isNotEmpty ? _screenBeforeCall : 'home') : _currentScreen;
+    return _buildScreenForName(activeScreenName);
+  }
+
+  Widget _buildScreenForName(String screenName) {
+    switch (screenName) {
       case 'loading':
       case 'splash':
         return SplashScreen(onContinue: () {});
@@ -837,83 +936,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
               _currentScreen = 'chat';
             });
           },
-          onStartCall: (type, recipient, {callId}) async {
-            final hasPerm = await _ensureCallPermissions(type);
-            if (!hasPerm) return;
-
-            // If a callId was given directly (incoming call), use it
-            if (callId != null) {
-              setState(() {
-                _screenBeforeCall = _currentScreen;
-                _activeCallType = type;
-                _activeCallId = callId;
-                _activeRecipient = recipient ?? {'username': '@user'};
-                _activeIsOutgoing = true; // called from chat/home = outgoing
-                _currentScreen = 'call';
-              });
-              return;
-            }
-            // Generate a real call link/room via API
-            try {
-              final res = await ApiClient.post('/call-links/create', {
-                'callType': type,
-                'durationMinutes': 60,
-              });
-              final token = res['token'] ?? res['callId'];
-              final generatedCallId = res['callId'] ?? 'call_${DateTime.now().millisecondsSinceEpoch}';
-              if (mounted) {
-                setState(() {
-                  _screenBeforeCall = _currentScreen;
-                  _activeCallType = type;
-                  _activeCallId = generatedCallId;
-                  _activeRecipient = recipient ?? {'username': '@user'};
-                  _activeIsOutgoing = true;
-                  _currentScreen = 'call';
-                });
-                // Send the call link to the recipient via WebSocket
-                if (recipient != null) {
-                  WebSocketClient().send({
-                    'type': 'call_invite',
-                    'callId': generatedCallId,
-                    'callType': type,
-                    'token': token,
-                    'targetUserId': recipient['id'],
-                    'targetUsername': recipient['username'],
-                    'targetPrivateId': recipient['privateId'],
-                    'callerUsername': _user?['username'] ?? '@user',
-                    'senderId': _user?['id'],
-                    'senderProfileImage': _user?['profileImage'],
-                  });
-                }
-              }
-            } catch (e) {
-              // Fallback: use a local room ID
-              final fallbackId = 'call_${DateTime.now().millisecondsSinceEpoch}';
-              if (mounted) {
-                setState(() {
-                  _screenBeforeCall = _currentScreen;
-                  _activeCallType = type;
-                  _activeCallId = fallbackId;
-                  _activeRecipient = recipient ?? {'username': '@user'};
-                  _activeIsOutgoing = true;
-                  _currentScreen = 'call';
-                });
-                if (recipient != null) {
-                  WebSocketClient().send({
-                    'type': 'call_invite',
-                    'callId': fallbackId,
-                    'callType': type,
-                    'targetUserId': recipient['id'],
-                    'targetUsername': recipient['username'],
-                    'targetPrivateId': recipient['privateId'],
-                    'callerUsername': _user?['username'] ?? '@user',
-                    'senderId': _user?['id'],
-                    'senderProfileImage': _user?['profileImage'],
-                  });
-                }
-              }
-            }
-          },
+          onStartCall: _handleStartCall,
           onOpenSettings: () => setState(() => _currentScreen = 'settings'),
         );
       case 'chat':
@@ -922,72 +945,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
           recipient: _activeRecipient ?? {'id': 'u2', 'username': '@alex_dev', 'publicKey': 'PUB-12345'},
           isDarkMode: _isDarkMode,
           onBack: () => setState(() => _currentScreen = 'home'),
-          onStartCall: (type, recipient, {callId}) async {
-            final hasPerm = await _ensureCallPermissions(type);
-            if (!hasPerm) return;
-
-            if (callId != null) {
-              setState(() {
-                _screenBeforeCall = _currentScreen;
-                _activeCallType = type;
-                _activeCallId = callId;
-                _activeRecipient = recipient;
-                _currentScreen = 'call';
-              });
-              return;
-            }
-            try {
-              final res = await ApiClient.post('/call-links/create', {
-                'callType': type,
-                'durationMinutes': 60,
-              });
-              final token = res['token'] ?? res['callId'];
-              final generatedCallId = res['callId'] ?? 'call_${DateTime.now().millisecondsSinceEpoch}';
-              if (mounted) {
-                setState(() {
-                  _screenBeforeCall = _currentScreen;
-                  _activeCallType = type;
-                  _activeCallId = generatedCallId;
-                  _activeRecipient = recipient;
-                  _currentScreen = 'call';
-                });
-                WebSocketClient().send({
-                  'type': 'call_invite',
-                  'callId': generatedCallId,
-                  'callType': type,
-                  'token': token,
-                  'targetUserId': recipient['id'],
-                  'targetUsername': recipient['username'],
-                  'targetPrivateId': recipient['privateId'],
-                  'callerUsername': _user?['username'] ?? '@user',
-                  'senderId': _user?['id'],
-                  'senderProfileImage': _user?['profileImage'],
-                });
-              }
-            } catch (e) {
-              final fallbackId = 'call_${DateTime.now().millisecondsSinceEpoch}';
-              if (mounted) {
-                setState(() {
-                  _screenBeforeCall = _currentScreen;
-                  _activeCallType = type;
-                  _activeCallId = fallbackId;
-                  _activeRecipient = recipient;
-                  _currentScreen = 'call';
-                });
-                WebSocketClient().send({
-                  'type': 'call_invite',
-                  'callId': fallbackId,
-                  'callType': type,
-                  'targetUserId': recipient['id'],
-                  'targetUsername': recipient['username'],
-                  'targetPrivateId': recipient['privateId'],
-                  'callerUsername': _user?['username'] ?? '@user',
-                  'senderId': _user?['id'],
-                  'senderProfileImage': _user?['profileImage'],
-                });
-              }
-            }
-          },
+          onStartCall: _handleStartCall,
           onOpenImageViewer: (imageUri, isViewOnce) {
             setState(() {
               _activeImageUri = imageUri;
@@ -1015,7 +973,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                 _currentScreen = 'chat';
               });
             },
-            onStartCall: (type, recipient, {callId}) async {},
+            onStartCall: _handleStartCall,
             onOpenSettings: () => setState(() => _currentScreen = 'settings'),
           );
         }
@@ -1027,14 +985,16 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
           senderProfileImage: _incomingCallData!['senderProfileImage'],
           onAccept: () {
             setState(() {
-              _screenBeforeCall = _currentScreen;
+              if (_currentScreen != 'call') {
+                _screenBeforeCall = _currentScreen;
+              }
               _activeCallType = _incomingCallData!['callType'] ?? 'video';
               _activeCallId = _incomingCallData!['callId'];
               _activeRecipient = {
                 'id': _incomingCallData!['senderId'],
                 'username': _incomingCallData!['callerUsername'],
               };
-              _activeIsOutgoing = false; // accepting = callee, waits for offer
+              _activeIsOutgoing = false;
               _incomingCallData = null;
               _currentScreen = 'call';
             });
@@ -1064,6 +1024,15 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
             });
             if (_user != null) {
               await SecureStorageService.write('user_info', jsonEncode(_user));
+              if (base64Img != null && base64Img.isNotEmpty) {
+                await SecureStorageService.write('profile_image_base64', base64Img);
+              }
+              try {
+                await ApiClient.put('/users/profile', {
+                  'profileImage': base64Img,
+                });
+              } catch (_) {}
+
               WebSocketClient().send({
                 'type': 'profile_update',
                 'senderId': _user!['id'],

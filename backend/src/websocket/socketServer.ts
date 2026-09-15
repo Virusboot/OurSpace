@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config';
 import { handleChatMessage } from './chatHandler';
 import { handleSignaling, activeCallRooms } from './signalingHandler';
-import { getUserById } from '../services/identityService';
+import { getUserById, getUserByUsername, getUserByPrivateId } from '../services/identityService';
 import { getPendingUndeliveredMessagesForUser, markMessageDelivered } from '../services/chatService';
 
 // Multi-Device Socket Connections Map: userId/guestId/username/privateId -> Set of WebSockets
@@ -77,20 +77,21 @@ export const activeConnections = new Proxy(activeUserConnections, {
 }) as unknown as Map<string, WebSocket>;
 
 export async function broadcastOnlineUsers() {
-  const onlineUsers = [];
-  const onlineUserIds = Array.from(activeUserConnections.keys());
-  for (const id of onlineUserIds) {
-    if (id.startsWith('usr_')) {
-      const user = await getUserById(id);
-      if (user) {
-        onlineUsers.push({
-          id: user.id,
-          username: user.username,
-          privateId: user.privateId
-        });
-      }
+  const onlineUsersMap = new Map<string, any>();
+  const activeKeys = Array.from(activeUserConnections.keys());
+  for (const key of activeKeys) {
+    if (!key) continue;
+    const user = (await getUserById(key)) || (await getUserByUsername(key)) || (await getUserByPrivateId(key));
+    if (user && user.id && !onlineUsersMap.has(user.id)) {
+      onlineUsersMap.set(user.id, {
+        id: user.id,
+        username: user.username,
+        privateId: user.privateId,
+        publicKey: user.publicKey
+      });
     }
   }
+  const onlineUsers = Array.from(onlineUsersMap.values());
   const payload = JSON.stringify({
     type: 'online_users_update',
     users: onlineUsers
@@ -98,7 +99,9 @@ export async function broadcastOnlineUsers() {
   activeUserConnections.forEach((set) => {
     set.forEach((clientWs) => {
       if (clientWs.readyState === WebSocket.OPEN) {
-        clientWs.send(payload);
+        try {
+          clientWs.send(payload);
+        } catch (_) {}
       }
     });
   });
@@ -212,7 +215,7 @@ export function initWebSocketServer(server: HttpServer) {
             return;
           }
           payload.senderId = currentId; // Force verified identity
-          handleSignaling(ws, payload, activeConnections);
+          await handleSignaling(ws, payload, activeConnections);
           return;
         }
 

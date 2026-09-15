@@ -43,7 +43,29 @@ class ApiClient {
     return data as Map<String, dynamic>;
   }
 
-  static Future<Map<String, dynamic>> get(String endpoint) async {
+  static Future<Map<String, dynamic>> put(String endpoint, Map<String, dynamic> body) async {
+    final token = await SecureStorageService.read('auth_token');
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+    };
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+
+    final response = await http.put(
+      Uri.parse('$baseUrl$endpoint'),
+      headers: headers,
+      body: jsonEncode(body),
+    ).timeout(const Duration(seconds: 60));
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode >= 400) {
+      throw Exception(data['error'] ?? 'API Request failed');
+    }
+    return data as Map<String, dynamic>;
+  }
+
+  static Future<dynamic> get(String endpoint) async {
     final token = await SecureStorageService.read('auth_token');
     final headers = <String, String>{
       'Content-Type': 'application/json',
@@ -59,8 +81,8 @@ class ApiClient {
 
     final data = jsonDecode(response.body);
     if (response.statusCode >= 400) {
-      throw Exception(data['error'] ?? 'API Request failed');
+      throw Exception(data is Map ? (data['error'] ?? 'API Request failed') : 'API Request failed');
     }
-    return data as Map<String, dynamic>;
+    return data;
   }
 }

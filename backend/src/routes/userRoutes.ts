@@ -25,22 +25,21 @@ router.get('/db-status', (req, res) => {
 
 router.get('/online', authenticateToken, async (req, res) => {
   try {
-    const onlineUserIds = Array.from(activeUserConnections.keys());
-    const onlineUsers = [];
-    for (const id of onlineUserIds) {
-      if (id.startsWith('usr_')) {
-        const user = await getUserById(id);
-        if (user) {
-          onlineUsers.push({
-            id: user.id,
-            username: user.username,
-            privateId: user.privateId,
-            publicKey: user.publicKey
-          });
-        }
+    const onlineUsersMap = new Map<string, any>();
+    const activeKeys = Array.from(activeUserConnections.keys());
+    for (const key of activeKeys) {
+      if (!key) continue;
+      const user = (await getUserById(key)) || (await getUserByUsername(key)) || (await getUserByPrivateId(key));
+      if (user && user.id && !onlineUsersMap.has(user.id)) {
+        onlineUsersMap.set(user.id, {
+          id: user.id,
+          username: user.username,
+          privateId: user.privateId,
+          publicKey: user.publicKey
+        });
       }
     }
-    return res.json(onlineUsers);
+    return res.json(Array.from(onlineUsersMap.values()));
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
@@ -156,12 +155,16 @@ router.get('/lookup', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
-router.get('/by-id/:id', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/fcm-token', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const targetId = req.params.id;
-    const user = await getUserById(targetId);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    return res.json({ id: user.id, privateId: user.privateId, username: user.username, publicKey: user.publicKey });
+    const userId = req.user!.userId;
+    const { fcmToken } = req.body;
+    if (fcmToken) {
+      const { registerUserFcmToken } = await import('../services/pushNotificationService');
+      registerUserFcmToken(userId, fcmToken);
+      return res.json({ success: true, message: 'FCM Token registered successfully' });
+    }
+    return res.status(400).json({ error: 'FCM Token required' });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

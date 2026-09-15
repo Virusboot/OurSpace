@@ -82,6 +82,11 @@
             </intent-filter>
         </activity>
 
+        <!-- Firebase Messaging High Priority Channel Metadata -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="ourspace_calls_channel" />
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

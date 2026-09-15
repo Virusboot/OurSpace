@@ -66,6 +66,12 @@ class _CallScreenState extends State<CallScreen> {
   /// handlers can safely create a peer connection.
   final Completer<void> _mediaReady = Completer<void>();
   Timer? _connectionWatchdog;
+  Timer? _ringingTimer;
+
+  bool _isCreatingPeerConnection = false;
+  bool _isSettingUpMedia = false;
+  Completer<void>? _setupMediaCompleter;
+  bool _isSendingOffer = false;
 
   final Map<String, dynamic> _iceConfig = {
     'iceServers': [
@@ -92,6 +98,27 @@ class _CallScreenState extends State<CallScreen> {
     _listenToSignaling();
     _initRenderers();
     _startTimer();
+    _startRingingTimeout();
+  }
+
+  void _startRingingTimeout() {
+    if (!widget.isOutgoing) return;
+    _ringingTimer?.cancel();
+    _ringingTimer = Timer(const Duration(seconds: 30), () {
+      if (!mounted || _isConnected) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${widget.recipient?['username'] ?? 'User'} is unavailable or not answering.'),
+          backgroundColor: const Color(0xFFF43F5E),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      WebSocketClient().send({
+        'type': 'call_hangup',
+        'callId': widget.callId,
+      });
+      widget.onEndCall();
+    });
   }
 
   void _startTimer() {
@@ -118,7 +145,9 @@ class _CallScreenState extends State<CallScreen> {
           }
         }
         if (validServers.isNotEmpty) {
-          _iceConfig['iceServers'] = validServers;
+          final existing = List<Map<String, dynamic>>.from(_iceConfig['iceServers'] ?? []);
+          existing.addAll(validServers);
+          _iceConfig['iceServers'] = existing;
         }
       }
     } catch (_) {}
@@ -140,14 +169,14 @@ class _CallScreenState extends State<CallScreen> {
     if (!_mediaReady.isCompleted) _mediaReady.complete();
     _joinCallRoom();
 
-    // Watchdog: if still not connected 8s after joining, the callee
-    // takes initiative and sends an offer itself (handles edge-cases
-    // where the caller's offer was lost or never sent).
     _connectionWatchdog = Timer(const Duration(seconds: 8), () {
       if (!mounted || _isConnected) return;
       if (_remoteParticipantId != null && _peerConnection == null) {
         debugPrint('[CallScreen] Watchdog: no connection after 8s — sending offer');
-        _createPeerConnection().then((_) => _sendOffer());
+        _mediaReady.future.then((_) async {
+          await _createPeerConnection();
+          await _sendOffer();
+        });
       }
     });
   }
@@ -161,47 +190,31 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> _setupLocalMedia() async {
+    if (_localStream != null) return;
+    if (_isSettingUpMedia && _setupMediaCompleter != null) {
+      await _setupMediaCompleter!.future;
+      return;
+    }
+    _isSettingUpMedia = true;
+    _setupMediaCompleter = Completer<void>();
+
     try {
-      // Verify runtime permission status before starting media recording
-      var micStatus = await Permission.microphone.status;
-      if (!micStatus.isGranted) {
-        micStatus = await Permission.microphone.request();
-      }
-      if (!micStatus.isGranted) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Microphone permission is required for voice calls.'),
-              backgroundColor: Color(0xFFF43F5E),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-          widget.onEndCall();
+      try {
+        var micStatus = await Permission.microphone.status;
+        if (!micStatus.isGranted) {
+          await Permission.microphone.request();
         }
-        return;
-      }
+      } catch (_) {}
 
       if (widget.callType == 'video') {
-        var camStatus = await Permission.camera.status;
-        if (!camStatus.isGranted) {
-          camStatus = await Permission.camera.request();
-        }
-        if (!camStatus.isGranted) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Camera permission is required for video calls.'),
-                backgroundColor: Color(0xFFF43F5E),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-            widget.onEndCall();
+        try {
+          var camStatus = await Permission.camera.status;
+          if (!camStatus.isGranted) {
+            await Permission.camera.request();
           }
-          return;
-        }
+        } catch (_) {}
       }
 
-      // Configure AudioManager mode BEFORE creating audio tracks to prevent AppOps silencing
       _applySpeakerphone();
 
       final mediaConstraints = <String, dynamic>{
@@ -222,18 +235,21 @@ class _CallScreenState extends State<CallScreen> {
       try {
         _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
       } catch (_) {
-        final fallbackConstraints = <String, dynamic>{
-          'audio': true,
-          'video': widget.callType == 'video' ? {'facingMode': 'user'} : false,
-        };
-        _localStream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+        try {
+          final fallbackConstraints = <String, dynamic>{
+            'audio': true,
+            'video': widget.callType == 'video' ? {'facingMode': 'user'} : false,
+          };
+          _localStream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+        } catch (e) {
+          debugPrint('Local media fallback error: $e');
+        }
       }
 
       if (widget.callType == 'video' && _localStream != null) {
         _localRenderer.srcObject = _localStream;
       }
       
-      // Ensure audio and video tracks are explicitly enabled for two-way communication
       if (_localStream != null) {
         _localStream!.getAudioTracks().forEach((track) {
           track.enabled = true;
@@ -241,23 +257,16 @@ class _CallScreenState extends State<CallScreen> {
         _localStream!.getVideoTracks().forEach((track) {
           track.enabled = _camEnabled;
         });
-
-        // Safely configure speakerphone after audio tracks are active
         _applySpeakerphone();
       }
 
       if (mounted) setState(() {});
     } catch (e) {
       debugPrint('Failed to get local media: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to access microphone or camera. Please check permissions.'),
-            backgroundColor: Color(0xFFF43F5E),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        widget.onEndCall();
+    } finally {
+      _isSettingUpMedia = false;
+      if (!(_setupMediaCompleter?.isCompleted ?? true)) {
+        _setupMediaCompleter?.complete();
       }
     }
   }
@@ -281,105 +290,115 @@ class _CallScreenState extends State<CallScreen> {
       
       if (callId != widget.callId) return;
 
-      switch (type) {
-        case 'call_joined_ack':
-          final existing = event['existingParticipants'] as List<dynamic>?;
-          if (existing != null && existing.isNotEmpty) {
-            _remoteParticipantId = existing.first.toString();
-            _flushLocalCandidates();
-            // Only the caller sends the offer when they find the remote peer already in the room
-            if (_peerConnection == null && widget.isOutgoing) {
-              await _createPeerConnection();
-              await _sendOffer();
-            }
-          }
-          break;
-
-        case 'participant_joined':
-          final newParticipant = event['participantId'];
-          final newNickname = event['nickname']?.toString();
-          if (newParticipant != widget.user?['id']) {
-            setState(() {
-              _remoteParticipantId = newParticipant;
-              if (newNickname != null && newNickname.isNotEmpty) {
-                _remoteParticipantName = newNickname;
+      try {
+        switch (type) {
+          case 'call_joined_ack':
+            final existing = event['existingParticipants'] as List<dynamic>?;
+            if (existing != null && existing.isNotEmpty) {
+              _remoteParticipantId = existing.first.toString();
+              _flushLocalCandidates();
+              await _mediaReady.future;
+              if (_peerConnection == null && widget.isOutgoing) {
+                await _createPeerConnection();
+                await _sendOffer();
               }
-            });
-            _flushLocalCandidates();
-            // Only the caller (isOutgoing) sends offers — callee waits for the offer
-            if (widget.isOutgoing) {
-              await _createPeerConnection();
-              await _sendOffer();
             }
-          }
-          break;
+            break;
 
-        case 'call_offer':
-          if (event['senderId'] != null) {
-            _remoteParticipantId = event['senderId']?.toString();
-            _flushLocalCandidates();
-          }
-          // Wait for renderers + local media before creating the peer connection
-          await _mediaReady.future;
-          await _createPeerConnection();
-          
-          final offerMap = event['sdp'];
-          final String offerSdp = (offerMap is Map ? offerMap['sdp'] : offerMap)?.toString() ?? '';
-          await _peerConnection!.setRemoteDescription(
-            RTCSessionDescription(offerSdp, 'offer'),
-          );
-          _hasRemoteDescription = true;
-          
-          await _sendAnswer();
-          await _processQueuedCandidates();
-          break;
+          case 'participant_joined':
+            final newParticipant = event['participantId'];
+            final newNickname = event['nickname']?.toString();
+            if (newParticipant != widget.user?['id']) {
+              setState(() {
+                _remoteParticipantId = newParticipant;
+                if (newNickname != null && newNickname.isNotEmpty) {
+                  _remoteParticipantName = newNickname;
+                }
+              });
+              _flushLocalCandidates();
+              await _mediaReady.future;
+              if (widget.isOutgoing && _peerConnection == null) {
+                await _createPeerConnection();
+                await _sendOffer();
+              }
+            }
+            break;
 
-        case 'call_answer':
-          if (_peerConnection != null) {
+          case 'call_offer':
             if (event['senderId'] != null) {
               _remoteParticipantId = event['senderId']?.toString();
               _flushLocalCandidates();
             }
-            final answerMap = event['sdp'];
-            final String answerSdp = (answerMap is Map ? answerMap['sdp'] : answerMap)?.toString() ?? '';
-            await _peerConnection!.setRemoteDescription(
-              RTCSessionDescription(answerSdp, 'answer'),
-            );
-            _hasRemoteDescription = true;
-            await _processQueuedCandidates();
-          }
-          break;
+            await _mediaReady.future;
+            await _createPeerConnection();
+            
+            final offerMap = event['sdp'];
+            final String offerSdp = (offerMap is Map ? offerMap['sdp'] : offerMap)?.toString() ?? '';
+            if (offerSdp.isNotEmpty && _peerConnection != null) {
+              await _peerConnection!.setRemoteDescription(
+                RTCSessionDescription(offerSdp, 'offer'),
+              );
+              _hasRemoteDescription = true;
+              
+              await _sendAnswer();
+              await _processQueuedCandidates();
+            }
+            break;
 
-        case 'ice_candidate':
-          final candidateMap = event['candidate'];
-          if (candidateMap != null && candidateMap['candidate'] != null) {
-            final candStr = candidateMap['candidate'].toString();
-            final candidate = RTCIceCandidate(
-              candStr,
-              candidateMap['sdpMid'],
-              candidateMap['sdpMLineIndex'],
-            );
-
-            final candKey = '${candidate.candidate}_${candidate.sdpMid}_${candidate.sdpMLineIndex}';
-            if (!_processedCandidateKeys.contains(candKey)) {
-              _processedCandidateKeys.add(candKey);
-              if (_peerConnection != null && _hasRemoteDescription) {
-                try {
-                  await _peerConnection!.addCandidate(candidate);
-                } catch (e) {
-                  debugPrint('Failed to add ICE candidate: $e');
-                }
-              } else {
-                _queuedRemoteCandidates.add(candidate);
+          case 'call_answer':
+            if (_peerConnection != null) {
+              if (event['senderId'] != null) {
+                _remoteParticipantId = event['senderId']?.toString();
+                _flushLocalCandidates();
+              }
+              final answerMap = event['sdp'];
+              final String answerSdp = (answerMap is Map ? answerMap['sdp'] : answerMap)?.toString() ?? '';
+              if (answerSdp.isNotEmpty) {
+                await _peerConnection!.setRemoteDescription(
+                  RTCSessionDescription(answerSdp, 'answer'),
+                );
+                _hasRemoteDescription = true;
+                await _processQueuedCandidates();
               }
             }
-          }
-          break;
+            break;
 
-        case 'call_ended':
-        case 'call_hangup':
-          _endCallWithLog();
-          break;
+          case 'ice_candidate':
+            final candidateMap = event['candidate'];
+            if (candidateMap != null && candidateMap['candidate'] != null) {
+              final candStr = candidateMap['candidate'].toString();
+              final candidate = RTCIceCandidate(
+                candStr,
+                candidateMap['sdpMid'],
+                candidateMap['sdpMLineIndex'],
+              );
+
+              final candKey = '${candidate.candidate}_${candidate.sdpMid}_${candidate.sdpMLineIndex}';
+              if (!_processedCandidateKeys.contains(candKey)) {
+                _processedCandidateKeys.add(candKey);
+                if (_peerConnection != null && _hasRemoteDescription) {
+                  try {
+                    await _peerConnection!.addCandidate(candidate);
+                  } catch (e) {
+                    debugPrint('Failed to add ICE candidate: $e');
+                  }
+                } else {
+                  _queuedRemoteCandidates.add(candidate);
+                }
+              }
+            }
+            break;
+
+          case 'call_ended':
+          case 'call_hangup':
+            if (event['senderId'] != null && event['senderId'].toString() == widget.user?['id']?.toString()) {
+              break;
+            }
+            widget.onCallEnded?.call(widget.callType, _secondsElapsed);
+            break;
+        }
+      } catch (e, stack) {
+        debugPrint('[CallScreen] Exception handling signal $type: $e\n$stack');
       }
     });
   }
@@ -394,135 +413,156 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> _createPeerConnection() async {
-    if (_peerConnection != null) return;
+    if (_peerConnection != null || _isCreatingPeerConnection) return;
+    _isCreatingPeerConnection = true;
 
-    if (_localStream == null) {
-      await _setupLocalMedia();
-    }
+    try {
+      if (_localStream == null) {
+        await _setupLocalMedia();
+      }
 
-    if (!mounted) return;
+      if (!mounted) return;
+      if (_peerConnection != null) return;
 
-    _peerConnection = await createPeerConnection(_iceConfig);
+      _peerConnection = await createPeerConnection(_iceConfig);
 
-    _peerConnection!.onIceCandidate = (candidate) {
-      if (candidate.candidate != null && candidate.candidate!.isNotEmpty) {
-        final payload = {
-          'type': 'ice_candidate',
-          'callId': widget.callId,
-          'senderId': widget.user?['id'] ?? 'user_host',
-          'targetId': _remoteParticipantId,
-          'candidate': {
-            'candidate': candidate.candidate,
-            'sdpMid': candidate.sdpMid,
-            'sdpMLineIndex': candidate.sdpMLineIndex,
-          },
-        };
-        if (_remoteParticipantId != null) {
-          WebSocketClient().send(payload);
-        } else {
-          _queuedLocalCandidates.add(payload);
+      _peerConnection!.onIceCandidate = (candidate) {
+        if (candidate.candidate != null && candidate.candidate!.isNotEmpty) {
+          final payload = {
+            'type': 'ice_candidate',
+            'callId': widget.callId,
+            'senderId': widget.user?['id'] ?? 'user_host',
+            'targetId': _remoteParticipantId,
+            'candidate': {
+              'candidate': candidate.candidate,
+              'sdpMid': candidate.sdpMid,
+              'sdpMLineIndex': candidate.sdpMLineIndex,
+            },
+          };
+          if (_remoteParticipantId != null) {
+            WebSocketClient().send(payload);
+          } else {
+            _queuedLocalCandidates.add(payload);
+          }
         }
-      }
-    };
+      };
 
-    _peerConnection!.onTrack = (event) {
-      if (!mounted) return;
-      // Accept stream from any track (audio or video)
-      final stream = event.streams.isNotEmpty ? event.streams[0] : null;
-      if (stream != null && _remoteStream != stream) {
-        _remoteStream = stream;
-        // Bind remote video renderer for video calls
-        if (widget.callType == 'video' && _remoteRenderer.srcObject != stream) {
-          _remoteRenderer.srcObject = stream;
+      _peerConnection!.onTrack = (event) {
+        if (!mounted) return;
+        final stream = event.streams.isNotEmpty ? event.streams[0] : null;
+        if (stream != null && _remoteStream != stream) {
+          _remoteStream = stream;
+          if (widget.callType == 'video' && _remoteRenderer.srcObject != stream) {
+            _remoteRenderer.srcObject = stream;
+          }
         }
-      }
-      if (mounted) {
-        _connectionWatchdog?.cancel();
-        setState(() => _isConnected = true);
-      }
-      _applySpeakerphone();
-    };
-
-    _peerConnection!.onAddStream = (stream) {
-      if (!mounted) return;
-      if (_remoteStream != stream) {
-        _remoteStream = stream;
-        if (widget.callType == 'video' && _remoteRenderer.srcObject != stream) {
-          _remoteRenderer.srcObject = stream;
-        }
-      }
-      if (mounted) {
-        _connectionWatchdog?.cancel();
-        setState(() => _isConnected = true);
-      }
-      _applySpeakerphone();
-    };
-
-    _peerConnection!.onConnectionState = (state) {
-      if (!mounted) return;
-      if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
-        _connectionWatchdog?.cancel();
-        setState(() => _isConnected = true);
-      } else if (state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
-                 state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
-                 state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
-        if (_isConnected) setState(() => _isConnected = false);
-      }
-    };
-
-    _peerConnection!.onIceConnectionState = (state) {
-      if (!mounted) return;
-      if (state == RTCIceConnectionState.RTCIceConnectionStateConnected ||
-          state == RTCIceConnectionState.RTCIceConnectionStateCompleted) {
-        // ICE connected — mark call as active even before media tracks arrive
-        if (!_isConnected && mounted) {
+        if (mounted) {
+          _ringingTimer?.cancel();
           _connectionWatchdog?.cancel();
           setState(() => _isConnected = true);
         }
-      }
-    };
+        _applySpeakerphone();
+      };
 
-    if (_localStream != null) {
-      _localStream!.getTracks().forEach((track) {
-        _peerConnection!.addTrack(track, _localStream!);
-      });
+      _peerConnection!.onAddStream = (stream) {
+        if (!mounted) return;
+        if (_remoteStream != stream) {
+          _remoteStream = stream;
+          if (widget.callType == 'video' && _remoteRenderer.srcObject != stream) {
+            _remoteRenderer.srcObject = stream;
+          }
+        }
+        if (mounted) {
+          _ringingTimer?.cancel();
+          _connectionWatchdog?.cancel();
+          setState(() => _isConnected = true);
+        }
+        _applySpeakerphone();
+      };
+
+      _peerConnection!.onConnectionState = (state) {
+        if (!mounted) return;
+        if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
+          _ringingTimer?.cancel();
+          _connectionWatchdog?.cancel();
+          setState(() => _isConnected = true);
+        } else if (state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
+                   state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
+                   state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
+          if (_isConnected) setState(() => _isConnected = false);
+        }
+      };
+
+      _peerConnection!.onIceConnectionState = (state) {
+        if (!mounted) return;
+        if (state == RTCIceConnectionState.RTCIceConnectionStateConnected ||
+            state == RTCIceConnectionState.RTCIceConnectionStateCompleted) {
+          _ringingTimer?.cancel();
+          _connectionWatchdog?.cancel();
+          if (!_isConnected && mounted) {
+            setState(() => _isConnected = true);
+          }
+        }
+      };
+
+      if (_localStream != null) {
+        _localStream!.getTracks().forEach((track) {
+          _peerConnection!.addTrack(track, _localStream!);
+        });
+      }
+    } catch (e) {
+      debugPrint('[CallScreen] Error creating peer connection: $e');
+    } finally {
+      _isCreatingPeerConnection = false;
     }
   }
 
   Future<void> _sendOffer() async {
-    if (_peerConnection == null) return;
-    final offer = await _peerConnection!.createOffer({
-      'offerToReceiveAudio': true,
-      'offerToReceiveVideo': widget.callType == 'video',
-    });
-    await _peerConnection!.setLocalDescription(offer);
-    
-    WebSocketClient().send({
-      'type': 'call_offer',
-      'callId': widget.callId,
-      'senderId': widget.user?['id'] ?? 'user_host',
-      'targetId': _remoteParticipantId,
-      'senderUsername': widget.user?['username'] ?? '@anonymous',
-      'callType': widget.callType,
-      'sdp': {'sdp': offer.sdp, 'type': offer.type},
-    });
+    if (_peerConnection == null || _isSendingOffer) return;
+    _isSendingOffer = true;
+
+    try {
+      final offer = await _peerConnection!.createOffer({
+        'offerToReceiveAudio': true,
+        'offerToReceiveVideo': widget.callType == 'video',
+      });
+      await _peerConnection!.setLocalDescription(offer);
+      
+      WebSocketClient().send({
+        'type': 'call_offer',
+        'callId': widget.callId,
+        'senderId': widget.user?['id'] ?? 'user_host',
+        'targetId': _remoteParticipantId,
+        'senderUsername': widget.user?['username'] ?? '@anonymous',
+        'callType': widget.callType,
+        'sdp': {'sdp': offer.sdp, 'type': offer.type},
+      });
+    } catch (e) {
+      debugPrint('[CallScreen] Error sending offer: $e');
+    } finally {
+      _isSendingOffer = false;
+    }
   }
 
   Future<void> _sendAnswer() async {
     if (_peerConnection == null) return;
-    final answer = await _peerConnection!.createAnswer({
-      'offerToReceiveAudio': true,
-      'offerToReceiveVideo': widget.callType == 'video',
-    });
-    await _peerConnection!.setLocalDescription(answer);
+    try {
+      final answer = await _peerConnection!.createAnswer({
+        'offerToReceiveAudio': true,
+        'offerToReceiveVideo': widget.callType == 'video',
+      });
+      await _peerConnection!.setLocalDescription(answer);
 
-    WebSocketClient().send({
-      'type': 'call_answer',
-      'callId': widget.callId,
-      'senderId': widget.user?['id'] ?? 'user_host',
-      'targetId': _remoteParticipantId,
-      'sdp': {'sdp': answer.sdp, 'type': answer.type},
-    });
+      WebSocketClient().send({
+        'type': 'call_answer',
+        'callId': widget.callId,
+        'senderId': widget.user?['id'] ?? 'user_host',
+        'targetId': _remoteParticipantId,
+        'sdp': {'sdp': answer.sdp, 'type': answer.type},
+      });
+    } catch (e) {
+      debugPrint('[CallScreen] Error sending answer: $e');
+    }
   }
 
   Future<void> _processQueuedCandidates() async {
@@ -601,6 +641,7 @@ class _CallScreenState extends State<CallScreen> {
     NativeSecurityService.disableFlagSecure();
     _timer?.cancel();
     _connectionWatchdog?.cancel();
+    _ringingTimer?.cancel();
     _wsCallSubscription?.cancel();
     
     if (_peerConnection != null) {

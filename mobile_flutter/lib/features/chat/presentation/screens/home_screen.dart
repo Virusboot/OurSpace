@@ -11,6 +11,7 @@ import '../../../../core/storage/secure_storage_service.dart';
 import '../../../../core/crypto/e2ee_crypto_service.dart';
 import '../../../../shared/widgets/app_gradient_button.dart';
 import '../../../../shared/widgets/brand_icons.dart';
+import '../../../settings/presentation/screens/settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Map<String, dynamic>? user;
@@ -46,6 +47,80 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isSearchingGlobal = false;
   bool _searchNotFound = false;
   Timer? _searchDebounce;
+
+  bool _isSelectionMode = false;
+  final Set<String> _selectedChatIds = {};
+
+  void _deleteSelectedChats() async {
+    if (_selectedChatIds.isEmpty) return;
+
+    final count = _selectedChatIds.length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final isDark = widget.isDarkMode;
+        return AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF141824) : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.delete_outline_rounded, color: Color(0xFFF43F5E), size: 22),
+              const SizedBox(width: 8),
+              Text(
+                'Delete $count Chat${count > 1 ? "s" : ""}',
+                style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: Text(
+            'Are you sure you want to delete the selected chat${count > 1 ? "s" : ""}? Messages will be removed locally.',
+            style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), fontSize: 13),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Cancel', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[700])),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF43F5E),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      setState(() {
+        _conversations.removeWhere((item) {
+          final id = item['username']?.toString() ?? item['id']?.toString() ?? '';
+          return _selectedChatIds.contains(id);
+        });
+        _isSelectionMode = false;
+        _selectedChatIds.clear();
+      });
+      await SecureStorageService.write('recent_chats', jsonEncode(_conversations));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Text('$count Chat${count > 1 ? "s" : ""} deleted successfully'),
+            ],
+          ),
+          backgroundColor: const Color(0xFFF43F5E),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -120,15 +195,19 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       } else if (type == 'profile_update') {
         final profileImg = event['profileImage'];
-        final username = event['senderUsername'];
-        if (profileImg != null && username != null && mounted) {
+        final rawUname = (event['senderUsername'] ?? '').toString().replaceAll('@', '').toLowerCase();
+        final userId = (event['userId'] ?? event['senderId'] ?? '').toString();
+        if (profileImg != null && mounted) {
           setState(() {
             for (var chat in _conversations) {
-              if (chat['username'] == username) {
+              final chatUname = (chat['username'] ?? '').toString().replaceAll('@', '').toLowerCase();
+              final chatId = (chat['id'] ?? '').toString();
+              if ((rawUname.isNotEmpty && chatUname == rawUname) || (userId.isNotEmpty && chatId == userId)) {
                 chat['profileImage'] = profileImg;
               }
             }
           });
+          unawaited(SecureStorageService.write('recent_chats', jsonEncode(_conversations)));
         }
       }
     });
@@ -629,7 +708,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final res = await ApiClient.get('/users/online');
       if (res is List && mounted) {
         setState(() {
-          _onlineUsers = (res as List).map((u) => Map<String, dynamic>.from(u as Map)).toList();
+          _onlineUsers = res.map((u) => Map<String, dynamic>.from(u as Map)).toList();
         });
       }
     } catch (_) {}
@@ -641,10 +720,19 @@ class _HomeScreenState extends State<HomeScreen> {
       if (data != null && data.isNotEmpty) {
         final decoded = jsonDecode(data);
         if (decoded is List && mounted) {
+          final myUname = widget.user?['username']?.toString() ?? '';
+          final myId = widget.user?['id']?.toString() ?? '';
+          final cleanList = List<Map<String, dynamic>>.from(decoded).where((item) {
+            final uname = item['username']?.toString() ?? '';
+            final id = item['id']?.toString() ?? '';
+            return uname.isNotEmpty && uname != myUname && id != myId;
+          }).toList();
+
           setState(() {
             _conversations.clear();
-            _conversations.addAll(List<Map<String, dynamic>>.from(decoded));
+            _conversations.addAll(cleanList);
           });
+          unawaited(SecureStorageService.write('recent_chats', jsonEncode(cleanList)));
         }
       }
     } catch (_) {
@@ -664,6 +752,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final cleanUsername = peer['username']?.toString() ?? '';
     if (cleanUsername.isEmpty) return;
 
+    final myUname = widget.user?['username']?.toString() ?? '';
+    final myId = widget.user?['id']?.toString() ?? '';
+    if (cleanUsername == myUname || (peerId.isNotEmpty && peerId == myId)) {
+      return;
+    }
+
     final newItem = {
       'id': peerId.isNotEmpty ? peerId : cleanUsername,
       'username': cleanUsername,
@@ -680,7 +774,9 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _conversations.removeWhere((item) =>
           item['username'] == cleanUsername ||
-          (peerId.isNotEmpty && item['id'] == peerId)
+          (peerId.isNotEmpty && item['id'] == peerId) ||
+          item['username'] == myUname ||
+          (myId.isNotEmpty && item['id'] == myId)
         );
         _conversations.insert(0, newItem);
         _isLoadingChats = false;
@@ -1322,7 +1418,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final searchBg = isDark ? const Color(0xFF191B20) : const Color(0xFFEDF2F7);
     final searchTxt = isDark ? Colors.white : const Color(0xFF0F172A);
     final searchHint = isDark ? const Color(0xFF6C727F) : const Color(0xFF94A3B8);
-    final cardBg = isDark ? const Color(0xFF121317) : const Color(0xFFFFFFFF);
+    final cardBg = scaffoldBg;
     final itemTxt = isDark ? Colors.white : const Color(0xFF0F172A);
     final itemSubtxt = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
     final avatarBg = isDark ? const Color(0xFF26282F) : const Color(0xFFE2E8F0);
@@ -1355,108 +1451,160 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // TOP HEADER WITH TITLE
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
+            if (_activeTab != 3) ...[
+              if (_isSelectionMode) ...[
+                // SELECTION MODE HEADER WITH CANCEL AND DELETE BUTTON
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 16, 20, 14),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Image.asset(
-                        'assets/images/app_logo.png',
-                        height: 32,
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.close_rounded, color: headerTxt, size: 24),
+                            onPressed: () {
+                              setState(() {
+                                _isSelectionMode = false;
+                                _selectedChatIds.clear();
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${_selectedChatIds.length} Selected',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: headerTxt,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 10),
-                      Text(
-                        _activeTab == 0 ? 'Chat' : (_activeTab == 1 ? 'Calls' : 'Voice Notes'),
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: headerTxt,
-                          letterSpacing: -0.4,
+                      IconButton(
+                        icon: Icon(
+                          Icons.delete_outline_rounded,
+                          color: _selectedChatIds.isNotEmpty ? const Color(0xFFF43F5E) : Colors.grey,
+                          size: 26,
+                        ),
+                        onPressed: _selectedChatIds.isNotEmpty ? _deleteSelectedChats : null,
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                // TOP HEADER: [3-DOTS] [TITLE] ..... [PLUS ICON]
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 16, 20, 14),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          PopupMenuButton<String>(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                            icon: Icon(Icons.more_vert_rounded, color: headerTxt, size: 26),
+                            color: isDark ? const Color(0xFF1E2028) : Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            onSelected: (value) {
+                              if (value == 'select_chats') {
+                                setState(() {
+                                  _isSelectionMode = true;
+                                  _selectedChatIds.clear();
+                                });
+                              }
+                            },
+                            itemBuilder: (ctx) => [
+                              PopupMenuItem(
+                                value: 'select_chats',
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.check_box_outlined, color: Color(0xFF7B2FBE), size: 18),
+                                    const SizedBox(width: 10),
+                                    Text('Select Chats', style: TextStyle(color: headerTxt, fontWeight: FontWeight.w600, fontSize: 14)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _activeTab == 0 ? 'Chats' : (_activeTab == 1 ? 'Calls' : 'Voice Notes'),
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: headerTxt,
+                              letterSpacing: -0.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Material(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(21),
+                        child: InkWell(
+                          onTap: _showNewActionSheet,
+                          borderRadius: BorderRadius.circular(21),
+                          child: Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF7B2FBE).withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.add_rounded,
+                                color: Color(0xFF7B2FBE),
+                                size: 26,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  Material(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(21),
-                    child: InkWell(
-                      onTap: _showNewActionSheet,
-                      borderRadius: BorderRadius.circular(21),
-                      child: Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF7B2FBE).withValues(alpha: 0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.add_rounded,
-                            color: Color(0xFF7B2FBE),
-                            size: 26,
-                          ),
-                        ),
-                      ),
+                ),
+              ],
+
+              // SEARCH BAR ("Type your search...")
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                child: Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: searchBg,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: TextField(
+                    controller: _searchCtrl,
+                    style: TextStyle(color: searchTxt, fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: 'Search chats, calls & contacts...',
+                      hintStyle: TextStyle(color: searchHint, fontSize: 14),
+                      prefixIcon: Icon(Icons.search, color: searchHint, size: 22),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 13),
                     ),
                   ),
-                ],
-              ),
-            ),
-
-            // SEARCH BAR ("Type your search...")
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-              child: Container(
-                height: 48,
-                decoration: BoxDecoration(
-                  color: searchBg,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: TextField(
-                  controller: _searchCtrl,
-                  style: TextStyle(color: searchTxt, fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: 'Search chats, calls & contacts...',
-                    hintStyle: TextStyle(color: searchHint, fontSize: 14),
-                    prefixIcon: Icon(Icons.search, color: searchHint, size: 22),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 13),
-                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 10),
+              const SizedBox(height: 10),
+            ],
 
             // CHAT LIST SECTION CONTAINER
             Expanded(
               child: Container(
                 width: double.infinity,
-                decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-                  boxShadow: isDark
-                      ? null
-                      : [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 10,
-                            offset: const Offset(0, -4),
-                          ),
-                        ],
-                ),
+                color: cardBg,
                 child: Column(
                   children: [
                     Expanded(
                       child: _activeTab == 0
                           ? (() {
-                              final filteredOnline = _onlineUsers.where((u) => u['id'] != widget.user?['id'] && u['username'] != widget.user?['username']).toList();
                               return Column(
                                 children: [
-                                  if (filteredOnline.isNotEmpty)
-                                    _buildOnlineUsersSection(filteredOnline),
                                   if (_isSearchingGlobal)
                                     const Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(color: Color(0xFF7B2FBE))),
                                   if (_globalSearchResult != null && !_isSearchingGlobal)
@@ -1573,15 +1721,21 @@ class _HomeScreenState extends State<HomeScreen> {
                                             itemCount: filteredConvs.length,
                                             itemBuilder: (ctx, idx) {
                                               final item = filteredConvs[idx];
+                                              final chatId = item['username']?.toString() ?? item['id']?.toString() ?? '';
+                                              final isSelected = _selectedChatIds.contains(chatId);
                                               final unread = (item['unread'] is int) ? item['unread'] as int : 0;
                                               final bool hasUnread = unread > 0;
 
-                                              final cardBgColor = hasUnread
-                                                  ? (isDark ? const Color(0xFF7B2FBE).withValues(alpha: 0.18) : const Color(0xFFF3E8FF))
-                                                  : Colors.transparent;
-                                              final cardBorderColor = hasUnread
-                                                  ? (isDark ? const Color(0xFF7B2FBE).withValues(alpha: 0.4) : const Color(0xFFC084FC))
-                                                  : Colors.transparent;
+                                              final cardBgColor = isSelected
+                                                  ? (isDark ? const Color(0xFF7B2FBE).withValues(alpha: 0.28) : const Color(0xFFE9D5FF))
+                                                  : (hasUnread
+                                                      ? (isDark ? const Color(0xFF7B2FBE).withValues(alpha: 0.18) : const Color(0xFFF3E8FF))
+                                                      : Colors.transparent);
+                                              final cardBorderColor = isSelected
+                                                  ? const Color(0xFF7B2FBE)
+                                                  : (hasUnread
+                                                      ? (isDark ? const Color(0xFF7B2FBE).withValues(alpha: 0.4) : const Color(0xFFC084FC))
+                                                      : Colors.transparent);
 
                                               return Container(
                                                 margin: const EdgeInsets.only(bottom: 8),
@@ -1590,12 +1744,28 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   borderRadius: BorderRadius.circular(20),
                                                   border: Border.all(
                                                     color: cardBorderColor,
-                                                    width: hasUnread ? 1.5 : 0,
+                                                    width: (isSelected || hasUnread) ? 1.5 : 0,
                                                   ),
                                                 ),
                                                 child: ListTile(
                                                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                                                  onLongPress: () {
+                                                    setState(() {
+                                                      _isSelectionMode = true;
+                                                      _selectedChatIds.add(chatId);
+                                                    });
+                                                  },
                                                   onTap: () {
+                                                    if (_isSelectionMode) {
+                                                      setState(() {
+                                                        if (isSelected) {
+                                                          _selectedChatIds.remove(chatId);
+                                                        } else {
+                                                          _selectedChatIds.add(chatId);
+                                                        }
+                                                      });
+                                                      return;
+                                                    }
                                                     if (hasUnread) {
                                                       setState(() {
                                                         item['unread'] = 0;
@@ -1604,39 +1774,53 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     }
                                                     widget.onOpenChat(item);
                                                   },
-                                                  leading: Stack(
+                                                  leading: Row(
+                                                    mainAxisSize: MainAxisSize.min,
                                                     children: [
-                                                      CircleAvatar(
-                                                        radius: 25,
-                                                        backgroundColor: avatarBg,
-                                                        child: ClipRRect(
-                                                          borderRadius: BorderRadius.circular(25),
-                                                          child: _buildAvatarImage(
-                                                            item['profileImage'],
-                                                            size: 50,
-                                                            fallbackName: item['username'].toString(),
+                                                      if (_isSelectionMode)
+                                                        Padding(
+                                                          padding: const EdgeInsets.only(right: 10),
+                                                          child: Icon(
+                                                            isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                                                            color: isSelected ? const Color(0xFF7B2FBE) : Colors.grey,
+                                                            size: 24,
                                                           ),
                                                         ),
-                                                      ),
-                                                      if (hasUnread)
-                                                        Positioned(
-                                                          right: 0,
-                                                          top: 0,
-                                                          child: Container(
-                                                            width: 13,
-                                                            height: 13,
-                                                            decoration: BoxDecoration(
-                                                              color: const Color(0xFF22C55E),
-                                                              shape: BoxShape.circle,
-                                                              border: Border.all(
-                                                                color: cardBgColor != Colors.transparent
-                                                                    ? cardBgColor
-                                                                    : (isDark ? const Color(0xFF0F172A) : Colors.white),
-                                                                width: 2,
+                                                      Stack(
+                                                        children: [
+                                                          CircleAvatar(
+                                                            radius: 25,
+                                                            backgroundColor: avatarBg,
+                                                            child: ClipRRect(
+                                                              borderRadius: BorderRadius.circular(25),
+                                                              child: _buildAvatarImage(
+                                                                item['profileImage'],
+                                                                size: 50,
+                                                                fallbackName: item['username'].toString(),
                                                               ),
                                                             ),
                                                           ),
-                                                        ),
+                                                          if (hasUnread)
+                                                            Positioned(
+                                                              right: 0,
+                                                              top: 0,
+                                                              child: Container(
+                                                                width: 13,
+                                                                height: 13,
+                                                                decoration: BoxDecoration(
+                                                                  color: const Color(0xFF22C55E),
+                                                                  shape: BoxShape.circle,
+                                                                  border: Border.all(
+                                                                    color: cardBgColor != Colors.transparent
+                                                                        ? cardBgColor
+                                                                        : (isDark ? const Color(0xFF0F172A) : Colors.white),
+                                                                    width: 2,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                        ],
+                                                      ),
                                                     ],
                                                   ),
                                                   title: Text(
@@ -1769,13 +1953,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   isSelected: _activeTab == 2,
                   onTap: () => setState(() => _activeTab = 2),
                 ),
-                // 5. Settings Tab
+                // 5. Settings / Profile Tab
                 _buildNavItem(
                   index: 3,
-                  icon: Icons.person_outline_rounded,
+                  icon: _activeTab == 3 ? Icons.person_rounded : Icons.person_outline_rounded,
                   label: 'Profile',
-                  isSelected: false,
-                  onTap: widget.onOpenSettings,
+                  isSelected: _activeTab == 3,
+                  onTap: () => setState(() => _activeTab = 3),
                 ),
               ],
             ),
@@ -2091,6 +2275,15 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ],
       );
+    } else if (_activeTab == 3) {
+      return SettingsScreen(
+        user: widget.user,
+        recoveryKey: '',
+        isDarkMode: widget.isDarkMode,
+        onToggleTheme: widget.onToggleTheme,
+        onBack: () => setState(() => _activeTab = 0),
+        onLogout: widget.onOpenSettings,
+      );
     } else {
       return Center(
         child: Padding(
@@ -2141,109 +2334,5 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     }
-  }
-
-  Widget _buildOnlineUsersSection(List<Map<String, dynamic>> users) {
-    final isDark = widget.isDarkMode;
-    final titleColor = isDark ? Colors.white70 : const Color(0xFF475569);
-    final avatarBg = isDark ? const Color(0xFF26282F) : const Color(0xFFE2E8F0);
-    final avatarTxt = isDark ? Colors.white : const Color(0xFF0F172A);
-    final labelColor = isDark ? Colors.white60 : const Color(0xFF0F172A);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF10B981), // active green
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'Active Now (${users.length})',
-                style: TextStyle(
-                  color: titleColor,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(
-          height: 84,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: users.length,
-            itemBuilder: (ctx, idx) {
-              final user = users[idx];
-              final displayName = user['username'].toString().startsWith('@') 
-                  ? user['username'].toString().substring(1) 
-                  : user['username'].toString();
-              return GestureDetector(
-                onTap: () => widget.onOpenChat(user),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Column(
-                    children: [
-                      Stack(
-                        children: [
-                          CircleAvatar(
-                            radius: 25,
-                            backgroundColor: avatarBg,
-                            child: Text(
-                              displayName.substring(0, 1).toUpperCase(),
-                              style: TextStyle(color: avatarTxt, fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
-                          ),
-                          Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: Container(
-                              width: 14,
-                              height: 14,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF10B981),
-                                shape: BoxShape.circle,
-                                border: Border.all(color: isDark ? const Color(0xFF121317) : Colors.white, width: 2),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      SizedBox(
-                        width: 64,
-                        child: Text(
-                          '@$displayName',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: labelColor,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        const Divider(height: 1, thickness: 1, indent: 16, endIndent: 16),
-      ],
-    );
   }
 }

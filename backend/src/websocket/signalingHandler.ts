@@ -1,10 +1,13 @@
 import WebSocket from 'ws';
 import { sendToUserConnections } from './socketServer';
+import { getUserByUsername, getUserByPrivateId, getUserById } from '../services/identityService';
+
+import { sendFcmCallNotification } from '../services/pushNotificationService';
 
 // In-memory call room participants registry (callId -> Map of participantId -> { ws, role, nickname })
 export const activeCallRooms = new Map<string, Map<string, { ws: WebSocket; role: string; nickname?: string }>>();
 
-export function handleSignaling(
+export async function handleSignaling(
   ws: WebSocket,
   payload: any,
   activeConnections: Map<string, WebSocket>
@@ -43,19 +46,58 @@ export function handleSignaling(
 
   } else if (type === 'call_invite') {
     let targetWs: WebSocket | undefined;
-    if (payload.targetUserId) {
-      targetWs = activeConnections.get(payload.targetUserId);
+    const tryKeys = [
+      payload.targetUserId,
+      payload.targetUsername,
+      payload.targetUsername?.toLowerCase(),
+      payload.targetUsername?.toLowerCase().replace(/^@/, ''),
+      `@${payload.targetUsername?.toLowerCase().replace(/^@/, '')}`,
+      payload.targetPrivateId,
+      payload.targetPrivateId?.toUpperCase(),
+      payload.targetPrivateId?.toLowerCase(),
+    ].filter(Boolean);
+
+    for (const key of tryKeys) {
+      const candidateWs = activeConnections.get(key);
+      if (candidateWs && candidateWs !== ws && candidateWs.readyState === WebSocket.OPEN) {
+        targetWs = candidateWs;
+        break;
+      }
     }
-    if (!targetWs && payload.targetUsername) {
-      const rawUname = payload.targetUsername.toLowerCase();
-      const cleanUname = rawUname.replace(/^@/, '');
-      targetWs = activeConnections.get(rawUname) ||
-                 activeConnections.get(cleanUname) ||
-                 activeConnections.get(`@${cleanUname}`);
+
+    // Fallback: If not found in active memory keys directly, resolve via DB
+    if (!targetWs) {
+      try {
+        const dbTarget = (payload.targetUsername ? await getUserByUsername(payload.targetUsername) : null) ||
+                         (payload.targetPrivateId ? await getUserByPrivateId(payload.targetPrivateId) : null) ||
+                         (payload.targetUserId ? await getUserById(payload.targetUserId) : null);
+        if (dbTarget && dbTarget.id) {
+          const candidateWs = activeConnections.get(dbTarget.id);
+          if (candidateWs && candidateWs !== ws && candidateWs.readyState === WebSocket.OPEN) {
+            targetWs = candidateWs;
+          }
+        }
+      } catch (_) {}
     }
-    if (!targetWs && payload.targetPrivateId) {
-      targetWs = activeConnections.get(payload.targetPrivateId.toUpperCase()) ||
-                 activeConnections.get(payload.targetPrivateId.toLowerCase());
+
+    let resolvedTargetId = payload.targetUserId || '';
+    if (!resolvedTargetId) {
+      try {
+        const dbTarget = (payload.targetUsername ? await getUserByUsername(payload.targetUsername) : null) ||
+                         (payload.targetPrivateId ? await getUserByPrivateId(payload.targetPrivateId) : null);
+        if (dbTarget) resolvedTargetId = dbTarget.id;
+      } catch (_) {}
+    }
+
+    // Always dispatch FCM Data Push Notification so calls ring even when app is closed / killed
+    if (resolvedTargetId) {
+      sendFcmCallNotification({
+        targetUserId: resolvedTargetId,
+        callId: payload.callId,
+        callType: payload.callType || 'audio',
+        callerUsername: payload.callerUsername || payload.senderUsername || '@peer',
+        senderId: payload.senderId,
+      });
     }
 
     if (targetWs && targetWs.readyState === WebSocket.OPEN) {
@@ -68,17 +110,9 @@ export function handleSignaling(
         senderUsername: payload.callerUsername || payload.senderUsername || '@peer',
         senderProfileImage: payload.senderProfileImage,
       }));
-      console.log(`[Signaling] call_invite delivered for callId ${payload.callId}`);
+      console.log(`[Signaling] call_invite delivered via WebSocket for callId ${payload.callId}`);
     } else {
-      console.log(`[Signaling] Target user offline or not found for call_invite: ${payload.targetUsername || payload.targetUserId}`);
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-          type: 'call_failed',
-          callId: payload.callId,
-          reason: 'recipient_offline',
-          targetUsername: payload.targetUsername || 'User'
-        }));
-      }
+      console.log(`[Signaling] Target user not currently connected via socket for call_invite: ${payload.targetUsername || payload.targetUserId} (FCM push dispatched)`);
     }
   } else if (type === 'call_offer' || type === 'call_answer' || type === 'ice_candidate' || type === 'media_toggle') {
     let room = activeCallRooms.get(callId);
@@ -118,6 +152,7 @@ export function handleSignaling(
           participant.ws.send(JSON.stringify({
             type: 'call_ended',
             callId,
+            senderId,
             reason: 'Participant left call'
           }));
         }
@@ -129,6 +164,7 @@ export function handleSignaling(
       sendToUserConnections(targetId, {
         type: 'call_ended',
         callId,
+        senderId,
         reason: 'Call declined or ended'
       });
     }
