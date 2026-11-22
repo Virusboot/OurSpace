@@ -66,8 +66,12 @@ android {
     buildTypes {
         release {
             signingConfig signingConfigs.release
-            minifyEnabled false
-            shrinkResources false
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            ndk {
+                debugSymbolLevel 'SYMBOL_TABLE'
+            }
         }
     }
 
@@ -76,6 +80,10 @@ android {
             useLegacyPackaging = false
         }
     }
+}
+
+dependencies {
+    implementation "androidx.activity:activity-ktx:1.9.3"
 }
 
 flutter {

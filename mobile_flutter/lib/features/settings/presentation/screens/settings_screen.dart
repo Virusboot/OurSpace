@@ -1285,7 +1285,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: const Icon(Icons.info_outline_rounded, color: Color(0xFF7B2FBE), size: 20),
                     ),
                     title: Text('About OurSpace', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
-                    subtitle: Text('Version 1.0.0 (Build 100)', style: TextStyle(color: subtxtCol, fontSize: 12)),
+                    subtitle: Text('Version 1.6.9 (Build 29)', style: TextStyle(color: subtxtCol, fontSize: 12)),
                     trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: subtxtCol),
                     onTap: () {
                       Navigator.push(

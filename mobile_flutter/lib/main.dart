@@ -860,37 +860,24 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
       });
     }
 
-    try {
-      final res = await ApiClient.post('/call-links/create', {
-        'callType': type,
-        'durationMinutes': 60,
-      });
-      final token = res['token'] ?? generatedCallId;
-      WebSocketClient().send({
-        'type': 'call_invite',
-        'callId': generatedCallId,
-        'callType': type,
-        'token': token,
-        'targetUserId': targetId.isNotEmpty ? targetId : targetRecipient['username'],
-        'targetUsername': targetRecipient['username'],
-        'targetPrivateId': targetRecipient['privateId'],
-        'callerUsername': _user?['username'] ?? '@user',
-        'senderId': _user?['id'],
-        'senderProfileImage': _user?['profileImage'],
-      });
-    } catch (_) {
-      WebSocketClient().send({
-        'type': 'call_invite',
-        'callId': generatedCallId,
-        'callType': type,
-        'targetUserId': targetId.isNotEmpty ? targetId : targetRecipient['username'],
-        'targetUsername': targetRecipient['username'],
-        'targetPrivateId': targetRecipient['privateId'],
-        'callerUsername': _user?['username'] ?? '@user',
-        'senderId': _user?['id'],
-        'senderProfileImage': _user?['profileImage'],
-      });
-    }
+    // Immediately send call_invite over WebSocket without blocking on REST API
+    WebSocketClient().send({
+      'type': 'call_invite',
+      'callId': generatedCallId,
+      'callType': type,
+      'targetUserId': targetId.isNotEmpty ? targetId : targetRecipient['username'],
+      'targetUsername': targetRecipient['username'],
+      'targetPrivateId': targetRecipient['privateId'],
+      'callerUsername': _user?['username'] ?? '@user',
+      'senderId': _user?['id'],
+      'senderProfileImage': _user?['profileImage'],
+    });
+
+    // Optionally create shareable call link in background without blocking calling UX
+    ApiClient.post('/call-links/create', {
+      'callType': type,
+      'durationMinutes': 60,
+    }).catchError((_) => <String, dynamic>{});
   }
 
   Widget _buildScreen() {

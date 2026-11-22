@@ -13,6 +13,11 @@ export interface UserRecord {
   recoveryHash: string;
   createdAt: string;
   updatedAt: string;
+  name?: string;
+  displayName?: string;
+  bio?: string;
+  profileImage?: string;
+  email?: string;
 }
 
 export function generatePrivateId(): string {
@@ -47,11 +52,15 @@ export async function createIdentity(username: string, publicKey: string, recove
   const privateId = generatePrivateId();
   const recoveryHash = recoveryKey ? await bcrypt.hash(recoveryKey, 10) : '';
   const now = new Date().toISOString();
+  const displayName = cleanUsername.replace(/^@/, '');
 
   const user: UserRecord = {
     id,
     privateId,
     username: cleanUsername,
+    name: displayName,
+    bio: '',
+    profileImage: '',
     publicKey,
     recoveryHash,
     createdAt: now,
@@ -61,9 +70,9 @@ export async function createIdentity(username: string, publicKey: string, recove
   if (isPgActive()) {
     const pool = getPgPool();
     await pool?.query(
-      `INSERT INTO users (id, username, private_id, password_hash, public_key, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [id, cleanUsername, privateId, recoveryHash, publicKey, now, now]
+      `INSERT INTO users (id, username, private_id, password_hash, display_name, bio, profile_image, public_key, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [id, cleanUsername, privateId, recoveryHash, displayName, '', '', publicKey, now, now]
     );
   } else {
     inMemoryDb.users.set(id, user);
@@ -80,7 +89,10 @@ export async function getUserByUsername(username: string): Promise<UserRecord | 
   const cleanUsername = username.trim().toLowerCase();
   if (isPgActive()) {
     const pool = getPgPool();
-    const res = await pool?.query('SELECT id, COALESCE(private_id, id) as "privateId", username, public_key as "publicKey", created_at as "createdAt", updated_at as "updatedAt" FROM users WHERE LOWER(username) = $1', [cleanUsername]);
+    const res = await pool?.query(
+      'SELECT id, COALESCE(private_id, id) as "privateId", username, email, display_name as "name", bio, profile_image as "profileImage", public_key as "publicKey", created_at as "createdAt", updated_at as "updatedAt" FROM users WHERE LOWER(username) = $1',
+      [cleanUsername]
+    );
     return res?.rows[0] || null;
   } else {
     return inMemoryDb.usersByUsername.get(cleanUsername) || null;
@@ -91,7 +103,10 @@ export async function getUserByPrivateId(privateId: string): Promise<UserRecord 
   const cleanId = privateId.trim().toUpperCase();
   if (isPgActive()) {
     const pool = getPgPool();
-    const res = await pool?.query('SELECT id, COALESCE(private_id, id) as "privateId", username, public_key as "publicKey", created_at as "createdAt", updated_at as "updatedAt" FROM users WHERE UPPER(COALESCE(private_id, \'\')) = $1 OR id = $1', [cleanId]);
+    const res = await pool?.query(
+      'SELECT id, COALESCE(private_id, id) as "privateId", username, email, display_name as "name", bio, profile_image as "profileImage", public_key as "publicKey", created_at as "createdAt", updated_at as "updatedAt" FROM users WHERE UPPER(COALESCE(private_id, \'\')) = $1 OR id = $1',
+      [cleanId]
+    );
     return res?.rows[0] || null;
   } else {
     return inMemoryDb.usersByPrivateId.get(cleanId) || null;
@@ -101,7 +116,10 @@ export async function getUserByPrivateId(privateId: string): Promise<UserRecord 
 export async function getUserById(id: string): Promise<UserRecord | null> {
   if (isPgActive()) {
     const pool = getPgPool();
-    const res = await pool?.query('SELECT id, COALESCE(private_id, id) as "privateId", username, public_key as "publicKey", created_at as "createdAt", updated_at as "updatedAt" FROM users WHERE id = $1', [id]);
+    const res = await pool?.query(
+      'SELECT id, COALESCE(private_id, id) as "privateId", username, email, display_name as "name", bio, profile_image as "profileImage", public_key as "publicKey", created_at as "createdAt", updated_at as "updatedAt" FROM users WHERE id = $1',
+      [id]
+    );
     return res?.rows[0] || null;
   } else {
     return inMemoryDb.users.get(id) || null;

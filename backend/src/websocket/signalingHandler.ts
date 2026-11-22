@@ -114,7 +114,14 @@ export async function handleSignaling(
     } else {
       console.log(`[Signaling] Target user not currently connected via socket for call_invite: ${payload.targetUsername || payload.targetUserId} (FCM push dispatched)`);
     }
-  } else if (type === 'call_offer' || type === 'call_answer' || type === 'ice_candidate' || type === 'media_toggle') {
+  } else if (
+    type === 'call_offer' ||
+    type === 'call_answer' ||
+    type === 'ice_candidate' ||
+    type === 'media_toggle' ||
+    type === 'call_accept' ||
+    type === 'call_ringing'
+  ) {
     let room = activeCallRooms.get(callId);
     if (!room) {
       room = new Map();
@@ -137,10 +144,11 @@ export async function handleSignaling(
     }
     
     if (!routed && room) {
-      // Broadcast to room members except sender
-      room.forEach((participant) => {
-        if (participant.ws !== ws && participant.ws.readyState === WebSocket.OPEN) {
+      // Broadcast to all other participants in the call room
+      room.forEach((participant, pid) => {
+        if (pid !== senderId && participant.ws !== ws && participant.ws.readyState === WebSocket.OPEN) {
           participant.ws.send(JSON.stringify(payload));
+          routed = true;
         }
       });
     }

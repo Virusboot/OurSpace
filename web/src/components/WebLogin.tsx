@@ -43,7 +43,9 @@ export const WebLogin: React.FC<WebLoginProps> = ({ onLoginSuccess, returnTo }) 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Something went wrong');
 
-      // Store token in sessionStorage for this browser session
+      // Store token and user in localStorage & sessionStorage for persistent browser session
+      localStorage.setItem('ws_token', data.token);
+      localStorage.setItem('ws_user', JSON.stringify(data.user));
       sessionStorage.setItem('ws_token', data.token);
       sessionStorage.setItem('ws_user', JSON.stringify(data.user));
 
@@ -52,9 +54,10 @@ export const WebLogin: React.FC<WebLoginProps> = ({ onLoginSuccess, returnTo }) 
       if (onLoginSuccess) {
         onLoginSuccess(data.user, data.token);
       } else {
-        // Redirect back to the call link or home
+        // Redirect back to returnTo or /profile
+        const targetDest = returnTo && returnTo !== '/login' ? returnTo : '/profile';
         setTimeout(() => {
-          window.location.href = returnTo || '/';
+          window.location.href = targetDest;
         }, 800);
       }
     } catch (err: any) {

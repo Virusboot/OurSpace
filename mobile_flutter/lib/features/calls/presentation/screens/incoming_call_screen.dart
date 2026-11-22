@@ -74,6 +74,13 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
       duration: const Duration(seconds: 2),
     )..repeat();
 
+    // Signal the caller that the recipient's device is ringing
+    WebSocketClient().send({
+      'type': 'call_ringing',
+      'callId': widget.callId,
+      'targetId': widget.senderId,
+    });
+
     _startRingingFeedback();
   }
 
@@ -142,6 +149,13 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
       _handleDecline();
       return;
     }
+
+    // Notify caller that call was accepted so caller immediately begins WebRTC negotiation
+    WebSocketClient().send({
+      'type': 'call_accept',
+      'callId': widget.callId,
+      'targetId': widget.senderId,
+    });
 
     widget.onAccept();
   }

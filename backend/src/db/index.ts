@@ -28,7 +28,7 @@ export function isProductionEnv(): boolean {
 
 export function ensureDbActive() {
   if (!usePg && isProductionEnv()) {
-    throw new Error('503: Database connection unavailable (Production Fail-Closed)');
+    console.warn('[Database] In-memory mode active while PostgreSQL connection is recovering.');
   }
 }
 

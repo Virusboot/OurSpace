@@ -10,6 +10,7 @@ interface LandingJoinProps {
 }
 
 export const LandingJoin: React.FC<LandingJoinProps> = ({ token, callType, pinRequired, onJoin, errorMsg }) => {
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [nickname, setNickname] = useState('');
   const [pin, setPin] = useState('');
   const [activeTab, setActiveTab] = useState<'guest' | 'login'>('guest');
@@ -19,6 +20,18 @@ export const LandingJoin: React.FC<LandingJoinProps> = ({ token, callType, pinRe
   });
 
   useEffect(() => {
+    try {
+      const stored = localStorage.getItem('ws_user') || sessionStorage.getItem('ws_user');
+      const guestName = localStorage.getItem('ws_guest_nickname');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setCurrentUser(parsed);
+        setNickname(parsed.name || parsed.username?.replace(/^@/, '') || '');
+      } else if (guestName) {
+        setNickname(guestName);
+      }
+    } catch (_) {}
+
     const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
     const isAndroid = /android/i.test(userAgent);
     const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
@@ -30,12 +43,14 @@ export const LandingJoin: React.FC<LandingJoinProps> = ({ token, callType, pinRe
       const intentUrl = `intent://c/${token}#Intent;scheme=ourspace;package=com.ourspace.app;S.browser_fallback_url=${encodeURIComponent(playStoreUrl)};end`;
       window.location.href = intentUrl;
     }
-    // iOS (iPhone/iPad) & Desktop Web: Stay on Web Browser for direct Guest Join
   }, [token]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!nickname.trim()) return;
+    try {
+      localStorage.setItem('ws_guest_nickname', nickname.trim());
+    } catch (_) {}
     onJoin(nickname.trim(), pinRequired ? pin : undefined);
   };
 
@@ -69,13 +84,23 @@ export const LandingJoin: React.FC<LandingJoinProps> = ({ token, callType, pinRe
           >
             Website Home
           </a>
-          <a
-            href={`/login?return=${returnUrl}`}
-            className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-[#7B2FBE] hover:bg-[#6823a3] text-white text-xs font-semibold shadow-md shadow-purple-500/20 transition"
-          >
-            <LogIn className="w-3.5 h-3.5" />
-            <span>Login to Website</span>
-          </a>
+          {currentUser ? (
+            <a
+              href="/profile"
+              className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-purple-50 text-[#7B2FBE] border border-purple-200 text-xs font-bold hover:bg-purple-100 transition"
+            >
+              <User className="w-3.5 h-3.5" />
+              <span>My Profile ({currentUser.name || currentUser.username})</span>
+            </a>
+          ) : (
+            <a
+              href={`/login?return=${returnUrl}`}
+              className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-[#7B2FBE] hover:bg-[#6823a3] text-white text-xs font-semibold shadow-md shadow-purple-500/20 transition"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Login to Website</span>
+            </a>
+          )}
         </div>
       </header>
 

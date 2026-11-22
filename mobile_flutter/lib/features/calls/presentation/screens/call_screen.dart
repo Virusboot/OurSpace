@@ -292,6 +292,26 @@ class _CallScreenState extends State<CallScreen> {
 
       try {
         switch (type) {
+          case 'call_ringing':
+            // Recipient phone is ringing
+            break;
+
+          case 'call_accept':
+            _ringingTimer?.cancel();
+            if (event['senderId'] != null) {
+              _remoteParticipantId = event['senderId'].toString();
+              _flushLocalCandidates();
+            }
+            if (widget.isOutgoing) {
+              await _mediaReady.future;
+              if (!mounted) return;
+              if (_peerConnection == null) {
+                await _createPeerConnection();
+                await _sendOffer();
+              }
+            }
+            break;
+
           case 'call_joined_ack':
             final existing = event['existingParticipants'] as List<dynamic>?;
             if (existing != null && existing.isNotEmpty) {

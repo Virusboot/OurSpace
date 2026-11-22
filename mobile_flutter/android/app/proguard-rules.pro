@@ -41,6 +41,19 @@
     java.lang.Object readResolve();
 }
 
+# Firebase Messaging
+-keep class com.google.firebase.** { *; }
+-dontwarn com.google.firebase.**
+
+# Flutter Local Notifications
+-keep class com.dexterous.flutterlocalnotifications.** { *; }
+-dontwarn com.dexterous.flutterlocalnotifications.**
+
+# Camera & Media
+-keep class io.flutter.plugins.camera.** { *; }
+-keep class io.flutter.plugins.imagepicker.** { *; }
+
 # General Android
 -dontwarn javax.**
 -dontwarn sun.misc.**
+

@@ -8,6 +8,7 @@ import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { TermsConditions } from './components/TermsConditions';
 import { ContactUs } from './components/ContactUs';
 import { AboutUs } from './components/AboutUs';
+import { WebProfile } from './components/WebProfile';
 import { WebRTCService } from './services/webRTCService';
 
 const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
@@ -152,6 +153,7 @@ export const App: React.FC = () => {
   if (currentRoute === '/terms') return <TermsConditions />;
   if (currentRoute === '/contact') return <ContactUs />;
   if (currentRoute === '/about') return <AboutUs />;
+  if (currentRoute === '/profile') return <WebProfile />;
   if (currentRoute === '/login') {
     const returnPath = new URLSearchParams(window.location.search).get('return') || '/';
     return <WebLogin returnTo={returnPath} />;

@@ -39,6 +39,8 @@ router.post('/login', authRateLimiter, async (req, res) => {
           username: row.username,
           email: row.email,
           privateId: row.private_id || row.id,
+          bio: row.bio || '',
+          profileImage: row.profile_image || '',
         };
         existingHash = row.password_hash || '';
       }
@@ -161,6 +163,8 @@ router.post('/register', authRateLimiter, async (req, res) => {
         email: cleanEmail,
         username: cleanUsername,
         privateId: privateId,
+        bio: '',
+        profileImage: '',
       },
       token,
     });

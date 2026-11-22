@@ -74,7 +74,7 @@ class AboutUsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Version 1.0.0 (Build 100)',
+              'Version 1.6.9 (Build 29)',
               style: TextStyle(color: subtxtCol, fontSize: 13, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 24),

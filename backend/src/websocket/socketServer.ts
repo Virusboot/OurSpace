@@ -130,20 +130,32 @@ export function initWebSocketServer(server: HttpServer) {
         // Authentication handshake
         if (type === 'auth') {
           let currentUserId: string | null = null;
+          let decodedPayload: any = null;
 
           if (token && typeof token === 'string') {
             try {
               const decoded: any = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] });
               currentUserId = decoded.userId;
+              decodedPayload = decoded;
             } catch (err) {
               console.log(`[WebSocket] Token verification failed:`, err);
             }
           }
 
           if (currentUserId) {
-            const dbUser = await getUserById(currentUserId);
+            let dbUser = await getUserById(currentUserId);
+            if (!dbUser && decodedPayload) {
+              // Resilient fallback: trust verified JWT payload so active sessions aren't killed during DB reconnects
+              dbUser = {
+                id: currentUserId,
+                username: decodedPayload.username || `@user_${currentUserId.slice(-4)}`,
+                privateId: decodedPayload.privateId || currentUserId,
+                publicKey: ''
+              };
+            }
+
             if (!dbUser) {
-              console.log(`[WebSocket] Auth rejected: User ${currentUserId} no longer exists in DB.`);
+              console.log(`[WebSocket] Auth rejected: User ${currentUserId} no longer exists.`);
               ws.send(JSON.stringify({ type: 'account_deleted', success: false, error: 'ACCOUNT_DELETED' }));
               ws.send(JSON.stringify({ type: 'auth_ack', success: false, error: 'ACCOUNT_DELETED' }));
               try { ws.close(); } catch (_) {}

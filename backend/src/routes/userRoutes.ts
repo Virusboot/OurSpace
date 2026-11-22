@@ -49,7 +49,16 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const user = await getUserById(req.user!.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
-    return res.json({ id: user.id, privateId: user.privateId, username: user.username, publicKey: user.publicKey });
+    return res.json({
+      id: user.id,
+      privateId: user.privateId,
+      username: user.username,
+      name: (user as any).name || (user as any).displayName || (user.username ? user.username.replace('@', '') : ''),
+      bio: (user as any).bio || '',
+      profileImage: (user as any).profileImage || '',
+      email: (user as any).email || '',
+      publicKey: user.publicKey
+    });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
@@ -124,7 +133,7 @@ router.get('/lookup', authenticateToken, async (req: AuthRequest, res) => {
     if (isPgActive()) {
       const pool = getPgPool();
       const result = await pool?.query(
-        `SELECT id, username, public_key as "publicKey"
+        `SELECT id, COALESCE(private_id, id) as "privateId", username, display_name as "name", bio, profile_image as "profileImage", public_key as "publicKey"
          FROM users
          WHERE (LOWER(username) LIKE $1 OR LOWER(username) LIKE $2)
            AND id != $5
@@ -148,7 +157,15 @@ router.get('/lookup', authenticateToken, async (req: AuthRequest, res) => {
       });
       if (matches.length === 0) return res.status(404).json({ error: 'No users found' });
       const u = matches[0];
-      return res.json({ id: u.id, privateId: u.privateId, username: u.username, publicKey: u.publicKey });
+      return res.json({
+        id: u.id,
+        privateId: u.privateId,
+        username: u.username,
+        name: u.name || u.displayName || (u.username ? u.username.replace('@', '') : ''),
+        bio: u.bio || '',
+        profileImage: u.profileImage || '',
+        publicKey: u.publicKey
+      });
     }
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
