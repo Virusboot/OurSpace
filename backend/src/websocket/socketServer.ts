@@ -146,11 +146,15 @@ export function initWebSocketServer(server: HttpServer) {
             let dbUser = await getUserById(currentUserId);
             if (!dbUser && decodedPayload) {
               // Resilient fallback: trust verified JWT payload so active sessions aren't killed during DB reconnects
+              const now = new Date().toISOString();
               dbUser = {
                 id: currentUserId,
                 username: decodedPayload.username || `@user_${currentUserId.slice(-4)}`,
                 privateId: decodedPayload.privateId || currentUserId,
-                publicKey: ''
+                publicKey: '',
+                recoveryHash: '',
+                createdAt: now,
+                updatedAt: now,
               };
             }
 
