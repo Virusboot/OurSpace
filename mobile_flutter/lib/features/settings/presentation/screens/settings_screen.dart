@@ -12,6 +12,7 @@ import 'about_us_screen.dart';
 import 'contact_us_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
+import '../../../../core/networking/api_client.dart';
 import '../../../../shared/widgets/app_gradient_button.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -318,7 +319,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   final token = await SecureStorageService.read('auth_token');
                   if (token != null && token.isNotEmpty) {
                     final res = await http.put(
-                      Uri.parse('https://ourspace-d81w.onrender.com/api/users/profile'),
+                      Uri.parse('${ApiClient.baseUrl}/users/profile'),
                       headers: {
                         'Authorization': 'Bearer $token',
                         'Content-Type': 'application/json',
@@ -615,7 +616,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       try {
         final token = await SecureStorageService.read('auth_token');
         if (token != null && token.isNotEmpty) {
-          final url = Uri.parse('https://ourspace-d81w.onrender.com/api/users/me');
+          final url = Uri.parse('${ApiClient.baseUrl}/users/me');
           await http.delete(url, headers: {
             'Authorization': 'Bearer $token',
             'Content-Type': 'application/json',
