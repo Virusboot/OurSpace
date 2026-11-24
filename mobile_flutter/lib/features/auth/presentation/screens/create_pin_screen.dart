@@ -46,20 +46,31 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
   Future<void> _triggerBiometricAuth() async {
     try {
       final auth = LocalAuthentication();
-      final canCheck = await auth.canCheckBiometrics || await auth.isDeviceSupported();
-      if (canCheck) {
+      final isSupported = await auth.isDeviceSupported();
+      final canCheck = await auth.canCheckBiometrics;
+      final available = await auth.getAvailableBiometrics();
+      if (isSupported && (canCheck || available.isNotEmpty)) {
         final authenticated = await auth.authenticate(
-          localizedReason: 'Authenticate to unlock OurSpace Privacy Chat',
+          localizedReason: 'Scan Fingerprint to unlock OurSpace Privacy Chat',
           options: const AuthenticationOptions(
             stickyAuth: true,
             useErrorDialogs: true,
+            biometricOnly: false,
           ),
         );
         if (authenticated && mounted) {
           widget.onPinComplete();
+        } else if (mounted) {
+          setState(() => _errorMsg = 'Fingerprint cancelled. Tap the fingerprint icon or enter PIN.');
         }
+      } else if (mounted) {
+        setState(() => _errorMsg = 'Biometric hardware not available or not enrolled.');
       }
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        setState(() => _errorMsg = 'Biometric error: Tap fingerprint icon to retry.');
+      }
+    }
   }
 
   void _handleKeyPress(String digit) {
@@ -283,6 +294,17 @@ class _CreatePinScreenState extends State<CreatePinScreen> {
                   ],
                 ),
               ),
+              if (widget.isUnlockMode) ...[
+                const SizedBox(height: 16),
+                TextButton.icon(
+                  onPressed: _triggerBiometricAuth,
+                  icon: const Icon(Icons.fingerprint_rounded, color: Color(0xFF7B2FBE), size: 22),
+                  label: const Text(
+                    'Unlock with Fingerprint',
+                    style: TextStyle(color: Color(0xFF7B2FBE), fontWeight: FontWeight.w600, fontSize: 14),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

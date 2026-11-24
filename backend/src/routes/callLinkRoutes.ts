@@ -24,7 +24,13 @@ router.post('/create', authenticateToken, async (req: AuthRequest, res) => {
       oneTime
     });
 
-    return res.json(result);
+    const requestedDuration = durationMinutes && Number(durationMinutes) > 0 ? Number(durationMinutes) : 60;
+    const effectiveDuration = Math.min(Math.max(Math.round(requestedDuration), 1), 1440);
+
+    return res.json({
+      ...result,
+      durationMinutes: effectiveDuration,
+    });
   } catch (err: any) {
     return res.status(500).json({ error: isProductionEnv() ? 'Failed to create call link' : err.message });
   }
@@ -49,6 +55,10 @@ router.post('/resolve/:token', authRateLimiter, async (req, res) => {
     }
 
     const link = verification.link!;
+    const durationMinutes = Math.max(
+      1,
+      Math.round((new Date(link.expiresAt).getTime() - new Date(link.createdAt).getTime()) / 60000)
+    );
     return res.json({
       valid: true,
       linkId: link.id,
@@ -56,6 +66,7 @@ router.post('/resolve/:token', authRateLimiter, async (req, res) => {
       hostId: link.hostId,
       callType: link.callType,
       expiresAt: link.expiresAt,
+      durationMinutes,
       oneTime: link.oneTime
     });
   } catch (err: any) {

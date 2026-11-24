@@ -18,7 +18,7 @@ class HomeScreen extends StatefulWidget {
   final bool isDarkMode;
   final VoidCallback onToggleTheme;
   final Function(Map<String, dynamic> recipient) onOpenChat;
-  final Function(String type, Map<String, dynamic>? recipient, {String? callId}) onStartCall;
+  final Function(String type, Map<String, dynamic>? recipient, {String? callId, int? maxDurationMinutes}) onStartCall;
   final VoidCallback onOpenSettings;
 
   const HomeScreen({
@@ -1016,6 +1016,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showCreateCallLinkModal() {
     String callType = 'video';
+    int selectedDuration = 15;
+    final durationCtrl = TextEditingController(text: '15');
     final pinCtrl = TextEditingController();
     String? generatedUrl;
     String? generatedCallId;
@@ -1126,6 +1128,81 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 14),
 
+                        // Call Duration (Auto-Cut) selector
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Call Duration (Auto-Cut)',
+                            style: TextStyle(color: txtSub, fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [5, 10, 15, 30, 60].map((mins) {
+                            final isSelected = selectedDuration == mins;
+                            return Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  setStateDialog(() {
+                                    selectedDuration = mins;
+                                    durationCtrl.text = '$mins';
+                                  });
+                                },
+                                child: Container(
+                                  margin: EdgeInsets.only(right: mins == 60 ? 0 : 6),
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  decoration: BoxDecoration(
+                                    gradient: isSelected
+                                        ? const LinearGradient(colors: [Color(0xFF7B2FBE), Color(0xFFE91E8C)])
+                                        : null,
+                                    color: isSelected ? null : inputBg,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '${mins}m',
+                                      style: TextStyle(
+                                        color: isSelected ? Colors.white : txtPrimary,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: inputBg,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: TextField(
+                            controller: durationCtrl,
+                            keyboardType: TextInputType.number,
+                            style: TextStyle(color: txtPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+                            onChanged: (val) {
+                              final parsed = int.tryParse(val.trim());
+                              if (parsed != null && parsed > 0) {
+                                setStateDialog(() => selectedDuration = parsed.clamp(1, 1440));
+                              }
+                            },
+                            decoration: InputDecoration(
+                              hintText: 'Custom minutes (e.g. 15)',
+                              hintStyle: TextStyle(color: txtSub, fontSize: 13),
+                              suffixText: 'min',
+                              suffixStyle: TextStyle(color: txtSub, fontSize: 12, fontWeight: FontWeight.w600),
+                              filled: false,
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              prefixIcon: const Icon(Icons.timer_outlined, color: Color(0xFF7B2FBE), size: 18),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
                         // Optional PIN field
                         Container(
                           decoration: BoxDecoration(
@@ -1153,7 +1230,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         AppGradientButton(
                           label: loading ? 'Generating...' : 'Generate Link',
                           onTap: loading ? null : () async {
+                            final parsedMins = int.tryParse(durationCtrl.text.trim()) ?? selectedDuration;
+                            final effectiveMins = parsedMins.clamp(1, 1440);
                             setStateDialog(() {
+                              selectedDuration = effectiveMins;
                               loading = true;
                               searchError = null;
                             });
@@ -1162,7 +1242,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             Future<Map<String, dynamic>> _tryCreate() =>
                                 ApiClient.post('/call-links/create', {
                                   'callType': callType,
-                                  'durationMinutes': 60,
+                                  'durationMinutes': effectiveMins,
                                   'pin': pinCtrl.text.trim().isNotEmpty
                                       ? pinCtrl.text.trim()
                                       : null,
@@ -1274,7 +1354,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Valid for 60 minutes',
+                                'Auto-cuts after $selectedDuration ${selectedDuration == 1 ? 'minute' : 'minutes'}',
                                 style: TextStyle(color: txtSub, fontSize: 11),
                               ),
                               const SizedBox(height: 14),
@@ -1325,7 +1405,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               label: 'Start & Join',
                               onTap: () {
                                 Navigator.pop(ctx);
-                                widget.onStartCall(callType, {'id': 'guest', 'username': '@waiting_for_join'}, callId: generatedCallId);
+                                widget.onStartCall(
+                                  callType,
+                                  {'id': 'guest', 'username': '@waiting_for_join'},
+                                  callId: generatedCallId,
+                                  maxDurationMinutes: selectedDuration,
+                                );
                               },
                             ),
                           ),

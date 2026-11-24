@@ -50,6 +50,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
   Map<String, dynamic>? _activeRecipient;
   String _activeCallType = 'video';
   String? _activeCallId;
+  int? _activeMaxDurationMinutes;
   bool _activeIsOutgoing = true; // true = caller, false = callee
   String _activeImageUri = '';
   bool _activeIsViewOnce = false;
@@ -273,7 +274,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
     if (state == AppLifecycleState.resumed) {
       WebSocketClient().ensureConnected();
     }
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused) {
       _lockAppIfEnabled();
     }
   }
@@ -349,9 +350,10 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
         _user = parsed;
 
         if (appLock == 'true') {
-          // Only lock if a PIN was actually set
+          // Lock if either a PIN or Biometric unlock is configured
           final storedPin = await SecureStorageService.read('user_pin_hash');
-          if (storedPin != null && storedPin.isNotEmpty) {
+          final biometricEnabled = await SecureStorageService.read('biometric_enabled');
+          if ((storedPin != null && storedPin.isNotEmpty) || biometricEnabled == 'true') {
             setState(() {
               _currentScreen = 'enter_pin';
             });
@@ -450,6 +452,9 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
           _screenBeforeCall = _currentScreen;
           _activeCallType = res['callType'] ?? 'video';
           _activeCallId = res['callId'];
+          _activeMaxDurationMinutes = res['durationMinutes'] is int
+              ? res['durationMinutes'] as int
+              : int.tryParse(res['durationMinutes']?.toString() ?? '');
           _activeRecipient = {
             'id': res['hostId'] ?? 'peer',
             'username': '@host_user',
@@ -758,6 +763,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                     isDarkMode: _isDarkMode,
                     isPipMode: false,
                     isOutgoing: _activeIsOutgoing,
+                    maxDurationMinutes: _activeMaxDurationMinutes,
                     onMinimize: () => setState(() => _currentScreen = _screenBeforeCall),
                     onCallEnded: (callType, duration) {
                       // Send call log message to chat so it appears as call history
@@ -775,7 +781,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                     },
                     onEndCall: () {
                       WebSocketClient().send({'type': 'call_hangup', 'callId': _activeCallId});
-                      setState(() { _activeCallId = null; _currentScreen = _screenBeforeCall; });
+                      setState(() { _activeCallId = null; _activeMaxDurationMinutes = null; _currentScreen = _screenBeforeCall; });
                     },
                   ),
                 )
@@ -795,6 +801,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                       isDarkMode: _isDarkMode,
                       isPipMode: true,
                       isOutgoing: _activeIsOutgoing,
+                      maxDurationMinutes: _activeMaxDurationMinutes,
                       onMinimize: () => setState(() => _currentScreen = _screenBeforeCall),
                       onCallEnded: (callType, duration) {
                         if (_activeRecipient?['id'] != null && _user?['id'] != null) {
@@ -811,7 +818,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
                       },
                       onEndCall: () {
                         WebSocketClient().send({'type': 'call_hangup', 'callId': _activeCallId});
-                        setState(() { _activeCallId = null; _currentScreen = _screenBeforeCall; });
+                        setState(() { _activeCallId = null; _activeMaxDurationMinutes = null; _currentScreen = _screenBeforeCall; });
                       },
                     ),
                   ),
@@ -821,7 +828,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
     );
   }
 
-  Future<void> _handleStartCall(String type, Map<String, dynamic>? recipient, {String? callId}) async {
+  Future<void> _handleStartCall(String type, Map<String, dynamic>? recipient, {String? callId, int? maxDurationMinutes}) async {
     final hasPerm = await _ensureCallPermissions(type);
     if (!hasPerm) return;
 
@@ -854,6 +861,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
         }
         _activeCallType = type;
         _activeCallId = generatedCallId;
+        _activeMaxDurationMinutes = maxDurationMinutes;
         _activeRecipient = targetRecipient;
         _activeIsOutgoing = true;
         _currentScreen = 'call';

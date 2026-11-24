@@ -116,29 +116,82 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (value) {
       try {
         final auth = LocalAuthentication();
-        final canCheck = await auth.canCheckBiometrics || await auth.isDeviceSupported();
-        if (canCheck) {
-          final authenticated = await auth.authenticate(
-            localizedReason: 'Verify Phone Fingerprint / Face ID to enable Biometric Unlock',
-            options: const AuthenticationOptions(
-              stickyAuth: true,
-              useErrorDialogs: true,
-            ),
-          );
-          if (authenticated) {
-            await SecureStorageService.write('biometric_enabled', 'true');
-            await SecureStorageService.write('app_lock_enabled', 'true');
+        final isSupported = await auth.isDeviceSupported();
+        final canCheck = await auth.canCheckBiometrics;
+        final available = await auth.getAvailableBiometrics();
+
+        if (!isSupported || (!canCheck && available.isEmpty)) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Biometric / Fingerprint is not set up on this device.'),
+                backgroundColor: const Color(0xFFF43F5E),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            );
+          }
+          setState(() => _biometric = false);
+          return;
+        }
+
+        final authenticated = await auth.authenticate(
+          localizedReason: 'Scan your Fingerprint / Biometrics to enable App Unlock',
+          options: const AuthenticationOptions(
+            stickyAuth: true,
+            useErrorDialogs: true,
+            biometricOnly: false,
+          ),
+        );
+
+        if (authenticated) {
+          await SecureStorageService.write('biometric_enabled', 'true');
+          await SecureStorageService.write('app_lock_enabled', 'true');
+          if (mounted) {
             setState(() {
               _biometric = true;
               _appLock = true;
             });
-            return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Fingerprint / Biometric Unlock enabled!'),
+                backgroundColor: const Color(0xFF10B981),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            );
           }
+        } else {
+          if (mounted) setState(() => _biometric = false);
         }
-      } catch (_) {}
+      } catch (e) {
+        if (mounted) {
+          setState(() => _biometric = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Biometric setup failed: ${e.toString()}'),
+              backgroundColor: const Color(0xFFF43F5E),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
+        }
+      }
+      return;
     }
-    await SecureStorageService.write('biometric_enabled', value ? 'true' : 'false');
-    setState(() => _biometric = value);
+
+    await SecureStorageService.write('biometric_enabled', 'false');
+    final storedPin = await SecureStorageService.read('user_pin_hash');
+    final hasPin = storedPin != null && storedPin.isNotEmpty;
+    if (!hasPin) {
+      await SecureStorageService.write('app_lock_enabled', 'false');
+    }
+    if (mounted) {
+      setState(() {
+        _biometric = false;
+        if (!hasPin) _appLock = false;
+      });
+    }
   }
 
   Future<void> _loadSavedProfileImage() async {
@@ -1207,7 +1260,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-
+            const SizedBox(height: 24),
 
             // 6. LEGAL, ABOUT & SUPPORT Section (Play Store Compliance)
             Padding(
@@ -1286,7 +1339,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: const Icon(Icons.info_outline_rounded, color: Color(0xFF7B2FBE), size: 20),
                     ),
                     title: Text('About OurSpace', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
-                    subtitle: Text('Version 1.6.9 (Build 29)', style: TextStyle(color: subtxtCol, fontSize: 12)),
+                    subtitle: Text('Version 1.7.3 (Build 33)', style: TextStyle(color: subtxtCol, fontSize: 12)),
                     trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: subtxtCol),
                     onTap: () {
                       Navigator.push(

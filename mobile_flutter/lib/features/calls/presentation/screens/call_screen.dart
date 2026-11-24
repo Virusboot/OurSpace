@@ -20,6 +20,8 @@ class CallScreen extends StatefulWidget {
   final bool isOutgoing;
   /// Called when call ends — passes call type and duration in seconds for chat log
   final void Function(String callType, int durationSeconds)? onCallEnded;
+  /// Optional auto-cut limit in minutes (e.g. from timed Call Links)
+  final int? maxDurationMinutes;
 
   const CallScreen({
     Key? key,
@@ -33,6 +35,7 @@ class CallScreen extends StatefulWidget {
     this.onMinimize,
     this.isOutgoing = true,
     this.onCallEnded,
+    this.maxDurationMinutes,
   }) : super(key: key);
 
   @override
@@ -125,6 +128,23 @@ class _CallScreenState extends State<CallScreen> {
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (mounted && _isConnected) {
         setState(() => _secondsElapsed++);
+        final limitMins = widget.maxDurationMinutes;
+        if (limitMins != null && limitMins > 0 && _secondsElapsed >= limitMins * 60) {
+          t.cancel();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Call limit of $limitMins min reached. Call ended automatically.'),
+              backgroundColor: const Color(0xFF7B2FBE),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          WebSocketClient().send({
+            'type': 'call_hangup',
+            'callId': widget.callId,
+          });
+          widget.onCallEnded?.call(widget.callType, _secondsElapsed);
+          widget.onEndCall();
+        }
       }
     });
   }
@@ -905,7 +925,9 @@ class _CallScreenState extends State<CallScreen> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                _formatTimer(_secondsElapsed),
+                                widget.maxDurationMinutes != null && widget.maxDurationMinutes! > 0
+                                    ? '${_formatTimer(_secondsElapsed)} / ${_formatTimer(widget.maxDurationMinutes! * 60)}'
+                                    : _formatTimer(_secondsElapsed),
                                 style: TextStyle(color: txtCol, fontFamily: 'monospace', fontSize: 13, fontWeight: FontWeight.bold),
                               ),
                             ),
