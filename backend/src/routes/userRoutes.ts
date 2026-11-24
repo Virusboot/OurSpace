@@ -5,22 +5,49 @@ import { activeUserConnections, addActiveConnection } from '../websocket/socketS
 
 const router = Router();
 
-import { isPgActive, getPgPool, inMemoryDb } from '../db';
+import { isPgActive, getPgPool, inMemoryDb, isProductionEnv } from '../db';
 
 let lastDbError = '';
 export function setLastDbError(err: string) { lastDbError = err; }
 
-router.get('/count', async (req, res) => {
+router.get('/count', authenticateToken, async (req, res) => {
   try {
     const count = await getUserCount();
     return res.json({ totalAccounts: count });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: isProductionEnv() ? 'Failed to fetch count' : err.message });
   }
 });
 
 router.get('/db-status', (req, res) => {
-  return res.json({ active: isPgActive(), error: lastDbError });
+  return res.json({ active: isPgActive(), error: isProductionEnv() ? '' : lastDbError });
+});
+
+router.post('/report', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const { reportedUserId, reason } = req.body;
+    if (!reportedUserId || !reason) {
+      return res.status(400).json({ error: 'reportedUserId and reason are required' });
+    }
+    const eventId = 'rep_' + Date.now();
+    if (isPgActive()) {
+      const pool = getPgPool();
+      await pool?.query(
+        'INSERT INTO security_events (id, user_id, event_type, created_at) VALUES ($1, $2, $3, $4)',
+        [eventId, req.user!.userId, `report:${String(reason).slice(0, 40)}`, new Date().toISOString()]
+      );
+    } else {
+      inMemoryDb.securityEvents.push({
+        id: eventId,
+        userId: req.user!.userId,
+        eventType: `report:${String(reason).slice(0, 40)}`,
+        createdAt: new Date().toISOString(),
+      });
+    }
+    return res.json({ success: true, reportId: eventId });
+  } catch (err: any) {
+    return res.status(500).json({ error: isProductionEnv() ? 'Failed to submit report' : err.message });
+  }
 });
 
 router.get('/online', authenticateToken, async (req, res) => {

@@ -56,7 +56,7 @@ class TermsConditionsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Text('Effective Date: August 2026', style: TextStyle(color: subtxtCol, fontSize: 12, fontWeight: FontWeight.w500)),
+            Text('Effective Date: November 2026', style: TextStyle(color: subtxtCol, fontSize: 12, fontWeight: FontWeight.w500)),
             const SizedBox(height: 20),
 
             _buildSection(
@@ -64,8 +64,8 @@ class TermsConditionsScreen extends StatelessWidget {
               cardBorderCol,
               txtCol,
               subtxtCol,
-              '1. Acceptance of Terms',
-              'By accessing or using the OurSpace application, you agree to be bound by these Terms of Service. If you do not agree with any part of these terms, you must discontinue use of the application immediately.',
+              '1. Acceptance & Age Eligibility',
+              'By accessing or using OurSpace, you confirm that you are at least 13 years of age (or the minimum age of digital consent in your jurisdiction) and agree to be bound by these Terms of Service.',
             ),
             const SizedBox(height: 14),
 
@@ -74,8 +74,8 @@ class TermsConditionsScreen extends StatelessWidget {
               cardBorderCol,
               txtCol,
               subtxtCol,
-              '2. Acceptable Use Policy',
-              'You agree to use OurSpace solely for lawful communication. You are strictly prohibited from using the platform for illegal activities, transmitting malware, harassing individuals, or distributing non-consensual content.',
+              '2. Acceptable Use & Zero-Tolerance Policy',
+              'You agree to use OurSpace solely for lawful communication. Harassment, threats, fraud, malware, non-consensual content, and Child Sexual Abuse Material (CSAM) are strictly prohibited. Users can block or report abusive contacts directly inside any chat.',
             ),
             const SizedBox(height: 14),
 

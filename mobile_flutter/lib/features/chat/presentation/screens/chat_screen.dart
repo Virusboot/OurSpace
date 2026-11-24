@@ -1671,6 +1671,85 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  void _showReportUserDialog() {
+    final isDark = widget.isDarkMode;
+    final rawName = widget.recipient['username'] ?? 'User';
+    String selectedReason = 'Spam or Scam';
+    final reasons = ['Spam or Scam', 'Harassment or Bullying', 'Inappropriate Content', 'Fake Account'];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setStateDialog) => AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF14161C) : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Report $rawName', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Select a reason for reporting this contact. Our safety team reviews abuse reports promptly.',
+                style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              ...reasons.map((r) {
+                final isSelected = selectedReason == r;
+                return InkWell(
+                  onTap: () => setStateDialog(() => selectedReason = r),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_unchecked_rounded,
+                          color: isSelected ? const Color(0xFF7B2FBE) : (isDark ? Colors.white54 : Colors.black45),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(r, style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14)),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF43F5E),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () {
+                Navigator.pop(ctx);
+                ApiClient.post('/users/report', {
+                  'reportedUserId': widget.recipient['id'] ?? rawName,
+                  'reason': selectedReason,
+                }).catchError((_) => <String, dynamic>{});
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('$rawName reported ($selectedReason). Thank you for keeping OurSpace safe.'),
+                    duration: const Duration(seconds: 3),
+                    backgroundColor: const Color(0xFF10B981),
+                  ),
+                );
+              },
+              child: const Text('Submit Report', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showRecipientProfileModal() {
     final rawName = widget.recipient['username'] ?? 'User';
     final displayName = rawName;
@@ -2020,6 +2099,9 @@ class _ChatScreenState extends State<ChatScreen> {
                           case 'clear':
                             _confirmClearChat();
                             break;
+                          case 'report':
+                            _showReportUserDialog();
+                            break;
                           case 'block':
                             _confirmBlockUser();
                             break;
@@ -2053,6 +2135,16 @@ class _ChatScreenState extends State<ChatScreen> {
                               Icon(Icons.cleaning_services_outlined, color: isDark ? Colors.white70 : const Color(0xFF475569), size: 20),
                               const SizedBox(width: 12),
                               Text('Clear Chat History', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14)),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'report',
+                          child: const Row(
+                            children: [
+                              Icon(Icons.flag_outlined, color: Color(0xFFF59E0B), size: 20),
+                              SizedBox(width: 12),
+                              Text('Report Contact', style: TextStyle(color: Color(0xFFF59E0B), fontSize: 14, fontWeight: FontWeight.w600)),
                             ],
                           ),
                         ),

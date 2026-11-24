@@ -57,7 +57,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Text('Last Updated: August 2026', style: TextStyle(color: subtxtCol, fontSize: 12, fontWeight: FontWeight.w500)),
+            Text('Last Updated: November 2026', style: TextStyle(color: subtxtCol, fontSize: 12, fontWeight: FontWeight.w500)),
             const SizedBox(height: 20),
 
             _buildPolicySection(
@@ -65,8 +65,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
               cardBorderCol,
               txtCol,
               subtxtCol,
-              '1. Zero Data Collection Architecture',
-              'OurSpace is designed from the ground up to respect your privacy. We do not collect, store, or sell your personal information. We do not ask for your phone number, email address, real name, contacts, or location data. Your identity is represented solely by a locally generated cryptographic keypair.',
+              '1. Minimal Data Collection & Privacy',
+              'OurSpace is built with privacy by design. We do not sell your data, collect your contacts, or track your location. You only provide a username and password/recovery credential to authenticate your encrypted account.',
             ),
             const SizedBox(height: 14),
 
@@ -75,8 +75,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
               cardBorderCol,
               txtCol,
               subtxtCol,
-              '2. End-to-End Encryption (E2EE)',
-              'All messages, voice calls, video calls, images, and files are encrypted end-to-end using AES-256-GCM and ECDH key exchange on your device. Only you and the intended recipient possess the decryption keys. Neither OurSpace servers nor any third party can access your communications.',
+              '2. End-to-End Encryption & Device Permissions',
+              'All messages, voice calls, video calls, and shared media use end-to-end encryption (AES-256-GCM / ECDH) and WebRTC peer-to-peer transport. Camera and Microphone permissions are used strictly during active calls or media capture when initiated by you.',
             ),
             const SizedBox(height: 14),
 
@@ -85,8 +85,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
               cardBorderCol,
               txtCol,
               subtxtCol,
-              '3. Self-Destructing Data & Disappearing Messages',
-              'Messages sent in Ghost Mode or with custom disappearing timers are automatically purged from local memory and relay queues after the set duration (30 seconds default in Ghost Mode). Once deleted, data cannot be recovered by anyone.',
+              '3. Push Notifications & No Ad Tracking',
+              'We use Firebase Cloud Messaging (FCM) tokens solely to deliver real-time incoming call and message notifications. We do NOT use third-party advertising networks, behavioral analytics, or tracking SDKs.',
             ),
             const SizedBox(height: 14),
 
@@ -95,8 +95,8 @@ class PrivacyPolicyScreen extends StatelessWidget {
               cardBorderCol,
               txtCol,
               subtxtCol,
-              '4. Third-Party Analytics & Tracking',
-              'We do NOT use third-party analytics trackers, SDKs, or advertising networks. We do not track user behavior, app usage metrics, or IP addresses.',
+              '4. Disappearing Messages & Data Retention',
+              'Messages sent in Ghost Mode automatically expire and are purged after the configured timer. Timed call links expire automatically after the selected duration.',
             ),
             const SizedBox(height: 14),
 
@@ -105,8 +105,18 @@ class PrivacyPolicyScreen extends StatelessWidget {
               cardBorderCol,
               txtCol,
               subtxtCol,
-              '5. Right to Erasure & Account Clearance',
-              'You can erase all local keys, stored session data, and identity records at any time by tapping "Logout & Clear Private Session" in the Settings screen.',
+              '5. Account & Data Deletion Rights',
+              'You can permanently delete your account, profile, and server records at any time using "Delete Account & Wipe Database" in Settings, or clear your local session via "Logout & Clear Private Session".',
+            ),
+            const SizedBox(height: 14),
+
+            _buildPolicySection(
+              cardBg,
+              cardBorderCol,
+              txtCol,
+              subtxtCol,
+              '6. Age Requirement & Child Safety',
+              'OurSpace is strictly intended for users aged 13 and older (or the minimum legal age in your country). We maintain zero tolerance for Child Sexual Abuse Material (CSAM) or exploitation. Any reported violations result in immediate account termination.',
             ),
             const SizedBox(height: 24),
           ],
