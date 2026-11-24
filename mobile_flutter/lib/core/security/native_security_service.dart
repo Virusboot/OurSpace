@@ -4,14 +4,18 @@ import 'package:local_auth/local_auth.dart';
 class NativeSecurityService {
   static const MethodChannel _channel = MethodChannel('com.ourspace.app/security');
   static final LocalAuthentication _auth = LocalAuthentication();
+  static int _secureRefCount = 0;
 
   static Future<void> enableFlagSecure() async {
+    _secureRefCount++;
     try {
       await _channel.invokeMethod('enableFlagSecure');
     } catch (_) {}
   }
 
   static Future<void> disableFlagSecure() async {
+    if (_secureRefCount > 0) _secureRefCount--;
+    if (_secureRefCount > 0) return;
     try {
       await _channel.invokeMethod('disableFlagSecure');
     } catch (_) {}
