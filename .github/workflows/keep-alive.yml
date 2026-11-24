@@ -2,13 +2,16 @@ name: Keep Backend Alive
 
 on:
   schedule:
-    # Runs every 10 minutes (cron syntax)
-    - cron: '*/10 * * * *'
+    # Runs every 5 minutes to prevent Render free-tier 15-minute sleep
+    - cron: '*/5 * * * *'
   workflow_dispatch: # Allows you to run this workflow manually from the Actions tab
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Backend Health Endpoint
-        run: curl -s https://ourspace-backend.onrender.com/health | echo "Ping sent to backend!"
+      - name: Ping Live Render Backend Health & Ready Endpoints
+        run: |
+          curl -fsS --max-time 30 https://ourspace-d81w.onrender.com/health
+          echo ""
+          curl -fsS --max-time 30 https://ourspace-d81w.onrender.com/ready || true
