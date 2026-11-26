@@ -150,13 +150,6 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
       return;
     }
 
-    // Notify caller that call was accepted so caller immediately begins WebRTC negotiation
-    WebSocketClient().send({
-      'type': 'call_accept',
-      'callId': widget.callId,
-      'targetId': widget.senderId,
-    });
-
     widget.onAccept();
   }
 

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -48,37 +49,49 @@ class _SecureImageViewerScreenState extends State<SecureImageViewerScreen> {
     super.dispose();
   }
 
+  Uint8List? _decodedBytes;
+
+  Uint8List? _resolveImageBytes() {
+    if (_decodedBytes != null) return _decodedBytes;
+    final src = widget.imageUri;
+    if (src.startsWith('data:image')) {
+      try {
+        _decodedBytes = base64Decode(src.split(',').last);
+        return _decodedBytes;
+      } catch (_) {}
+    } else if (src.length > 80 && !src.contains('/') && !src.startsWith('http')) {
+      try {
+        _decodedBytes = base64Decode(src);
+        return _decodedBytes;
+      } catch (_) {}
+    }
+    return null;
+  }
+
   Future<void> _saveToGallery() async {
     if (_isSaving) return;
     setState(() => _isSaving = true);
     try {
+      final picturesDir = Directory('/storage/emulated/0/Pictures/OurSpace');
+      if (!await picturesDir.exists()) {
+        await picturesDir.create(recursive: true);
+      }
+      final destPath = '${picturesDir.path}/IMG_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final file = File(widget.imageUri);
+      final memBytes = _resolveImageBytes();
       if (await file.exists()) {
-        final picturesDir = Directory('/storage/emulated/0/Pictures/OurSpace');
-        if (!await picturesDir.exists()) {
-          await picturesDir.create(recursive: true);
-        }
-        final destPath = '${picturesDir.path}/IMG_${DateTime.now().millisecondsSinceEpoch}.jpg';
         await file.copy(destPath);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Saved to Gallery! ($destPath)'),
-              backgroundColor: const Color(0xFF10B981),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Image file saved successfully.'),
-              backgroundColor: Color(0xFF10B981),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
+      } else if (memBytes != null) {
+        await File(destPath).writeAsBytes(memBytes);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Saved to Gallery! ($destPath)'),
+            backgroundColor: const Color(0xFF10B981),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -100,7 +113,9 @@ class _SecureImageViewerScreenState extends State<SecureImageViewerScreen> {
     final isDark = widget.isDarkMode;
     final bgCol = isDark ? Colors.black : const Color(0xFF0F172A);
     final txtCol = Colors.white;
-    final fileExists = File(widget.imageUri).existsSync();
+    final memBytes = _resolveImageBytes();
+    final fileExists = memBytes == null && File(widget.imageUri).existsSync();
+    final hasImage = memBytes != null || fileExists;
 
     return SecurityOverlay(
       isSensitive: widget.isViewOnce,
@@ -118,7 +133,7 @@ class _SecureImageViewerScreenState extends State<SecureImageViewerScreen> {
             onPressed: widget.onClose,
           ),
           actions: [
-            if (!widget.isViewOnce)
+            if (!widget.isViewOnce && hasImage)
               IconButton(
                 icon: _isSaving
                     ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
@@ -132,36 +147,47 @@ class _SecureImageViewerScreenState extends State<SecureImageViewerScreen> {
           child: Stack(
             children: [
               Center(
-                child: fileExists
+                child: memBytes != null
                     ? InteractiveViewer(
                         maxScale: 4.0,
                         minScale: 0.8,
-                        child: Image.file(
-                          File(widget.imageUri),
+                        child: Image.memory(
+                          memBytes,
                           fit: BoxFit.contain,
                           width: double.infinity,
                           height: double.infinity,
                         ),
                       )
-                    : Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(widget.isViewOnce ? Icons.visibility_off_rounded : Icons.image_rounded, size: 64, color: const Color(0xFF7B2FBE)),
-                          const SizedBox(height: 16),
-                          Text('Secure Media Attachment', style: TextStyle(color: txtCol, fontSize: 18, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 8),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 32.0),
-                            child: Text(
-                              'Zero-knowledge encrypted media stream.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: Colors.grey, fontSize: 12),
+                    : fileExists
+                        ? InteractiveViewer(
+                            maxScale: 4.0,
+                            minScale: 0.8,
+                            child: Image.file(
+                              File(widget.imageUri),
+                              fit: BoxFit.contain,
+                              width: double.infinity,
+                              height: double.infinity,
                             ),
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(widget.isViewOnce ? Icons.visibility_off_rounded : Icons.image_rounded, size: 64, color: const Color(0xFF7B2FBE)),
+                              const SizedBox(height: 16),
+                              Text('Secure Media Attachment', style: TextStyle(color: txtCol, fontSize: 18, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 8),
+                              const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 32.0),
+                                child: Text(
+                                  'Media file unavailable on this device.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
               ),
-              if (!widget.isViewOnce && fileExists)
+              if (!widget.isViewOnce && hasImage)
                 Positioned(
                   bottom: 24,
                   left: 24,

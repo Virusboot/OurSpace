@@ -43,7 +43,9 @@ export async function handleChatMessage(
         senderProfileImage: payload.senderProfileImage,
         text: payload.text,
         mediaPath: payload.mediaPath,
-        isViewOnce: payload.isViewOnce
+        isViewOnce: payload.isViewOnce,
+        duration: payload.duration,
+        ttlSeconds: ttlSeconds ?? 0,
       }
     };
 

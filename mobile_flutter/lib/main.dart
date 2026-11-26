@@ -452,6 +452,7 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
           _screenBeforeCall = _currentScreen;
           _activeCallType = res['callType'] ?? 'video';
           _activeCallId = res['callId'];
+          _activeIsOutgoing = false;
           _activeMaxDurationMinutes = res['durationMinutes'] is int
               ? res['durationMinutes'] as int
               : int.tryParse(res['durationMinutes']?.toString() ?? '');

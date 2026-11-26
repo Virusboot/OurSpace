@@ -72,6 +72,7 @@ class _CallScreenState extends State<CallScreen> {
   Timer? _ringingTimer;
 
   bool _isCreatingPeerConnection = false;
+  Completer<void>? _pcCompleter;
   bool _isSettingUpMedia = false;
   Completer<void>? _setupMediaCompleter;
   bool _isSendingOffer = false;
@@ -151,7 +152,7 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _fetchIceConfig() async {
     try {
-      final res = await ApiClient.get('/turn-credentials');
+      final res = await ApiClient.get('/turn-credentials').timeout(const Duration(seconds: 4));
       if (res['iceServers'] != null && res['iceServers'] is List) {
         final List rawServers = res['iceServers'];
         final validServers = <Map<String, dynamic>>[];
@@ -159,7 +160,7 @@ class _CallScreenState extends State<CallScreen> {
           if (s is Map) {
             final urlVal = s['urls'];
             final urlStr = urlVal is List ? urlVal.join(',') : urlVal?.toString() ?? '';
-            if (urlStr.isNotEmpty && !urlStr.contains('kittuvirusstudio.in')) {
+            if (urlStr.isNotEmpty) {
               validServers.add(Map<String, dynamic>.from(s));
             }
           }
@@ -189,11 +190,23 @@ class _CallScreenState extends State<CallScreen> {
     if (!_mediaReady.isCompleted) _mediaReady.complete();
     _joinCallRoom();
 
-    _connectionWatchdog = Timer(const Duration(seconds: 8), () {
+    if (!widget.isOutgoing) {
+      final targetId = widget.recipient?['id']?.toString();
+      WebSocketClient().send({
+        'type': 'call_accept',
+        'callId': widget.callId,
+        'senderId': widget.user?['id'] ?? 'user_callee',
+        if (targetId != null && targetId.isNotEmpty && targetId != 'guest' && targetId != 'peer')
+          'targetId': targetId,
+      });
+    }
+
+    _connectionWatchdog = Timer(const Duration(seconds: 6), () {
       if (!mounted || _isConnected) return;
-      if (_remoteParticipantId != null && _peerConnection == null) {
-        debugPrint('[CallScreen] Watchdog: no connection after 8s — sending offer');
+      if (widget.isOutgoing && _remoteParticipantId != null && _peerConnection == null) {
+        debugPrint('[CallScreen] Watchdog: no connection after 6s — sending offer');
         _mediaReady.future.then((_) async {
+          if (!mounted || _peerConnection != null) return;
           await _createPeerConnection();
           await _sendOffer();
         });
@@ -453,8 +466,13 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> _createPeerConnection() async {
-    if (_peerConnection != null || _isCreatingPeerConnection) return;
+    if (_peerConnection != null) return;
+    if (_isCreatingPeerConnection && _pcCompleter != null) {
+      await _pcCompleter!.future;
+      return;
+    }
     _isCreatingPeerConnection = true;
+    _pcCompleter = Completer<void>();
 
     try {
       if (_localStream == null) {
@@ -554,6 +572,9 @@ class _CallScreenState extends State<CallScreen> {
       debugPrint('[CallScreen] Error creating peer connection: $e');
     } finally {
       _isCreatingPeerConnection = false;
+      if (!(_pcCompleter?.isCompleted ?? true)) {
+        _pcCompleter?.complete();
+      }
     }
   }
 

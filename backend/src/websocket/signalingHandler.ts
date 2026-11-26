@@ -132,7 +132,8 @@ export async function handleSignaling(
     }
 
     let routed = false;
-    if (targetId) {
+    const isGenericTarget = !targetId || targetId === 'guest' || targetId === 'peer';
+    if (!isGenericTarget) {
       routed = sendToUserConnections(targetId, payload);
       if (!routed && room.has(targetId)) {
         const targetObj = room.get(targetId)!;

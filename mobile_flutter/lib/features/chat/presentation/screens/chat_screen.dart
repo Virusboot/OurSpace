@@ -98,6 +98,40 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  void _persistMessagesCache() {
+    final convId = _conversationId;
+    final recipientId = widget.recipient['id']?.toString();
+    // Strip huge base64 strings from SecureStorage cache so UI & Keystore stay fast;
+    // local file paths (ourspace_img_*) stay intact and load instantaneously.
+    final compactList = _messages.where((m) => m['isTyping'] != true).map((m) {
+      final copy = Map<String, dynamic>.from(m);
+      final mp = copy['mediaPath']?.toString() ?? '';
+      if (mp.startsWith('data:image') && mp.length > 2000) {
+        copy['mediaPath'] = '';
+      }
+      return copy;
+    }).toList();
+    final encoded = jsonEncode(compactList);
+    if (convId != null && convId.isNotEmpty) {
+      unawaited(SecureStorageService.write('conv_msgs_$convId', encoded));
+    }
+    if (recipientId != null && recipientId.isNotEmpty) {
+      unawaited(SecureStorageService.write('conv_msgs_user_$recipientId', encoded));
+    }
+  }
+
+  Future<String> _saveIncomingMediaToFile(String msgId, String rawMediaPath) async {
+    if (rawMediaPath.startsWith('data:image')) {
+      try {
+        final bytes = base64Decode(rawMediaPath.split(',').last);
+        final file = File('${Directory.systemTemp.path}/ourspace_img_$msgId.jpg');
+        await file.writeAsBytes(bytes, flush: true);
+        return file.path;
+      } catch (_) {}
+    }
+    return rawMediaPath;
+  }
+
   void _sendVoiceNote() async {
     _recordTimer?.cancel();
     final duration = _recordSeconds > 0 ? _recordSeconds : 1;
@@ -117,9 +151,12 @@ class _ChatScreenState extends State<ChatScreen> {
         _conversationId = res['conversationId'];
       } catch (_) {}
     }
+    final activeConvId = (_conversationId != null && _conversationId!.isNotEmpty)
+        ? _conversationId!
+        : 'c_${widget.recipient['id'] ?? 'peer'}';
 
     final clientMsgId = 'voice_${DateTime.now().millisecondsSinceEpoch}_${(_messages.length + 1)}';
-    await SecureStorageService.write('local_msg_txt_$clientMsgId', voiceText);
+    unawaited(SecureStorageService.write('local_msg_txt_$clientMsgId', voiceText));
 
     final userPriv = await SecureStorageService.read('user_private_key') ?? '';
     String edPriv = '';
@@ -132,12 +169,12 @@ class _ChatScreenState extends State<ChatScreen> {
       recipientPublicKey: widget.recipient['publicKey'] ?? '',
       senderPrivateKeyHex: userPriv,
       senderEd25519PrivateKeyHex: edPriv,
-      conversationId: _conversationId,
+      conversationId: activeConvId,
     );
 
     final localMsg = {
       'id': clientMsgId,
-      'conversationId': _conversationId ?? 'c1',
+      'conversationId': activeConvId,
       'senderId': widget.user['id'] ?? 'u1',
       'encryptedPayload': encrypted,
       'decryptedText': voiceText,
@@ -149,30 +186,31 @@ class _ChatScreenState extends State<ChatScreen> {
       'createdAt': DateTime.now().toIso8601String(),
     };
 
-    setState(() {
-      _messages.removeWhere((m) => m['isTyping'] == true);
-      _messages.add(localMsg);
-    });
-    _scrollToBottom();
-    _saveRecentChatSnippet(voiceText);
-
-    if (_conversationId != null) {
-      WebSocketClient().send({
-        'type': 'chat_send',
-        'messageId': clientMsgId,
-        'conversationId': _conversationId,
-        'senderId': widget.user['id'] ?? 'u1',
-        'senderUsername': widget.user['username'],
-        'senderProfileImage': widget.user['profileImage'],
-        'recipientId': widget.recipient['id'] ?? 'u2',
-        'recipientUsername': widget.recipient['username'],
-        'recipientPrivateId': widget.recipient['privateId'],
-        'encryptedPayload': encrypted,
-        'messageType': 'voice_note',
-        'duration': timeFormatted,
-        'ttlSeconds': _ttlSeconds,
+    if (mounted) {
+      setState(() {
+        _messages.removeWhere((m) => m['isTyping'] == true);
+        _messages.add(localMsg);
       });
+      _scrollToBottom();
     }
+    _saveRecentChatSnippet(voiceText);
+    _persistMessagesCache();
+
+    WebSocketClient().send({
+      'type': 'chat_send',
+      'messageId': clientMsgId,
+      'conversationId': activeConvId,
+      'senderId': widget.user['id'] ?? 'u1',
+      'senderUsername': widget.user['username'],
+      'senderProfileImage': widget.user['profileImage'],
+      'recipientId': widget.recipient['id'] ?? 'u2',
+      'recipientUsername': widget.recipient['username'],
+      'recipientPrivateId': widget.recipient['privateId'],
+      'encryptedPayload': encrypted,
+      'messageType': 'voice_note',
+      'duration': timeFormatted,
+      'ttlSeconds': _ttlSeconds,
+    });
   }
 
   void _showEmojiPickerModal() {
@@ -399,6 +437,12 @@ class _ChatScreenState extends State<ChatScreen> {
           final cleanText = _cleanDisplayText(text, msg['text'] ?? msg['decryptedText']);
           final existingIdx = _messages.indexWhere((m) => m['id'] == msgId);
           final existingMsg = existingIdx >= 0 ? _messages[existingIdx] : null;
+          final rawMediaPath = (msg['mediaPath'] != null && msg['mediaPath'].toString().isNotEmpty)
+              ? msg['mediaPath'].toString()
+              : (existingMsg?['mediaPath']?.toString() ?? '');
+          final savedMediaPath = rawMediaPath.startsWith('data:image')
+              ? await _saveIncomingMediaToFile(msgId, rawMediaPath)
+              : rawMediaPath;
 
           final newMsg = {
             'id': msgId,
@@ -407,9 +451,8 @@ class _ChatScreenState extends State<ChatScreen> {
             'encryptedPayload': encrypted,
             'decryptedText': cleanText,
             'messageType': msg['messageType'] ?? existingMsg?['messageType'] ?? 'text',
-            'mediaPath': (msg['mediaPath'] != null && msg['mediaPath'].toString().isNotEmpty)
-                ? msg['mediaPath']
-                : (existingMsg?['mediaPath'] ?? ''),
+            'mediaPath': savedMediaPath,
+            'duration': msg['duration'] ?? existingMsg?['duration'],
             'isViewOnce': msg['isViewOnce'] == true ||
                 msg['messageType'] == 'view_once_image' ||
                 existingMsg?['isViewOnce'] == true,
@@ -440,15 +483,18 @@ class _ChatScreenState extends State<ChatScreen> {
               }
             });
             _scrollToBottom();
+            _persistMessagesCache();
           }
 
-          // Ghost Mode / TTL 30s Auto Disappear (only when Ghost Mode is enabled)
-          if (_isGhostMode && _ttlSeconds > 0) {
-            Timer(Duration(seconds: _ttlSeconds), () {
+          // Sync Ghost Mode / TTL deletion on BOTH sender & receiver when sender sent with ttlSeconds > 0
+          final msgTtl = int.tryParse(msg['ttlSeconds']?.toString() ?? '') ?? (_isGhostMode ? _ttlSeconds : 0);
+          if (msgTtl > 0) {
+            Timer(Duration(seconds: msgTtl), () {
               if (mounted) {
                 setState(() {
                   _messages.removeWhere((m) => m['id'] == msgId);
                 });
+                _persistMessagesCache();
               }
             });
           }
@@ -720,11 +766,8 @@ class _ChatScreenState extends State<ChatScreen> {
             });
           });
           _scrollToBottom();
-          // Update persistent conversation message cache asynchronously
-          unawaited(SecureStorageService.write('conv_msgs_$convId', jsonEncode(_messages)));
-          if (recipientId != null) {
-            unawaited(SecureStorageService.write('conv_msgs_user_$recipientId', jsonEncode(_messages)));
-          }
+          // Update persistent conversation message cache asynchronously (without multi-MB base64 blobs)
+          _persistMessagesCache();
         }
       }
     } catch (_) {}
@@ -734,51 +777,14 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = _inputCtrl.text.trim();
     if (text.isEmpty) return;
 
-    // Ensure conversation ID is created
-    if (_conversationId == null || _conversationId!.isEmpty) {
-      try {
-        final res = await ApiClient.post('/chat/conversation', {'recipientId': widget.recipient['id'] ?? 'u2'});
-        _conversationId = res['conversationId'];
-      } catch (_) {}
-    }
-
-    // Ensure recipient public key is fetched if missing/dummy
-    final currentPubKey = widget.recipient['publicKey']?.toString() ?? '';
-    if (currentPubKey.isEmpty || !currentPubKey.startsWith('PUB_X25519:')) {
-      try {
-        final recipientUname = widget.recipient['username']?.toString() ?? '';
-        final recipientId = widget.recipient['id']?.toString() ?? '';
-        final query = recipientUname.isNotEmpty ? recipientUname : recipientId;
-        final lookupRes = await ApiClient.get('/users/lookup?query=$query');
-        if (lookupRes['publicKey'] != null) {
-          widget.recipient['publicKey'] = lookupRes['publicKey'];
-        }
-      } catch (_) {}
-    }
-
     _inputCtrl.clear();
 
     final clientMsgId = 'msg_${DateTime.now().millisecondsSinceEpoch}_${(_messages.length + 1)}';
-    await SecureStorageService.write('local_msg_txt_$clientMsgId', text);
-
-    final userPriv = await SecureStorageService.read('user_private_key') ?? '';
-    String edPriv = '';
-    if (userPriv.contains(':')) {
-      final parts = userPriv.split(':');
-      if (parts.length > 2) edPriv = parts[2];
-    }
-    final encrypted = await E2EECryptoService.encryptPayloadAsync(
-      plaintext: text,
-      recipientPublicKey: widget.recipient['publicKey'] ?? '',
-      senderPrivateKeyHex: userPriv,
-      senderEd25519PrivateKeyHex: edPriv,
-      conversationId: _conversationId,
-    );
     final localMsg = {
       'id': clientMsgId,
       'conversationId': _conversationId ?? 'c1',
       'senderId': widget.user['id'] ?? 'u1',
-      'encryptedPayload': encrypted,
+      'encryptedPayload': '',
       'decryptedText': text,
       'messageType': 'text',
       'status': 'sending',
@@ -793,6 +799,33 @@ class _ChatScreenState extends State<ChatScreen> {
     });
     _scrollToBottom();
     _saveRecentChatSnippet(text);
+    _persistMessagesCache();
+
+    // Ensure conversation ID is created (only if missing)
+    if (_conversationId == null || _conversationId!.isEmpty) {
+      try {
+        final res = await ApiClient.post('/chat/conversation', {'recipientId': widget.recipient['id'] ?? 'u2'});
+        _conversationId = res['conversationId'];
+      } catch (_) {}
+    }
+
+    unawaited(SecureStorageService.write('local_msg_txt_$clientMsgId', text));
+
+    final userPriv = await SecureStorageService.read('user_private_key') ?? '';
+    String edPriv = '';
+    if (userPriv.contains(':')) {
+      final parts = userPriv.split(':');
+      if (parts.length > 2) edPriv = parts[2];
+    }
+    final encrypted = await E2EECryptoService.encryptPayloadAsync(
+      plaintext: text,
+      recipientPublicKey: widget.recipient['publicKey'] ?? '',
+      senderPrivateKeyHex: userPriv,
+      senderEd25519PrivateKeyHex: edPriv,
+      conversationId: _conversationId,
+    );
+    localMsg['encryptedPayload'] = encrypted;
+    _persistMessagesCache();
 
     if (_isGhostMode && _ttlSeconds > 0) {
       final msgId = localMsg['id'];
@@ -801,6 +834,7 @@ class _ChatScreenState extends State<ChatScreen> {
           setState(() {
             _messages.removeWhere((m) => m['id'] == msgId);
           });
+          _persistMessagesCache();
         }
       });
     }
@@ -1392,21 +1426,7 @@ class _ChatScreenState extends State<ChatScreen> {
       } catch (_) {}
     }
 
-    // 2. Ensure recipient public key is fetched if missing/dummy
-    final currentPubKey = widget.recipient['publicKey']?.toString() ?? '';
-    if (currentPubKey.isEmpty || !currentPubKey.startsWith('PUB_X25519:')) {
-      try {
-        final recipientUname = widget.recipient['username']?.toString() ?? '';
-        final recipientId = widget.recipient['id']?.toString() ?? '';
-        final query = recipientUname.isNotEmpty ? recipientUname : recipientId;
-        final lookupRes = await ApiClient.get('/users/lookup?query=$query');
-        if (lookupRes['publicKey'] != null) {
-          widget.recipient['publicKey'] = lookupRes['publicKey'];
-        }
-      } catch (_) {}
-    }
-
-    // 3. Encode media file as base64 string for cross-device transmission
+    // 2. Encode media file as base64 string for cross-device transmission
     String base64Media = imagePath;
     try {
       if (File(imagePath).existsSync()) {
@@ -1453,6 +1473,7 @@ class _ChatScreenState extends State<ChatScreen> {
     });
     _scrollToBottom();
     _saveRecentChatSnippet(text);
+    _persistMessagesCache();
 
     if (_conversationId != null) {
       WebSocketClient().send({
