@@ -144,9 +144,25 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
     });
   }
 
-  void _handleIncomingChatMessage(Map<String, dynamic> event) {
+  Future<bool> _isSenderBlocked(String senderId, String senderUsername) async {
+    try {
+      final raw = await SecureStorageService.read('blocked_users');
+      if (raw == null || raw.isEmpty) return false;
+      final blocked = List<String>.from(jsonDecode(raw));
+      final sid = senderId.trim().toLowerCase();
+      final suname = senderUsername.trim().toLowerCase();
+      return (sid.isNotEmpty && blocked.contains(sid)) ||
+          (suname.isNotEmpty && blocked.contains(suname));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _handleIncomingChatMessage(Map<String, dynamic> event) async {
     final msg = event['message'] ?? event;
     final senderName = msg['senderUsername'] ?? msg['senderId'] ?? 'Someone';
+    final senderId = msg['senderId']?.toString() ?? '';
+    if (await _isSenderBlocked(senderId, senderName.toString())) return;
     final text = msg['text'] ?? 'Sent you an encrypted message';
     final conversationId = msg['conversationId'] ?? '';
 
@@ -164,10 +180,13 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
     );
   }
 
-  void _handleIncomingCall(Map<String, dynamic> event) {
+  Future<void> _handleIncomingCall(Map<String, dynamic> event) async {
     final incomingCallId = event['callId']?.toString();
     final senderId = event['senderId']?.toString() ?? '';
     final senderUname = (event['senderUsername'] ?? event['callerUsername'] ?? '').toString().replaceAll('@', '').toLowerCase();
+    final rawSenderUname = (event['senderUsername'] ?? event['callerUsername'] ?? '').toString();
+    if (await _isSenderBlocked(senderId, rawSenderUname)) return;
+    if (!mounted) return;
     final myId = _user?['id']?.toString() ?? '';
     final myUname = (_user?['username'] ?? '').toString().replaceAll('@', '').toLowerCase();
 

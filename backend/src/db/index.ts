@@ -179,6 +179,7 @@ async function createTablesIfNotExist() {
     `ALTER TABLE public.users ADD COLUMN IF NOT EXISTS display_name VARCHAR(128) DEFAULT ''`,
     `ALTER TABLE public.users ADD COLUMN IF NOT EXISTS bio TEXT DEFAULT ''`,
     `ALTER TABLE public.users ADD COLUMN IF NOT EXISTS profile_image TEXT DEFAULT ''`,
+    `ALTER TABLE public.users ADD COLUMN IF NOT EXISTS fcm_token TEXT`,
 
     `ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS status VARCHAR(16) DEFAULT 'sent'`,
     `ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP`,

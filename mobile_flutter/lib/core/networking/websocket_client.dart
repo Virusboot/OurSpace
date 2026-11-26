@@ -15,6 +15,7 @@ class WebSocketClient {
   final StreamController<Map<String, dynamic>> _messageController = StreamController.broadcast();
   final List<Map<String, dynamic>> _pendingQueue = [];
   Timer? _reconnectTimer;
+  Timer? _heartbeatTimer;
   bool _isConnecting = false;
   bool _isAuthenticated = false;
   bool _isExplicitlyDisconnected = false;
@@ -75,10 +76,14 @@ class WebSocketClient {
             final parsed = jsonDecode(data.toString()) as Map<String, dynamic>;
             final type = parsed['type'];
 
+            if (type == 'pong') {
+              return;
+            }
             if (type == 'auth_ack') {
               if (parsed['success'] == true) {
                 _isAuthenticated = true;
                 _reconnectAttempts = 0;
+                _startHeartbeat();
                 _flushQueue();
               }
             } else if (type == 'chat_receive') {
@@ -101,12 +106,14 @@ class WebSocketClient {
           }
         },
         onError: (err) {
+          _heartbeatTimer?.cancel();
           _isConnecting = false;
           _isAuthenticated = false;
           _channel = null;
           _reconnect();
         },
         onDone: () {
+          _heartbeatTimer?.cancel();
           _isConnecting = false;
           _isAuthenticated = false;
           _channel = null;
@@ -121,6 +128,15 @@ class WebSocketClient {
       _channel = null;
       _reconnect();
     }
+  }
+
+  void _startHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = Timer.periodic(const Duration(seconds: 25), (_) {
+      if (_channel != null && _isAuthenticated) {
+        sendDirect({'type': 'ping', 'ts': DateTime.now().millisecondsSinceEpoch});
+      }
+    });
   }
 
   void _reconnect() {
@@ -171,6 +187,8 @@ class WebSocketClient {
   void disconnect() {
     _isExplicitlyDisconnected = true;
     _isAuthenticated = false;
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _channel?.sink.close();

@@ -127,6 +127,13 @@ export function initWebSocketServer(server: HttpServer) {
         const payload = JSON.parse(messageData.toString());
         const { type, token } = payload;
 
+        if (type === 'ping') {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'pong', ts: Date.now() }));
+          }
+          return;
+        }
+
         // Authentication handshake
         if (type === 'auth') {
           let currentUserId: string | null = null;

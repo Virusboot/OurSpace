@@ -1240,14 +1240,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     title: Text('Clear Cache & Temp Files', style: TextStyle(color: txtCol, fontSize: 14, fontWeight: FontWeight.w600)),
                     trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: subtxtCol),
-                    onTap: () {
+                    onTap: () async {
+                      int clearedCount = 0;
+                      try {
+                        final tempDir = Directory.systemTemp;
+                        if (await tempDir.exists()) {
+                          await for (final entity in tempDir.list()) {
+                            final name = entity.path.split('/').last;
+                            if (name.startsWith('ourspace_img_') || name.startsWith('ourspace_voice_') || name.startsWith('ourspace_rec_')) {
+                              try {
+                                await entity.delete();
+                                clearedCount++;
+                              } catch (_) {}
+                            }
+                          }
+                        }
+                      } catch (_) {}
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: const Row(
+                          content: Row(
                             children: [
-                              Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                              SizedBox(width: 10),
-                              Text('Temporary media cache wiped cleanly!'),
+                              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                              const SizedBox(width: 10),
+                              Text('Temporary media cache wiped ($clearedCount files removed)!'),
                             ],
                           ),
                           backgroundColor: const Color(0xFF10B981),

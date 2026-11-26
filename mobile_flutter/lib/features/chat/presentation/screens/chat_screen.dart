@@ -3,6 +3,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:record/record.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../../../../core/crypto/e2ee_crypto_service.dart';
 import '../../../../core/networking/api_client.dart';
 import '../../../../core/networking/websocket_client.dart';
@@ -74,8 +76,36 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isRecordingVoice = false;
   int _recordSeconds = 0;
   Timer? _recordTimer;
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  String? _currentRecordPath;
+  String? _playingMsgId;
 
-  void _startVoiceRecording() {
+  Future<void> _startVoiceRecording() async {
+    try {
+      final hasPerm = await _audioRecorder.hasPermission();
+      if (!hasPerm) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Microphone permission is required to record voice notes.'),
+              backgroundColor: Color(0xFFF43F5E),
+            ),
+          );
+        }
+        return;
+      }
+      final recPath = '${Directory.systemTemp.path}/ourspace_rec_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      await _audioRecorder.start(
+        const RecordConfig(encoder: AudioEncoder.aacLc, bitRate: 64000, sampleRate: 44100),
+        path: recPath,
+      );
+      _currentRecordPath = recPath;
+    } catch (e) {
+      debugPrint('Voice recorder start error: $e');
+    }
+
+    if (!mounted) return;
     setState(() {
       _isRecordingVoice = true;
       _recordSeconds = 0;
@@ -90,12 +120,21 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  void _cancelVoiceRecording() {
+  Future<void> _cancelVoiceRecording() async {
     _recordTimer?.cancel();
-    setState(() {
-      _isRecordingVoice = false;
-      _recordSeconds = 0;
-    });
+    try {
+      await _audioRecorder.stop();
+      if (_currentRecordPath != null && File(_currentRecordPath!).existsSync()) {
+        await File(_currentRecordPath!).delete();
+      }
+    } catch (_) {}
+    _currentRecordPath = null;
+    if (mounted) {
+      setState(() {
+        _isRecordingVoice = false;
+        _recordSeconds = 0;
+      });
+    }
   }
 
   void _persistMessagesCache() {
@@ -128,12 +167,26 @@ class _ChatScreenState extends State<ChatScreen> {
         await file.writeAsBytes(bytes, flush: true);
         return file.path;
       } catch (_) {}
+    } else if (rawMediaPath.startsWith('data:audio')) {
+      try {
+        final bytes = base64Decode(rawMediaPath.split(',').last);
+        final file = File('${Directory.systemTemp.path}/ourspace_voice_$msgId.m4a');
+        await file.writeAsBytes(bytes, flush: true);
+        return file.path;
+      } catch (_) {}
     }
     return rawMediaPath;
   }
 
   void _sendVoiceNote() async {
     _recordTimer?.cancel();
+    String? stoppedPath;
+    try {
+      stoppedPath = await _audioRecorder.stop();
+    } catch (_) {}
+    final recordedFilePath = stoppedPath ?? _currentRecordPath;
+    _currentRecordPath = null;
+
     final duration = _recordSeconds > 0 ? _recordSeconds : 1;
     final mins = duration ~/ 60;
     final secs = (duration % 60).toString().padLeft(2, '0');
@@ -144,6 +197,14 @@ class _ChatScreenState extends State<ChatScreen> {
       _isRecordingVoice = false;
       _recordSeconds = 0;
     });
+
+    String base64Audio = '';
+    if (recordedFilePath != null && File(recordedFilePath).existsSync()) {
+      try {
+        final bytes = await File(recordedFilePath).readAsBytes();
+        base64Audio = 'data:audio/mp4;base64,${base64Encode(bytes)}';
+      } catch (_) {}
+    }
 
     if (_conversationId == null || _conversationId!.isEmpty) {
       try {
@@ -179,6 +240,7 @@ class _ChatScreenState extends State<ChatScreen> {
       'encryptedPayload': encrypted,
       'decryptedText': voiceText,
       'messageType': 'voice_note',
+      'mediaPath': recordedFilePath ?? '',
       'duration': timeFormatted,
       'status': 'sending',
       'time': '${DateTime.now().hour > 12 ? DateTime.now().hour - 12 : DateTime.now().hour == 0 ? 12 : DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')} ${DateTime.now().hour >= 12 ? 'PM' : 'AM'}',
@@ -208,6 +270,7 @@ class _ChatScreenState extends State<ChatScreen> {
       'recipientPrivateId': widget.recipient['privateId'],
       'encryptedPayload': encrypted,
       'messageType': 'voice_note',
+      if (base64Audio.isNotEmpty) 'mediaPath': base64Audio,
       'duration': timeFormatted,
       'ttlSeconds': _ttlSeconds,
     });
@@ -378,6 +441,9 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     NativeSecurityService.disableFlagSecure();
+    _recordTimer?.cancel();
+    _audioRecorder.dispose();
+    _audioPlayer.dispose();
     _inputCtrl.dispose();
     _scrollCtrl.dispose();
     _wsSubscription?.cancel();
@@ -440,7 +506,7 @@ class _ChatScreenState extends State<ChatScreen> {
           final rawMediaPath = (msg['mediaPath'] != null && msg['mediaPath'].toString().isNotEmpty)
               ? msg['mediaPath'].toString()
               : (existingMsg?['mediaPath']?.toString() ?? '');
-          final savedMediaPath = rawMediaPath.startsWith('data:image')
+          final savedMediaPath = (rawMediaPath.startsWith('data:image') || rawMediaPath.startsWith('data:audio'))
               ? await _saveIncomingMediaToFile(msgId, rawMediaPath)
               : rawMediaPath;
 
@@ -888,7 +954,8 @@ class _ChatScreenState extends State<ChatScreen> {
     final status = item['status']?.toString();
 
     if (messageType == 'voice_note' || item['decryptedText']?.toString().startsWith('🎵') == true) {
-      final isPlaying = item['isPlaying'] == true;
+      final msgId = item['id']?.toString() ?? '';
+      final isPlaying = _playingMsgId == msgId && msgId.isNotEmpty;
       final durationStr = item['duration'] ?? '0:05';
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -901,10 +968,29 @@ class _ChatScreenState extends State<ChatScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             GestureDetector(
-              onTap: () {
-                setState(() {
-                  item['isPlaying'] = !isPlaying;
-                });
+              onTap: () async {
+                if (isPlaying) {
+                  await _audioPlayer.stop();
+                  if (mounted) setState(() => _playingMsgId = null);
+                  return;
+                }
+                if (mediaPath.isNotEmpty) {
+                  try {
+                    await _audioPlayer.stop();
+                    _audioPlayer.onPlayerComplete.first.then((_) {
+                      if (mounted) setState(() => _playingMsgId = null);
+                    });
+                    if (mediaPath.startsWith('data:audio')) {
+                      final bytes = base64Decode(mediaPath.split(',').last);
+                      await _audioPlayer.play(BytesSource(bytes));
+                    } else if (File(mediaPath).existsSync()) {
+                      await _audioPlayer.play(DeviceFileSource(mediaPath));
+                    }
+                    if (mounted) setState(() => _playingMsgId = msgId);
+                  } catch (e) {
+                    debugPrint('Voice playback error: $e');
+                  }
+                }
               },
               child: CircleAvatar(
                 radius: 18,
@@ -1678,12 +1764,25 @@ class _ChatScreenState extends State<ChatScreen> {
               backgroundColor: const Color(0xFFF43F5E),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('$rawName has been blocked'), duration: const Duration(seconds: 2), backgroundColor: const Color(0xFFF43F5E)),
-              );
-              widget.onBack();
+              try {
+                final raw = await SecureStorageService.read('blocked_users');
+                final List<String> blocked = raw != null && raw.isNotEmpty
+                    ? List<String>.from(jsonDecode(raw))
+                    : <String>[];
+                final rid = (widget.recipient['id'] ?? '').toString().trim().toLowerCase();
+                final runame = (widget.recipient['username'] ?? '').toString().trim().toLowerCase();
+                if (rid.isNotEmpty && !blocked.contains(rid)) blocked.add(rid);
+                if (runame.isNotEmpty && !blocked.contains(runame)) blocked.add(runame);
+                await SecureStorageService.write('blocked_users', jsonEncode(blocked));
+              } catch (_) {}
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('$rawName has been blocked'), duration: const Duration(seconds: 2), backgroundColor: const Color(0xFFF43F5E)),
+                );
+                widget.onBack();
+              }
             },
             child: const Text('Block', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
