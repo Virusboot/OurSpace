@@ -30,8 +30,66 @@ export const App: React.FC = () => {
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [connectionState, setConnectionState] = useState('connecting');
   const [securityAlert, setSecurityAlert] = useState<string | null>(null);
+  const [globalPrivacyShield, setGlobalPrivacyShield] = useState(false);
 
   const [rtcService] = useState(() => new WebRTCService());
+
+  // Global Web Anti-Screenshot, Anti-Copy & Focus Shield
+  useEffect(() => {
+    const activateShield = () => {
+      setGlobalPrivacyShield(true);
+      if (inCall) {
+        rtcService.sendSecurityAlert('Screenshot / Screen Capture attempt detected on Web');
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      const isMacShot = (e.metaKey || e.ctrlKey) && e.shiftKey && ['3', '4', '5', 's'].includes(key);
+      const isPrintScreen = key === 'printscreen' || key === 'prtscr' || key === 'sysreq';
+      const isCtrlPS = (e.ctrlKey || e.metaKey) && (key === 'p' || key === 's');
+      if (isPrintScreen || isMacShot || isCtrlPS) {
+        e.preventDefault();
+        activateShield();
+        setTimeout(() => setGlobalPrivacyShield(false), 2500);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'printscreen') {
+        try { navigator.clipboard?.writeText(''); } catch (_) {}
+        activateShield();
+        setTimeout(() => setGlobalPrivacyShield(false), 2500);
+      }
+    };
+
+    const handleContextMenu = (e: MouseEvent) => e.preventDefault();
+    const handleDragStart = (e: DragEvent) => e.preventDefault();
+    const handleVisibility = () => {
+      if (document.hidden) activateShield();
+      else setTimeout(() => setGlobalPrivacyShield(false), 400);
+    };
+    const handleBlur = () => activateShield();
+    const handleFocus = () => setTimeout(() => setGlobalPrivacyShield(false), 300);
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('keyup', handleKeyUp, true);
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('dragstart', handleDragStart);
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('keyup', handleKeyUp, true);
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('dragstart', handleDragStart);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [inCall, rtcService]);
 
   useEffect(() => {
     // Parse route path
@@ -141,53 +199,70 @@ export const App: React.FC = () => {
     setRemoteStream(null);
   };
 
-  if (loading) {
+  const renderRoute = () => {
+    if (loading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-black text-white">
+          <div className="w-8 h-8 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin"></div>
+        </div>
+      );
+    }
+
+    if (currentRoute === '/privacy') return <PrivacyPolicy />;
+    if (currentRoute === '/terms') return <TermsConditions />;
+    if (currentRoute === '/contact') return <ContactUs />;
+    if (currentRoute === '/about') return <AboutUs />;
+    if (currentRoute === '/profile') return <WebProfile />;
+    if (currentRoute === '/login') {
+      const returnPath = new URLSearchParams(window.location.search).get('return') || '/';
+      return <WebLogin returnTo={returnPath} />;
+    }
+
+    if (!token) return <WebHome />;
+    if (errorStatus === 'expired') return <ExpiredLink />;
+    if (errorStatus === 'invalid') return <InvalidLink />;
+
+    if (inCall) {
+      return (
+        <ActiveCall
+          callType={linkDetails?.callType || 'video'}
+          localStream={localStream}
+          remoteStream={remoteStream}
+          nickname={nickname}
+          connectionState={connectionState}
+          securityAlert={securityAlert}
+          onToggleMic={(enabled) => rtcService.toggleAudio(enabled)}
+          onToggleCam={(enabled) => rtcService.toggleVideo(enabled)}
+          onLeaveCall={handleLeaveCall}
+          onSecurityEvent={(event) => rtcService.sendSecurityAlert(event)}
+        />
+      );
+    }
+
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-white">
-        <div className="w-8 h-8 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin"></div>
-      </div>
-    );
-  }
-
-  if (currentRoute === '/privacy') return <PrivacyPolicy />;
-  if (currentRoute === '/terms') return <TermsConditions />;
-  if (currentRoute === '/contact') return <ContactUs />;
-  if (currentRoute === '/about') return <AboutUs />;
-  if (currentRoute === '/profile') return <WebProfile />;
-  if (currentRoute === '/login') {
-    const returnPath = new URLSearchParams(window.location.search).get('return') || '/';
-    return <WebLogin returnTo={returnPath} />;
-  }
-
-  if (!token) return <WebHome />;
-  if (errorStatus === 'expired') return <ExpiredLink />;
-  if (errorStatus === 'invalid') return <InvalidLink />;
-
-  if (inCall) {
-    return (
-      <ActiveCall
+      <LandingJoin
+        token={token}
         callType={linkDetails?.callType || 'video'}
-        localStream={localStream}
-        remoteStream={remoteStream}
-        nickname={nickname}
-        connectionState={connectionState}
-        securityAlert={securityAlert}
-        onToggleMic={(enabled) => rtcService.toggleAudio(enabled)}
-        onToggleCam={(enabled) => rtcService.toggleVideo(enabled)}
-        onLeaveCall={handleLeaveCall}
-        onSecurityEvent={(event) => rtcService.sendSecurityAlert(event)}
+        pinRequired={pinRequired}
+        onJoin={handleJoin}
+        errorMsg={joinError}
       />
     );
-  }
+  };
 
   return (
-    <LandingJoin
-      token={token}
-      callType={linkDetails?.callType || 'video'}
-      pinRequired={pinRequired}
-      onJoin={handleJoin}
-      errorMsg={joinError}
-    />
+    <>
+      {renderRoute()}
+      {globalPrivacyShield && (
+        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center text-white select-none">
+          <div className="w-14 h-14 rounded-2xl bg-purple-600/20 border border-purple-500/40 flex items-center justify-center mb-4">
+            <span className="text-2xl">🛡️</span>
+          </div>
+          <p className="text-lg font-bold">OurSpace Privacy Shield Active</p>
+          <p className="text-xs text-slate-400 mt-1">Screen protected against background capture &amp; screenshots</p>
+        </div>
+      )}
+    </>
   );
 };
 export default App;

@@ -1,5 +1,24 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;600;700;800;900&display=swap');
 
+/* Anti-screenshot, anti-print, and anti-copy protections for Web */
+html, body, #root {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+@media print {
+  html, body, #root {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}
+
 /* ═══════════════════════════════════════════════
    RESET
 ═══════════════════════════════════════════════ */
