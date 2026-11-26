@@ -12,6 +12,12 @@
 @import app_links;
 #endif
 
+#if __has_include(<audioplayers_darwin/AudioplayersDarwinPlugin.h>)
+#import <audioplayers_darwin/AudioplayersDarwinPlugin.h>
+#else
+@import audioplayers_darwin;
+#endif
+
 #if __has_include(<camera_avfoundation/CameraPlugin.h>)
 #import <camera_avfoundation/CameraPlugin.h>
 #else
@@ -72,6 +78,12 @@
 @import permission_handler_apple;
 #endif
 
+#if __has_include(<record_darwin/RecordDarwinPlugin.h>)
+#import <record_darwin/RecordDarwinPlugin.h>
+#else
+@import record_darwin;
+#endif
+
 #if __has_include(<share_plus/FPPSharePlusPlugin.h>)
 #import <share_plus/FPPSharePlusPlugin.h>
 #else
@@ -100,6 +112,7 @@
 
 + (void)registerWithRegistry:(NSObject<FlutterPluginRegistry>*)registry {
   [AppLinksPlugin registerWithRegistrar:[registry registrarForPlugin:@"AppLinksPlugin"]];
+  [AudioplayersDarwinPlugin registerWithRegistrar:[registry registrarForPlugin:@"AudioplayersDarwinPlugin"]];
   [CameraPlugin registerWithRegistrar:[registry registrarForPlugin:@"CameraPlugin"]];
   [FPPDeviceInfoPlusPlugin registerWithRegistrar:[registry registrarForPlugin:@"FPPDeviceInfoPlusPlugin"]];
   [FLTFirebaseCorePlugin registerWithRegistrar:[registry registrarForPlugin:@"FLTFirebaseCorePlugin"]];
@@ -110,6 +123,7 @@
   [FLTImagePickerPlugin registerWithRegistrar:[registry registrarForPlugin:@"FLTImagePickerPlugin"]];
   [LocalAuthPlugin registerWithRegistrar:[registry registrarForPlugin:@"LocalAuthPlugin"]];
   [PermissionHandlerPlugin registerWithRegistrar:[registry registrarForPlugin:@"PermissionHandlerPlugin"]];
+  [RecordDarwinPlugin registerWithRegistrar:[registry registrarForPlugin:@"RecordDarwinPlugin"]];
   [FPPSharePlusPlugin registerWithRegistrar:[registry registrarForPlugin:@"FPPSharePlusPlugin"]];
   [SharedPreferencesPlugin registerWithRegistrar:[registry registrarForPlugin:@"SharedPreferencesPlugin"]];
   [URLLauncherPlugin registerWithRegistrar:[registry registrarForPlugin:@"URLLauncherPlugin"]];
