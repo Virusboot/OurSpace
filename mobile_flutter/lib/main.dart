@@ -753,77 +753,44 @@ class _SecureChatAppState extends State<SecureChatApp> with WidgetsBindingObserv
           // transitions so that call timer, WebRTC connection, and all state
           // are preserved (no dispose/recreate cycle).
           if (_activeCallId != null && _currentScreen != 'enter_pin' && _currentScreen != 'create_pin')
-            _currentScreen == 'call'
-              ? Positioned.fill(
-                  child: CallScreen(
-                    key: _callScreenKey,
-                    callType: _activeCallType,
-                    recipient: _activeRecipient,
-                    callId: _activeCallId,
-                    user: _user,
-                    isDarkMode: _isDarkMode,
-                    isPipMode: false,
-                    isOutgoing: _activeIsOutgoing,
-                    maxDurationMinutes: _activeMaxDurationMinutes,
-                    onMinimize: () => setState(() => _currentScreen = _screenBeforeCall),
-                    onCallEnded: (callType, duration) {
-                      // Send call log message to chat so it appears as call history
-                      if (_activeRecipient?['id'] != null && _user?['id'] != null) {
-                        WebSocketClient().send({
-                          'type': 'call_log',
-                          'callId': _activeCallId,
-                          'callType': callType,
-                          'durationSeconds': duration,
-                          'senderId': _user!['id'],
-                          'targetId': _activeRecipient!['id'],
-                          'senderUsername': _user!['username'],
-                        });
-                      }
-                    },
-                    onEndCall: () {
-                      WebSocketClient().send({'type': 'call_hangup', 'callId': _activeCallId});
-                      setState(() { _activeCallId = null; _activeMaxDurationMinutes = null; _currentScreen = _screenBeforeCall; });
-                    },
-                  ),
-                )
-              : Positioned(
-                  right: 20,
-                  bottom: 100,
-                  width: 120,
-                  height: 180,
-                  child: GestureDetector(
-                    onTap: () => setState(() => _currentScreen = 'call'),
-                    child: CallScreen(
-                      key: _callScreenKey,
-                      callType: _activeCallType,
-                      recipient: _activeRecipient,
-                      callId: _activeCallId,
-                      user: _user,
-                      isDarkMode: _isDarkMode,
-                      isPipMode: true,
-                      isOutgoing: _activeIsOutgoing,
-                      maxDurationMinutes: _activeMaxDurationMinutes,
-                      onMinimize: () => setState(() => _currentScreen = _screenBeforeCall),
-                      onCallEnded: (callType, duration) {
-                        if (_activeRecipient?['id'] != null && _user?['id'] != null) {
-                          WebSocketClient().send({
-                            'type': 'call_log',
-                            'callId': _activeCallId,
-                            'callType': callType,
-                            'durationSeconds': duration,
-                            'senderId': _user!['id'],
-                            'targetId': _activeRecipient!['id'],
-                            'senderUsername': _user!['username'],
-                          });
-                        }
-                      },
-                      onEndCall: () {
-                        WebSocketClient().send({'type': 'call_hangup', 'callId': _activeCallId});
-                        setState(() { _activeCallId = null; _activeMaxDurationMinutes = null; _currentScreen = _screenBeforeCall; });
-                      },
-                    ),
-                  ),
-                ),
+            Positioned(
+              top: _currentScreen == 'call' ? 0 : null,
+              left: _currentScreen == 'call' ? 0 : null,
+              right: _currentScreen == 'call' ? 0 : 16,
+              bottom: _currentScreen == 'call' ? 0 : 100,
+              width: _currentScreen == 'call' ? null : 120,
+              height: _currentScreen == 'call' ? null : 180,
+              child: CallScreen(
+                key: _callScreenKey,
+                callType: _activeCallType,
+                recipient: _activeRecipient,
+                callId: _activeCallId,
+                user: _user,
+                isDarkMode: _isDarkMode,
+                isPipMode: _currentScreen != 'call',
+                isOutgoing: _activeIsOutgoing,
+                maxDurationMinutes: _activeMaxDurationMinutes,
+                onMinimize: () => setState(() => _currentScreen = _screenBeforeCall),
+                onExpand: () => setState(() => _currentScreen = 'call'),
+                onCallEnded: (callType, duration) {
+                  if (_activeRecipient?['id'] != null && _user?['id'] != null) {
+                    WebSocketClient().send({
+                      'type': 'call_log',
+                      'callId': _activeCallId,
+                      'callType': callType,
+                      'durationSeconds': duration,
+                      'senderId': _user!['id'],
+                      'targetId': _activeRecipient!['id'],
+                      'senderUsername': _user!['username'],
+                    });
+                  }
+                },
+                onEndCall: () {
+                  WebSocketClient().send({'type': 'call_hangup', 'callId': _activeCallId});
+                  setState(() { _activeCallId = null; _activeMaxDurationMinutes = null; _currentScreen = _screenBeforeCall; });
+                },
+              ),
+            ),
         ],
       ),
     );

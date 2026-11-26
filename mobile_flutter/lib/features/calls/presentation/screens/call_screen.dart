@@ -16,6 +16,7 @@ class CallScreen extends StatefulWidget {
   final VoidCallback onEndCall;
   final bool isPipMode;
   final VoidCallback? onMinimize;
+  final VoidCallback? onExpand;
   /// True if this user initiated the call (caller). False if this user is receiving (callee).
   final bool isOutgoing;
   /// Called when call ends — passes call type and duration in seconds for chat log
@@ -33,6 +34,7 @@ class CallScreen extends StatefulWidget {
     required this.onEndCall,
     this.isPipMode = false,
     this.onMinimize,
+    this.onExpand,
     this.isOutgoing = true,
     this.onCallEnded,
     this.maxDurationMinutes,
@@ -768,9 +770,10 @@ class _CallScreenState extends State<CallScreen> {
     // PiP mode: audio calls show compact floating bar, video calls show video preview
     if (widget.isPipMode) {
       if (widget.callType == 'audio') {
-        // WhatsApp-style compact audio call bar
-        // No GestureDetector here — the parent in main.dart handles tap-to-maximize
-        return Container(
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onExpand,
+          child: Container(
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 colors: [Color(0xFF7B2FBE), Color(0xFF0052CC)],
@@ -801,46 +804,68 @@ class _CallScreenState extends State<CallScreen> {
                 ),
               ],
             ),
+          ),
         );
       }
-      // Video PiP — IgnorePointer lets taps pass to parent GestureDetector for maximize
-      return IgnorePointer(
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.black,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFF7B2FBE), width: 2),
-          ),
-          child: Stack(
-            children: [
-              if (showRemoteVideo)
-                Positioned.fill(
+      // Video PiP — AbsorbPointer on RTCVideoView + top GestureDetector overlay so taps ALWAYS maximize cleanly
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF7B2FBE), width: 2),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.45), blurRadius: 12, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Stack(
+          children: [
+            if (showRemoteVideo)
+              Positioned.fill(
+                child: AbsorbPointer(
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(14),
-                    child: RTCVideoView(_remoteRenderer, key: const ValueKey('pip_remote_renderer'), objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
+                    child: RTCVideoView(_remoteRenderer, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
                   ),
-                )
-              else if (showLocalPreviewFullscreen)
-                Positioned.fill(
+                ),
+              )
+            else if (showLocalPreviewFullscreen)
+              Positioned.fill(
+                child: AbsorbPointer(
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(14),
-                    child: RTCVideoView(_localRenderer, key: const ValueKey('pip_local_renderer'), mirror: true, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
+                    child: RTCVideoView(_localRenderer, mirror: true, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
                   ),
-                )
-              else
-                Center(child: Icon(widget.callType == 'video' ? Icons.videocam : Icons.phone, color: Colors.white)),
-              Positioned(
-                bottom: 8, left: 0, right: 0,
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
-                    child: Text(_formatTimer(_secondsElapsed), style: const TextStyle(color: Colors.white, fontSize: 10)),
-                  )
-                )
+                ),
+              )
+            else
+              Center(child: Icon(widget.callType == 'video' ? Icons.videocam : Icons.phone, color: Colors.white)),
+            Positioned(
+              top: 6,
+              right: 6,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
+                child: const Icon(Icons.open_in_full_rounded, color: Colors.white, size: 12),
               ),
-            ]
-          )
+            ),
+            Positioned(
+              bottom: 8, left: 0, right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
+                  child: Text(_formatTimer(_secondsElapsed), style: const TextStyle(color: Colors.white, fontSize: 10)),
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: widget.onExpand,
+                child: const ColoredBox(color: Colors.transparent),
+              ),
+            ),
+          ],
         ),
       );
     }

@@ -7,6 +7,7 @@ import 'package:vibration/vibration.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../../core/networking/websocket_client.dart';
 import '../../../../core/notifications/notification_service.dart';
+import '../../../../core/security/native_security_service.dart';
 
 class IncomingCallScreen extends StatefulWidget {
   final String callId;
@@ -86,7 +87,10 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
 
   void _startRingingFeedback() async {
     _stopRingingFeedback();
-    
+
+    // Play native Android phone ringtone
+    NativeSecurityService.startRingtone();
+
     // Check if device supports vibration with pattern
     bool? hasVibrator = await Vibration.hasVibrator();
     if (hasVibrator == true) {
@@ -96,14 +100,15 @@ class _IncomingCallScreenState extends State<IncomingCallScreen>
       HapticFeedback.vibrate();
     }
 
-    _ringTimer = Timer.periodic(const Duration(milliseconds: 1500), (timer) {
-      SystemSound.play(SystemSoundType.click);
+    _ringTimer = Timer.periodic(const Duration(milliseconds: 2500), (timer) {
+      HapticFeedback.heavyImpact();
     });
   }
 
   void _stopRingingFeedback() {
     _ringTimer?.cancel();
     _ringTimer = null;
+    NativeSecurityService.stopRingtone();
     try {
       Vibration.cancel();
     } catch (_) {}

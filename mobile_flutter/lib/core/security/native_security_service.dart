@@ -21,6 +21,18 @@ class NativeSecurityService {
     } catch (_) {}
   }
 
+  static Future<void> startRingtone() async {
+    try {
+      await _channel.invokeMethod('startRingtone');
+    } catch (_) {}
+  }
+
+  static Future<void> stopRingtone() async {
+    try {
+      await _channel.invokeMethod('stopRingtone');
+    } catch (_) {}
+  }
+
   static Future<bool> isBiometricsAvailable() async {
     try {
       final canAuthenticateWithBiometrics = await _auth.canCheckBiometrics;
